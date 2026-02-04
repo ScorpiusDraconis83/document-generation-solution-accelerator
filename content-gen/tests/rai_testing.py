@@ -26,11 +26,9 @@ Options:
 import argparse
 import asyncio
 import json
-import os
-import subprocess
 import sys
 import time
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
@@ -41,9 +39,9 @@ import httpx
 # Try to import Azure Identity for auth
 try:
     from azure.identity import AzureCliCredential, InteractiveBrowserCredential
-    AZURE_IDENTITY_AVAILABLE = True
 except ImportError:
-    AZURE_IDENTITY_AVAILABLE = False
+    # Azure Identity is optional; authentication features depending on it will be unavailable.
+    pass
 
 
 class TestCategory(Enum):
@@ -966,7 +964,7 @@ async def main():
     
     # Generate report
     report_path = runner.generate_report(args.output_dir)
-    print(f"\nReports saved to: {args.output_dir}")
+    print(f"\nReports saved to: {report_path}")
     
     return runner.print_summary()
 
