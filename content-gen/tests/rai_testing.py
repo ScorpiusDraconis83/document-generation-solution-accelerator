@@ -40,8 +40,16 @@ import httpx
 try:
     from azure.identity import AzureCliCredential, InteractiveBrowserCredential
 except ImportError:
-    # Azure Identity is optional; authentication features depending on it will be unavailable.
-    pass
+    # Azure Identity is optional; provide stubs that fail clearly if Azure auth is requested.
+    class _MissingAzureIdentityCredential:
+        def __init__(self, *args, **kwargs) -> None:
+            raise RuntimeError(
+                "The 'azure-identity' package is required to use '--use-azure-auth'. "
+                "Install it with 'pip install azure-identity' and try again."
+            )
+
+    AzureCliCredential = _MissingAzureIdentityCredential
+    InteractiveBrowserCredential = _MissingAzureIdentityCredential
 
 
 class TestCategory(Enum):

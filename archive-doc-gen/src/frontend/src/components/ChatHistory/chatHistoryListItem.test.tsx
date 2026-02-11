@@ -569,12 +569,12 @@ describe('ChatHistoryListItemCell', () => {
     })
 
     const inputItem = screen.getByPlaceholderText(conversation.title)
-    fireEvent.change(inputItem, { target: { value: 'Test Chat' } })
+    fireEvent.change(inputItem, { target: { value: 'Another Existing Chat' } })
 
     fireEvent.keyDown(inputItem, { key: 'Enter', code: 'Enter', charCode: 13 })
 
     await waitFor(() => {
-      expect(screen.getByText(/Error: Enter a new title to proceed./i)).toBeInTheDocument()
+      expect(screen.getByText(/Error: could not rename item/i)).toBeInTheDocument()
     })
   })
 

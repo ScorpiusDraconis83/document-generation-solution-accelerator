@@ -40,7 +40,7 @@ import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import Dict
 
 try:
     import httpx

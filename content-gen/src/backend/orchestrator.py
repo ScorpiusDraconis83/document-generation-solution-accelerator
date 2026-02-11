@@ -1514,7 +1514,10 @@ Use the detailed visual descriptions above to ensure accurate color reproduction
                                     except Exception as parse_error:
                                         # Best-effort JSON extraction from markdown code block; on failure,
                                         # fall back to the original prompt_text without interrupting image generation.
-                                        logger.debug(f"Failed to parse JSON from markdown code block for image prompt: {parse_error}")
+                                        logger.debug(
+                                            "Failed to parse JSON from markdown code block for image prompt: %s",
+                                            parse_error,
+                                        )
                         
                         # Build product description for DALL-E context
                         # Include detailed image descriptions if available for better color accuracy
