@@ -240,9 +240,9 @@ var useExistingAiFoundryAiProject = !empty(azureExistingAIProjectResourceId)
 var aiFoundryAiServicesResourceGroupName = useExistingAiFoundryAiProject
   ? split(azureExistingAIProjectResourceId, '/')[4]
   : 'rg-${solutionSuffix}'
-// var aiFoundryAiServicesSubscriptionId = useExistingAiFoundryAiProject
-//   ? split(azureExistingAIProjectResourceId, '/')[2]
-//   : subscription().id
+var aiFoundryAiServicesSubscriptionId = useExistingAiFoundryAiProject
+  ? split(azureExistingAIProjectResourceId, '/')[2]
+  : subscription().subscriptionId
 var aiFoundryAiServicesResourceName = useExistingAiFoundryAiProject
   ? split(azureExistingAIProjectResourceId, '/')[8]
   : 'aif-${solutionSuffix}'
@@ -571,6 +571,17 @@ module aiFoundryAiServicesProject 'modules/ai-project.bicep' = if (!useExistingA
 var aiFoundryAiProjectEndpoint = useExistingAiFoundryAiProject
   ? 'https://${aiFoundryAiServicesResourceName}.services.ai.azure.com/api/projects/${aiFoundryAiProjectResourceName}'
   : aiFoundryAiServicesProject!.outputs.apiEndpoint
+
+// ========== Role Assignments for Existing AI Services ========== //
+module existingAiServicesRoleAssignments 'modules/deploy_foundry_role_assignment.bicep' = if (useExistingAiFoundryAiProject) {
+  name: take('module.foundry-role-assignment.${aiFoundryAiServicesResourceName}', 64)
+  scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
+  params: {
+    aiServicesName: aiFoundryAiServicesResourceName
+    principalId: userAssignedIdentity.outputs.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
 
 // ========== AI Search ========== //
 module aiSearch 'br/public:avm/res/search/search-service:0.11.1' = {
