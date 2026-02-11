@@ -33,12 +33,12 @@ class ComplianceResult(BaseModel):
     """Result of compliance validation on generated content."""
     is_valid: bool = Field(description="True if no error-level violations")
     violations: List[ComplianceViolation] = Field(default_factory=list)
-    
+
     @property
     def has_errors(self) -> bool:
         """Check if there are any error-level violations."""
         return any(v.severity == ComplianceSeverity.ERROR for v in self.violations)
-    
+
     @property
     def has_warnings(self) -> bool:
         """Check if there are any warning-level violations."""
@@ -48,7 +48,7 @@ class ComplianceResult(BaseModel):
 class CreativeBrief(BaseModel):
     """
     Structured creative brief parsed from free-text input.
-    
+
     The PlanningAgent extracts these fields from user's natural language
     creative brief description.
     """
@@ -61,7 +61,7 @@ class CreativeBrief(BaseModel):
     timelines: str = Field(description="Due dates and milestones")
     visual_guidelines: str = Field(description="Image requirements and visual direction")
     cta: str = Field(description="Call to action text and placement")
-    
+
     # Metadata
     raw_input: Optional[str] = Field(default=None, description="Original free-text input")
     confidence_score: Optional[float] = Field(default=None, description="Extraction confidence 0-1")
@@ -70,7 +70,7 @@ class CreativeBrief(BaseModel):
 class Product(BaseModel):
     """
     Product information stored in CosmosDB.
-    
+
     Designed for paint catalog products with name, description, tags, and price.
     Image URLs reference product images stored in Azure Blob Storage.
     """
@@ -81,7 +81,7 @@ class Product(BaseModel):
     price: float = Field(description="Price in USD")
     sku: str = Field(description="Stock keeping unit identifier (e.g., 'CP-0001')")
     image_url: Optional[str] = Field(default=None, description="URL to product image in Blob Storage")
-    
+
     # Legacy fields for backward compatibility (optional)
     category: Optional[str] = Field(default="Paint", description="Product category")
     sub_category: Optional[str] = Field(default=None, description="Sub-category")
@@ -89,7 +89,7 @@ class Product(BaseModel):
     detailed_spec_description: Optional[str] = Field(default=None, description="Detailed specs")
     model: Optional[str] = Field(default=None, description="Model number")
     image_description: Optional[str] = Field(default=None, description="Text description of image")
-    
+
     # Metadata
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
@@ -121,7 +121,7 @@ class ContentGenerationResponse(BaseModel):
     products_used: List[str] = Field(default_factory=list, description="Product IDs used")
     generation_id: str = Field(description="Unique ID for this generation")
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    
+
     @property
     def requires_modification(self) -> bool:
         """Check if content has error-level violations requiring modification."""
@@ -137,7 +137,7 @@ class ConversationMessage(BaseModel):
     content: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
     feedback: Optional[str] = None
-    
+
     # For multimodal responses
     image_base64: Optional[str] = None
     compliance_warnings: Optional[List[ComplianceViolation]] = None
