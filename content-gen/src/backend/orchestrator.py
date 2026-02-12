@@ -1580,7 +1580,8 @@ Check against brand guidelines and flag any issues.
                     for v in results["violations"]
                 )
             except (json.JSONDecodeError, KeyError):
-                pass
+                # Failed to parse compliance response JSON; violations will remain empty
+                logger.debug("Could not parse compliance violations from response", exc_info=True)
 
         except Exception as e:
             logger.exception(f"Error generating content: {e}")

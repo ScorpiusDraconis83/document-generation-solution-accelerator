@@ -156,6 +156,7 @@ for REGION in "${REGIONS[@]}"; do
         continue
     fi
 
+    IMAGE_MODEL_AVAILABLE=false
     AT_LEAST_ONE_MODEL_AVAILABLE=false
     TEMP_TABLE_ROWS=()
 
@@ -199,6 +200,9 @@ for REGION in "${REGIONS[@]}"; do
 
                 if [ "$AVAILABLE" -ge "$REQUIRED_CAPACITY" ]; then
                     FOUND=true
+                    if [ "$MODEL_NAME" = "gpt-image-1" ]; then
+                        IMAGE_MODEL_AVAILABLE=true
+                    fi
                     AT_LEAST_ONE_MODEL_AVAILABLE=true
                     TEMP_TABLE_ROWS+=("$(printf "| %-4s | %-20s | %-43s | %-10s | %-10s | %-10s |" "$INDEX" "$REGION" "$MODEL_TYPE" "$LIMIT" "$CURRENT_VALUE" "$AVAILABLE")")
                 else
@@ -215,8 +219,7 @@ for REGION in "${REGIONS[@]}"; do
         done
     done
 
-    # For content-gen, we only need GPT-5.1, so check if at least one model is available
-    if [ "$AT_LEAST_ONE_MODEL_AVAILABLE" = true ] && [ "$INSUFFICIENT_QUOTA" = false ] && [ "$FOUND" = true ]; then
+if { [ "$IS_USER_PROVIDED_PAIRS" = true ] && [ "$INSUFFICIENT_QUOTA" = false ] && [ "$FOUND" = true ]; } || { [ "$IMAGE_MODEL_AVAILABLE" = true ] && { [ "$APPLY_OR_CONDITION" != true ] || [ "$AT_LEAST_ONE_MODEL_AVAILABLE" = true ]; }; }; then
         VALID_REGIONS+=("$REGION")
         TABLE_ROWS+=("${TEMP_TABLE_ROWS[@]}")
         INDEX=$((INDEX + 1))
