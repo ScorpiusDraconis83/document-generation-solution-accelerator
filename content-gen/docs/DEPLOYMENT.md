@@ -134,13 +134,12 @@ When you start the deployment, most parameters will have **default values**, but
 | ------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ---------------------- |
 | **Azure Region**                            | The region where resources will be created.                                                               | *(empty)*              |
 | **Environment Name**                        | A **3–20 character alphanumeric value** used to generate a unique ID to prefix the resources.             | env\_name              |
-| **GPT Model**                               | Choose from **gpt-4, gpt-4o, gpt-4o-mini**.                                                               | gpt-4o-mini            |
-| **GPT Model Version**                       | The version of the selected GPT model.                                                                    | 2024-07-18             |
+| **GPT Model**                               | Choose from **gpt-4, gpt-4o, gpt-4o-mini, gpt-5.1**.                                                               | gpt-5.1           |
+| **GPT Model Version**                       | The version of the selected GPT model.                                                                    | 2025-11-13            |
 | **OpenAI API Version**                      | The Azure OpenAI API version to use.                                                                      | 2025-01-01-preview     |
-| **GPT Model Deployment Capacity**           | Configure capacity for **GPT models** (in thousands).                                                     | 30k                    |
-| **DALL-E Model**                            | DALL-E model for image generation.                                                                        | dall-e-3               |
+| **GPT Model Deployment Capacity**           | Configure capacity for **GPT models** (in thousands).                                                     | 150k                    |
+| **Image Model**                            | Choose from **dall-e-3, gpt-image-1, gpt-image-1.5**                                                                          | gpt-image-1             |
 | **Image Tag**                               | Docker image tag to deploy. Common values: `latest`, `dev`, `hotfix`.                                     | latest                 |
-| **Use Local Build**                         | Boolean flag to determine if local container builds should be used.                                       | false                  |
 | **Existing Log Analytics Workspace**        | To reuse an existing Log Analytics Workspace ID.                                                          | *(empty)*              |
 | **Existing Azure AI Foundry Project**       | To reuse an existing Azure AI Foundry Project ID instead of creating a new one.                           | *(empty)*              |
 
@@ -171,29 +170,13 @@ Once you've opened the project in [Codespaces](#github-codespaces), [Dev Contain
    
     Follow steps in [App Authentication](./AppAuthentication.md) to configure authentication in app service. Note: Authentication changes can take up to 10 minutes.
 
-2. **Assign RBAC Roles (if needed)**
-
-    If you encounter 401/403 errors, run the RBAC assignment script and wait 5-10 minutes for propagation:
-
-    ```shell
-    bash ./scripts/assign_rbac_roles.sh
-    ```
-
-3. **Deleting Resources After a Failed Deployment**  
+2. **Deleting Resources After a Failed Deployment**  
     - Follow steps in [Delete Resource Group](./DeleteResourceGroup.md) if your deployment fails and/or you need to clean up the resources.
 
 ## Troubleshooting
 
 <details>
   <summary><b>Common Issues and Solutions</b></summary>
-
-### 401 Unauthorized Errors
-
-**Symptom**: API calls return 401 errors
-
-**Cause**: Missing RBAC role assignments
-
-**Solution**: Run `assign_rbac_roles.sh` and wait 5-10 minutes for propagation
 
 ### 403 Forbidden from Cosmos DB
 
@@ -230,56 +213,29 @@ az webapp config set -g $RESOURCE_GROUP -n <app-name> --http20-enabled false
 
 ### Image Generation Not Working
 
-**Symptom**: DALL-E requests fail
+**Symptom**: DALL-E/GPT-Image requests fail
 
-**Cause**: Missing DALL-E model deployment or incorrect endpoint
+**Cause**: Missing DALL-E/GPT-Image model deployment or incorrect endpoint
 
 **Solution**: 
-1. Verify DALL-E 3 deployment exists in Azure OpenAI resource
-2. Check `AZURE_OPENAI_DALLE_ENDPOINT` and `AZURE_OPENAI_DALLE_DEPLOYMENT` environment variables
+1. Verify DALL-E 3 or GPT-Image-1 or GPT-Image-1.5 deployment exists in Azure OpenAI resource
+2. Check `AZURE_OPENAI_IMAGE_MODEL` environment variable
 
 </details>
 
-## Environment Variables Reference
+## Sample Workflow
 
-<details>
-  <summary><b>Backend Environment Variables (ACI)</b></summary>
+To get started with the Content Generation solution, follow these steps:
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| AZURE_OPENAI_ENDPOINT | GPT model endpoint | https://ai-account.cognitiveservices.azure.com/ |
-| AZURE_OPENAI_DEPLOYMENT_NAME | GPT deployment name | gpt-4o-mini |
-| AZURE_OPENAI_DALLE_ENDPOINT | DALL-E endpoint | https://dalle-account.cognitiveservices.azure.com/ |
-| AZURE_OPENAI_DALLE_DEPLOYMENT | DALL-E deployment name | dall-e-3 |
-| COSMOS_ENDPOINT | Cosmos DB endpoint | https://cosmos.documents.azure.com:443/ |
-| COSMOS_DATABASE | Database name | content-generation |
-| AZURE_STORAGE_ACCOUNT_NAME | Storage account | storagecontentgen |
-| AZURE_STORAGE_CONTAINER | Product images container | product-images |
-| AZURE_STORAGE_GENERATED_CONTAINER | Generated images container | generated-images |
+1. **Task:** From the welcome screen, select one of the suggested prompts. Sample prompts include:
+   - *"I need to create a social media post about paint products for home remodels. The campaign is titled 'Brighten Your Springtime' and the audience is new homeowners. I need marketing copy plus an image."*
+   - *"Generate a social media campaign with ad copy and an image. This is for 'Back to School' and the audience is parents of school age children. Tone is playful and humorous."*
 
-</details>
+2. **Task:** Click the **"Confirm Brief"** button.
+   > **Observe:** The system analyzes the creative brief to provide suggestions later.
 
-<details>
-  <summary><b>Frontend Environment Variables (App Service)</b></summary>
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| BACKEND_URL | Backend API URL | http://backend.contentgen.internal:8000 |
-| WEBSITES_PORT | App Service port | 3000 |
-
-</details>
-
-## Sample Prompts
-
-To help you get started, here are some **sample prompts** you can use with the Content Generation Solution:
-
-- "Create a product description for a new eco-friendly water bottle"
-- "Generate marketing copy for a summer sale campaign"
-- "Write social media posts promoting our latest product launch"
-- "Create an image for a blog post about sustainable living"
-- "Generate a product image showing a modern office setup"
-
-These prompts serve as a great starting point to explore the solution's capabilities with text generation, image generation, and content management.
+3. **Task:** Select a product from the product list, then click **"Generate Content"**.
+   > **Observe:** Enters "Thinking Process" with a "Generating Content.." spinner. Once complete, the detailed output is displayed.
 
 ## Architecture Overview
 
