@@ -32,6 +32,6 @@ jobs:
           pip install -r content-gen/src/backend/requirements.txt
           pip install flake8  # Ensure flake8 is installed explicitly
       
-      - name: Run flake8 and pylint
+      - name: Run flake8
         run: |
           flake8 --config=.flake8 content-gen/src/backend  # Specify the directory to lint
