@@ -163,7 +163,7 @@ Depending on your subscription quota and capacity, you can adjust quota settings
 
 ### Deploying with AZD
 
-Once you've opened the project in [Codespaces](#github-codespaces), [Dev Containers](#vs-code-dev-containers), or [locally](#local-environment), you can deploy it to Azure by following the steps in the [AZD Deployment Guide](AZD_DEPLOYMENT.md)
+Once you've opened the project in [Codespaces](#github-codespaces), [Dev Containers](#vs-code-dev-containers), or [locally](#local-environment), you can deploy it to Azure by following the steps in the [AZD Deployment Guide](AZD_DEPLOYMENT.md).
 
 ## Post Deployment Steps
 

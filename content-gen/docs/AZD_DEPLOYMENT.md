@@ -101,21 +101,28 @@ azd env set embeddingDeploymentCapacity 50
 azd env set azureOpenaiAPIVersion 2024-12-01-preview
 ```
 
-### 4. Enable Optional Features (WAF Pillars)
+### 4. Choose Deployment Configuration
 
-```bash
-# Enable private networking (VNet integration)
-azd env set enablePrivateNetworking true
+The [`infra`](../infra) folder contains the [`main.bicep`](../infra/main.bicep) Bicep script, which defines all Azure infrastructure components for this solution.
 
-# Enable monitoring (Log Analytics + App Insights)
-azd env set enableMonitoring true
+By default, the `azd up` command uses the [`main.parameters.json`](../infra/main.parameters.json) file to deploy the solution. This file is pre-configured for a **sandbox environment**.
 
-# Enable scalability (auto-scaling, higher SKUs)
-azd env set enableScalability true
+For **production deployments**, the repository also provides [`main.waf.parameters.json`](../infra/main.waf.parameters.json), which applies a [Well-Architected Framework (WAF) aligned](https://learn.microsoft.com/en-us/azure/well-architected/) configuration. This can be used for Production scenarios.
 
-# Enable redundancy (zone redundancy, geo-replication)
-azd env set enableRedundancy true
-```
+**How to choose your deployment configuration:**
+
+* **To use sandbox/dev environment** — Use the default `main.parameters.json` file.
+
+* **To use production configuration:**
+
+Before running `azd up`, copy the contents from the production configuration file to your main parameters file:
+
+1. Navigate to the `infra` folder in your project.
+2. Open `main.waf.parameters.json` in a text editor (like Notepad, VS Code, etc.).
+3. Select all content (Ctrl+A) and copy it (Ctrl+C).
+4. Open `main.parameters.json` in the same text editor.
+5. Select all existing content (Ctrl+A) and paste the copied content (Ctrl+V).
+6. Save the file (Ctrl+S).
 
 ### 5. Deploy
 
