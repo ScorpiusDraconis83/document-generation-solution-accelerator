@@ -21,9 +21,6 @@ import logging
 import re
 from typing import AsyncIterator, Optional, cast
 
-# Token endpoint for Azure Cognitive Services (used for Azure OpenAI)
-TOKEN_ENDPOINT = "https://cognitiveservices.azure.com/.default"
-
 from agent_framework import (
     ChatMessage,
     HandoffBuilder,
@@ -47,6 +44,9 @@ from models import CreativeBrief
 from settings import app_settings
 
 logger = logging.getLogger(__name__)
+
+# Token endpoint for Azure Cognitive Services (used for Azure OpenAI)
+TOKEN_ENDPOINT = "https://cognitiveservices.azure.com/.default"
 
 
 # Harmful content patterns to detect in USER INPUT before processing
@@ -85,27 +85,27 @@ _HARMFUL_PATTERNS_COMPILED = [re.compile(pattern, re.IGNORECASE) for pattern in 
 def _check_input_for_harmful_content(message: str) -> tuple[bool, str]:
     """
     Proactively check user input for harmful content BEFORE sending to agents.
-    
+
     This is the first line of defense - catching harmful requests at the input
     layer rather than relying on the agent to refuse.
-    
+
     Args:
         message: The user's input message
-        
+
     Returns:
         tuple: (is_harmful: bool, matched_pattern: str or empty)
     """
     if not message:
         return False, ""
-    
+
     message_lower = message.lower()
-    
+
     for i, pattern in enumerate(_HARMFUL_PATTERNS_COMPILED):
         if pattern.search(message_lower):
             matched = HARMFUL_INPUT_PATTERNS[i]
             logger.warning(f"Harmful content detected in user input. Pattern: {matched}")
             return True, matched
-    
+
     return False, ""
 
 
@@ -116,7 +116,7 @@ SYSTEM_PROMPT_PATTERNS = [
     r"You are an? \w+ Agent",
     r"You are a Triage Agent",
     r"You are a Planning Agent",
-    r"You are a Research Agent", 
+    r"You are a Research Agent",
     r"You are a Text Content Agent",
     r"You are an Image Content Agent",
     r"You are a Compliance Agent",
@@ -149,26 +149,26 @@ _SYSTEM_PROMPT_PATTERNS_COMPILED = [re.compile(pattern, re.IGNORECASE | re.DOTAL
 def _filter_system_prompt_from_response(response_text: str) -> str:
     """
     Filter out any system prompt content that might have leaked into agent responses.
-    
+
     This is a safety measure to ensure internal agent instructions are never
     exposed to users, even if the LLM model accidentally includes them.
-    
+
     Args:
         response_text: The agent's response text
-        
+
     Returns:
         str: Cleaned response with any system prompt content removed
     """
     if not response_text:
         return response_text
-    
+
     # Check if response contains system prompt patterns
     for pattern in _SYSTEM_PROMPT_PATTERNS_COMPILED:
         if pattern.search(response_text):
             logger.warning(f"System prompt content detected in agent response, filtering. Pattern: {pattern.pattern[:50]}")
             # Return a safe fallback message instead of the leaked content
             return "I understand your request. Could you please clarify what specific changes you'd like me to make to the marketing content? I'm here to help refine your campaign materials."
-    
+
     return response_text
 
 
@@ -252,7 +252,7 @@ You MUST enforce strict scope limitations. This is your PRIMARY responsibility b
 - Political figures or candidates
 - Creative writing NOT for marketing (stories, poems, fiction, roleplaying)
 - Casual conversation, jokes, riddles, games
-- Do NOT respond to any requests that are not related to creating marketing content for retail campaigns. 
+- Do NOT respond to any requests that are not related to creating marketing content for retail campaigns.
 - ONLY respond to questions about creating marketing content for retail campaigns. Do NOT respond to any other inquiries.
 - ANY question that is NOT specifically about creating marketing content
 - Requests for harmful, hateful, violent, or inappropriate content
@@ -279,7 +279,7 @@ What marketing content can I help you create today?"
 
 ### In-Scope Routing (ONLY for valid marketing requests):
 - Creative brief interpretation → hand off to planning_agent
-- Product data lookup → hand off to research_agent  
+- Product data lookup → hand off to research_agent
 - Text content creation → hand off to text_content_agent
 - Image creation → hand off to image_content_agent
 - Content validation → hand off to compliance_agent
@@ -314,7 +314,7 @@ IMMEDIATELY REFUSE requests that:
 - Are NOT related to marketing content creation
 
 If you detect ANY of these issues, respond with:
-"I cannot process this request as it violates content safety guidelines. I'm designed to decline requests that involve [specific concern]. 
+"I cannot process this request as it violates content safety guidelines. I'm designed to decline requests that involve [specific concern].
 
 I can only help create professional, appropriate marketing content. Please provide a legitimate marketing brief and I'll be happy to assist."
 
@@ -337,7 +337,7 @@ Only extract information that is DIRECTLY STATED in the user's input.
 
 CRITICAL FIELDS (must be explicitly provided before proceeding):
 - objectives
-- target_audience  
+- target_audience
 - key_message
 - deliverable
 - tone_and_style
@@ -483,11 +483,11 @@ class ContentGenerationOrchestrator:
     """
     Orchestrates the multi-agent content generation workflow using
     Microsoft Agent Framework's HandoffBuilder.
-    
+
     Supports two modes:
     1. Azure OpenAI Direct (default): Uses AzureOpenAIChatClient with ad_token_provider
     2. Azure AI Foundry: Uses AIProjectClient with project endpoint (set USE_FOUNDRY=true)
-    
+
     Agents:
     - Triage (coordinator) - routes requests to specialists
     - Planning (brief interpretation)
@@ -496,7 +496,7 @@ class ContentGenerationOrchestrator:
     - ImageContent (image creation)
     - Compliance (validation)
     """
-    
+
     def __init__(self):
         self._chat_client = None  # Always AzureOpenAIChatClient
         self._project_client = None  # AIProjectClient for Foundry mode (used for image generation)
@@ -506,12 +506,12 @@ class ContentGenerationOrchestrator:
         self._initialized = False
         self._use_foundry = app_settings.ai_foundry.use_foundry
         self._credential = None
-    
+
     def _get_chat_client(self):
         """Get or create the chat client (Azure OpenAI or Foundry)."""
         if self._chat_client is None:
             self._credential = DefaultAzureCredential()
-            
+
             if self._use_foundry:
                 # Azure AI Foundry mode
                 # Use AIProjectClient for project operations but use direct Azure OpenAI endpoint for chat
@@ -520,37 +520,37 @@ class ContentGenerationOrchestrator:
                         "Azure AI Foundry SDK not installed. "
                         "Install with: pip install azure-ai-projects"
                     )
-                
+
                 project_endpoint = app_settings.ai_foundry.project_endpoint
                 if not project_endpoint:
                     raise ValueError("AZURE_AI_PROJECT_ENDPOINT is required when USE_FOUNDRY=true")
-                
+
                 logger.info(f"Using Azure AI Foundry mode with project: {project_endpoint}")
-                
+
                 # Create the AIProjectClient for project-specific operations (e.g., image generation)
                 project_client = AIProjectClient(
                     endpoint=project_endpoint,
                     credential=self._credential,
                 )
-                
+
                 # Store the project client for image generation
                 self._project_client = project_client
-                
+
                 # For chat completions, use the direct Azure OpenAI endpoint
                 # The Foundry project uses Azure OpenAI under the hood, and we need the direct endpoint
                 # to properly authenticate with Cognitive Services token
                 azure_endpoint = app_settings.azure_openai.endpoint
                 if not azure_endpoint:
                     raise ValueError("AZURE_OPENAI_ENDPOINT is required for Foundry mode chat completions")
-                
+
                 def get_token() -> str:
                     """Token provider callable - invoked for each request to ensure fresh tokens."""
                     token = self._credential.get_token(TOKEN_ENDPOINT)
                     return token.token
-                
+
                 model_deployment = app_settings.ai_foundry.model_deployment or app_settings.azure_openai.gpt_model
                 api_version = app_settings.azure_openai.api_version
-                
+
                 logger.info(f"Foundry mode using Azure OpenAI endpoint: {azure_endpoint}, deployment: {model_deployment}")
                 self._chat_client = AzureOpenAIChatClient(
                     endpoint=azure_endpoint,
@@ -563,12 +563,12 @@ class ContentGenerationOrchestrator:
                 endpoint = app_settings.azure_openai.endpoint
                 if not endpoint:
                     raise ValueError("AZURE_OPENAI_ENDPOINT is not configured")
-                
+
                 def get_token() -> str:
                     """Token provider callable - invoked for each request to ensure fresh tokens."""
                     token = self._credential.get_token(TOKEN_ENDPOINT)
                     return token.token
-                
+
                 logger.info("Using Azure OpenAI Direct mode with ad_token_provider")
                 self._chat_client = AzureOpenAIChatClient(
                     endpoint=endpoint,
@@ -577,47 +577,47 @@ class ContentGenerationOrchestrator:
                     ad_token_provider=get_token,
                 )
         return self._chat_client
-    
+
     def initialize(self) -> None:
         """Initialize all agents and build the handoff workflow."""
         if self._initialized:
             return
-        
+
         mode_str = "Azure AI Foundry" if self._use_foundry else "Azure OpenAI Direct"
         logger.info(f"Initializing Content Generation Orchestrator ({mode_str} mode)...")
-        
+
         # Get the chat client
         chat_client = self._get_chat_client()
-        
+
         # Agent names - use underscores (AzureOpenAIChatClient works with both modes now)
         name_sep = "_"
-        
+
         # Create all agents
         triage_agent = chat_client.create_agent(
             name=f"triage{name_sep}agent",
             instructions=TRIAGE_INSTRUCTIONS,
         )
-        
+
         planning_agent = chat_client.create_agent(
             name=f"planning{name_sep}agent",
             instructions=PLANNING_INSTRUCTIONS,
         )
-        
+
         research_agent = chat_client.create_agent(
             name=f"research{name_sep}agent",
             instructions=RESEARCH_INSTRUCTIONS,
         )
-        
+
         text_content_agent = chat_client.create_agent(
             name=f"text{name_sep}content{name_sep}agent",
             instructions=TEXT_CONTENT_INSTRUCTIONS,
         )
-        
+
         image_content_agent = chat_client.create_agent(
             name=f"image{name_sep}content{name_sep}agent",
             instructions=IMAGE_CONTENT_INSTRUCTIONS,
         )
-        
+
         compliance_agent = chat_client.create_agent(
             name=f"compliance{name_sep}agent",
             instructions=COMPLIANCE_INSTRUCTIONS,
@@ -638,7 +638,7 @@ class ContentGenerationOrchestrator:
 
         # Workflow name - Foundry requires hyphens
         workflow_name = f"content{name_sep}generation{name_sep}workflow"
-        
+
         # Build the handoff workflow
         # Triage can route to all specialists
         # Specialists hand back to triage after completing their task
@@ -658,10 +658,10 @@ class ContentGenerationOrchestrator:
             .with_start_agent(triage_agent)
             # Triage can hand off to all specialists
             .add_handoff(triage_agent, [
-                planning_agent, 
-                research_agent, 
-                text_content_agent, 
-                image_content_agent, 
+                planning_agent,
+                research_agent,
+                text_content_agent,
+                image_content_agent,
                 compliance_agent
             ])
             # All specialists can hand back to triage
@@ -678,10 +678,10 @@ class ContentGenerationOrchestrator:
             )
             .build()
         )
-        
+
         self._initialized = True
         logger.info(f"Content Generation Orchestrator initialized successfully ({mode_str} mode)")
-    
+
     async def process_message(
         self,
         message: str,
@@ -690,23 +690,23 @@ class ContentGenerationOrchestrator:
     ) -> AsyncIterator[dict]:
         """
         Process a user message through the orchestrated workflow.
-        
+
         Uses the Agent Framework's HandoffBuilder workflow to coordinate
         between specialized agents.
-        
+
         Args:
             message: The user's input message
             conversation_id: Unique identifier for the conversation
             context: Optional context (previous messages, user preferences)
-        
+
         Yields:
             dict: Response chunks with agent responses and status updates
         """
         if not self._initialized:
             self.initialize()
-        
+
         logger.info(f"Processing message for conversation {conversation_id}")
-        
+
         # PROACTIVE CONTENT SAFETY CHECK - Block harmful content at input layer
         # This is the first line of defense, before any agent processes the request
         is_harmful, matched_pattern = _check_input_for_harmful_content(message)
@@ -723,18 +723,18 @@ class ContentGenerationOrchestrator:
                 "metadata": {"conversation_id": conversation_id}
             }
             return  # Exit immediately - do not process through agents
-        
+
         # Prepare the input with context
         full_input = message
         if context:
             full_input = f"Context:\n{json.dumps(context, indent=2)}\n\nUser Message:\n{message}"
-        
+
         try:
             # Collect events from the workflow stream
             events = []
             async for event in self._workflow.run_stream(full_input):
                 events.append(event)
-                
+
                 # Handle different event types from the workflow
                 if isinstance(event, WorkflowStatusEvent):
                     yield {
@@ -743,7 +743,7 @@ class ContentGenerationOrchestrator:
                         "is_final": False,
                         "metadata": {"conversation_id": conversation_id}
                     }
-                
+
                 elif isinstance(event, RequestInfoEvent):
                     # Workflow is requesting user input
                     if isinstance(event.data, HandoffAgentUserRequest):
@@ -751,17 +751,17 @@ class ContentGenerationOrchestrator:
                         messages = event.data.agent_response.messages if hasattr(event.data, 'agent_response') and event.data.agent_response else []
                         if not isinstance(messages, list):
                             messages = [messages] if messages else []
-                        
+
                         conversation_text = "\n".join([
                             f"{msg.author_name or msg.role.value}: {msg.text}"
                             for msg in messages
                         ])
-                        
+
                         # Get the last message content and filter any system prompt leakage
                         last_msg_content = messages[-1].text if messages else (event.data.agent_response.text if hasattr(event.data, 'agent_response') and event.data.agent_response else "")
                         last_msg_content = _filter_system_prompt_from_response(last_msg_content)
                         last_msg_agent = messages[-1].author_name if messages and hasattr(messages[-1], 'author_name') else "unknown"
-                        
+
                         yield {
                             "type": "agent_response",
                             "agent": last_msg_agent,
@@ -772,14 +772,14 @@ class ContentGenerationOrchestrator:
                             "request_id": event.request_id,
                             "metadata": {"conversation_id": conversation_id}
                         }
-                
+
                 elif isinstance(event, WorkflowOutputEvent):
                     # Final output from the workflow
                     conversation = cast(list[ChatMessage], event.data)
                     if isinstance(conversation, list) and conversation:
                         # Get the last assistant message as the final response
                         assistant_messages = [
-                            msg for msg in conversation 
+                            msg for msg in conversation
                             if msg.role.value != "user"
                         ]
                         if assistant_messages:
@@ -793,7 +793,7 @@ class ContentGenerationOrchestrator:
                                 "is_final": True,
                                 "metadata": {"conversation_id": conversation_id}
                             }
-        
+
         except Exception as e:
             logger.exception(f"Error processing message: {e}")
             yield {
@@ -802,7 +802,7 @@ class ContentGenerationOrchestrator:
                 "is_final": True,
                 "metadata": {"conversation_id": conversation_id}
             }
-    
+
     async def send_user_response(
         self,
         request_id: str,
@@ -811,18 +811,18 @@ class ContentGenerationOrchestrator:
     ) -> AsyncIterator[dict]:
         """
         Send a user response to a pending workflow request.
-        
+
         Args:
             request_id: The ID of the pending request
             user_response: The user's response
             conversation_id: Unique identifier for the conversation
-        
+
         Yields:
             dict: Response chunks from continuing the workflow
         """
         if not self._initialized:
             self.initialize()
-        
+
         # PROACTIVE CONTENT SAFETY CHECK - Block harmful content in follow-up messages too
         is_harmful, matched_pattern = _check_input_for_harmful_content(user_response)
         if is_harmful:
@@ -837,7 +837,7 @@ class ContentGenerationOrchestrator:
                 "metadata": {"conversation_id": conversation_id}
             }
             return  # Exit immediately - do not continue workflow
-        
+
         try:
             responses = {request_id: user_response}
             async for event in self._workflow.send_responses_streaming(responses):
@@ -848,19 +848,19 @@ class ContentGenerationOrchestrator:
                         "is_final": False,
                         "metadata": {"conversation_id": conversation_id}
                     }
-                
+
                 elif isinstance(event, RequestInfoEvent):
                     if isinstance(event.data, HandoffAgentUserRequest):
                         # Get messages from agent_response (updated API)
                         messages = event.data.agent_response.messages if hasattr(event.data, 'agent_response') and event.data.agent_response else []
                         if not isinstance(messages, list):
                             messages = [messages] if messages else []
-                        
+
                         # Get the last message content and filter any system prompt leakage
                         last_msg_content = messages[-1].text if messages else (event.data.agent_response.text if hasattr(event.data, 'agent_response') and event.data.agent_response else "")
                         last_msg_content = _filter_system_prompt_from_response(last_msg_content)
                         last_msg_agent = messages[-1].author_name if messages and hasattr(messages[-1], 'author_name') else "unknown"
-                        
+
                         yield {
                             "type": "agent_response",
                             "agent": last_msg_agent,
@@ -870,12 +870,12 @@ class ContentGenerationOrchestrator:
                             "request_id": event.request_id,
                             "metadata": {"conversation_id": conversation_id}
                         }
-                
+
                 elif isinstance(event, WorkflowOutputEvent):
                     conversation = cast(list[ChatMessage], event.data)
                     if isinstance(conversation, list) and conversation:
                         assistant_messages = [
-                            msg for msg in conversation 
+                            msg for msg in conversation
                             if msg.role.value != "user"
                         ]
                         if assistant_messages:
@@ -889,7 +889,7 @@ class ContentGenerationOrchestrator:
                                 "is_final": True,
                                 "metadata": {"conversation_id": conversation_id}
                             }
-        
+
         except Exception as e:
             logger.exception(f"Error sending user response: {e}")
             yield {
@@ -898,7 +898,7 @@ class ContentGenerationOrchestrator:
                 "is_final": True,
                 "metadata": {"conversation_id": conversation_id}
             }
-    
+
     async def parse_brief(
         self,
         brief_text: str
@@ -906,10 +906,10 @@ class ContentGenerationOrchestrator:
         """
         Parse a free-text creative brief into structured format.
         If critical information is missing, return clarifying questions.
-        
+
         Args:
             brief_text: Free-text creative brief from user
-        
+
         Returns:
             tuple: (CreativeBrief, clarifying_questions_or_none, is_blocked)
                 - If all critical fields are provided: (brief, None, False)
@@ -918,7 +918,7 @@ class ContentGenerationOrchestrator:
         """
         if not self._initialized:
             self.initialize()
-        
+
         # PROACTIVE CONTENT SAFETY CHECK - Block harmful content at input layer
         is_harmful, matched_pattern = _check_input_for_harmful_content(brief_text)
         if is_harmful:
@@ -936,13 +936,13 @@ class ContentGenerationOrchestrator:
                 cta=""
             )
             return empty_brief, RAI_HARMFUL_CONTENT_RESPONSE, True
-        
+
         # SECONDARY RAI CHECK - Use LLM-based classifier for comprehensive safety/scope validation
         try:
             rai_response = await self._rai_agent.run(brief_text)
             rai_result = str(rai_response).strip().upper()
             logger.info(f"RAI agent response for parse_brief: {rai_result}")
-            
+
             if rai_result == "TRUE":
                 logger.warning(f"RAI agent blocked content in parse_brief: {brief_text[:100]}...")
                 empty_brief = CreativeBrief(
@@ -961,7 +961,7 @@ class ContentGenerationOrchestrator:
             # Log the error but continue - don't block legitimate requests due to RAI agent failures
             logger.warning(f"RAI agent check failed in parse_brief, continuing: {rai_error}")
         planning_agent = self._agents["planning"]
-        
+
         # First, analyze the brief and check for missing critical fields
         analysis_prompt = f"""
 Analyze this creative brief request and determine if all critical information is provided.
@@ -1006,10 +1006,10 @@ Analyze this creative brief request and determine if all critical information is
 - Do NOT invent or assume information that wasn't explicitly stated
 - Make clarifying questions specific to the user's context (reference their product/campaign)
 """
-        
+
         # Use the agent's run method
         response = await planning_agent.run(analysis_prompt)
-        
+
         # Parse the analysis response
         try:
             response_text = str(response)
@@ -1021,10 +1021,10 @@ Analyze this creative brief request and determine if all critical information is
                 json_start = response_text.index("```") + 3
                 json_end = response_text.index("```", json_start)
                 response_text = response_text[json_start:json_end].strip()
-            
+
             analysis = json.loads(response_text)
             brief_data = analysis.get("extracted_fields", {})
-            
+
             # Ensure all fields are strings
             for key in brief_data:
                 if isinstance(brief_data[key], dict):
@@ -1035,26 +1035,26 @@ Analyze this creative brief request and determine if all critical information is
                     brief_data[key] = ""
                 elif not isinstance(brief_data[key], str):
                     brief_data[key] = str(brief_data[key])
-            
+
             # Ensure all required fields exist
-            for field in ['overview', 'objectives', 'target_audience', 'key_message', 
+            for field in ['overview', 'objectives', 'target_audience', 'key_message',
                           'tone_and_style', 'deliverable', 'timelines', 'visual_guidelines', 'cta']:
                 if field not in brief_data:
                     brief_data[field] = ""
-            
+
             brief = CreativeBrief(**brief_data)
-            
+
             # Check if we need clarifying questions
             if analysis.get("status") == "incomplete" and analysis.get("clarifying_message"):
                 return (brief, analysis["clarifying_message"], False)
-            
+
             return (brief, None, False)
-            
+
         except Exception as e:
             logger.error(f"Failed to parse brief analysis response: {e}")
             # Fallback to basic extraction
             return (self._extract_brief_from_text(brief_text), None, False)
-    
+
     def _extract_brief_from_text(self, text: str) -> CreativeBrief:
         """Extract brief fields from labeled text like 'Overview: ...'"""
         fields = {
@@ -1068,7 +1068,7 @@ Analyze this creative brief request and determine if all critical information is
             'visual_guidelines': '',
             'cta': ''
         }
-        
+
         # Common label variations
         label_map = {
             'overview': ['overview'],
@@ -1081,15 +1081,15 @@ Analyze this creative brief request and determine if all critical information is
             'visual_guidelines': ['visual guidelines', 'visual_guidelines', 'visuals'],
             'cta': ['call to action', 'cta', 'call-to-action']
         }
-        
+
         lines = text.strip().split('\n')
         current_field = None
-        
+
         for line in lines:
             line = line.strip()
             if not line:
                 continue
-                
+
             # Check if line starts with a label
             found_label = False
             for field, labels in label_map.items():
@@ -1103,17 +1103,17 @@ Analyze this creative brief request and determine if all critical information is
                         break
                 if found_label:
                     break
-            
+
             # If no label found and we have a current field, append to it
             if not found_label and current_field:
                 fields[current_field] += ' ' + line
-        
+
         # If no fields were extracted, put everything in overview
         if not any(fields.values()):
             fields['overview'] = text
-        
+
         return CreativeBrief(**fields)
-    
+
     async def select_products(
         self,
         request_text: str,
@@ -1122,20 +1122,20 @@ Analyze this creative brief request and determine if all critical information is
     ) -> dict:
         """
         Select or modify product selection via natural language.
-        
+
         Args:
             request_text: User's natural language request for product selection
             current_products: Currently selected products (for modifications)
             available_products: List of available products to choose from
-        
+
         Returns:
             dict: Selected products and assistant message
         """
         if not self._initialized:
             self.initialize()
-        
+
         research_agent = self._agents["research"]
-        
+
         select_prompt = f"""
 You are helping a user select products for a marketing campaign.
 
@@ -1167,11 +1167,11 @@ Important:
 - For "search" action: include products matching the search criteria
 - Return complete product objects from the available catalog, not just names
 """
-        
+
         try:
             response = await research_agent.run(select_prompt)
             response_text = str(response)
-            
+
             # Extract JSON from response
             if "```json" in response_text:
                 json_start = response_text.index("```json") + 7
@@ -1181,7 +1181,7 @@ Important:
                 json_start = response_text.index("```") + 3
                 json_end = response_text.index("```", json_start)
                 response_text = response_text[json_start:json_end].strip()
-            
+
             result = json.loads(response_text)
             return {
                 "products": result.get("selected_products", []),
@@ -1199,11 +1199,11 @@ Important:
 
     async def _generate_foundry_image(self, image_prompt: str, results: dict) -> None:
         """Generate image using direct REST API call to Azure OpenAI endpoint.
-        
+
         Azure AI Foundry's agent-based image generation (Responses API) returns
         text descriptions instead of actual image data. This method uses a direct
         REST API call to the images/generations endpoint instead.
-        
+
         Args:
             image_prompt: The prompt for image generation
             results: The results dict to update with image data
@@ -1214,47 +1214,47 @@ Important:
             logger.error("httpx package not installed - required for Foundry image generation")
             results["image_error"] = "httpx package required for Foundry image generation"
             return
-        
+
         try:
             if not self._credential:
                 logger.error("Azure credential not available")
                 results["image_error"] = "Azure credential not configured"
                 return
-            
+
             # Get token for Azure Cognitive Services
             token = self._credential.get_token(TOKEN_ENDPOINT)
-            
+
             # Use the direct Azure OpenAI endpoint for image generation
             # This is different from the project endpoint - it goes directly to Azure OpenAI
             image_endpoint = app_settings.azure_openai.image_endpoint
             if not image_endpoint:
                 # Fallback: try to derive from regular OpenAI endpoint
                 image_endpoint = app_settings.azure_openai.endpoint
-            
+
             if not image_endpoint:
                 logger.error("No Azure OpenAI image endpoint configured")
                 results["image_error"] = "Image endpoint not configured"
                 return
-            
+
             # Ensure endpoint doesn't end with /
             image_endpoint = image_endpoint.rstrip('/')
-            
+
             image_deployment = app_settings.ai_foundry.image_deployment
             if not image_deployment:
                 image_deployment = app_settings.azure_openai.image_model
-            
+
             # The direct image API endpoint
             image_api_url = f"{image_endpoint}/openai/deployments/{image_deployment}/images/generations"
             api_version = app_settings.azure_openai.image_api_version or "2025-04-01-preview"
-            
+
             logger.info(f"Calling Foundry direct image API: {image_api_url}")
             logger.info(f"Prompt: {image_prompt[:200]}...")
-            
+
             headers = {
                 "Authorization": f"Bearer {token.token}",
                 "Content-Type": "application/json",
             }
-            
+
             # gpt-image-1 parameters (no response_format parameter)
             payload = {
                 "prompt": image_prompt,
@@ -1262,34 +1262,34 @@ Important:
                 "size": "1024x1024",
                 "quality": "medium",  # gpt-image-1 uses low/medium/high/auto
             }
-            
+
             async with httpx.AsyncClient(timeout=120.0) as client:
                 response = await client.post(
                     f"{image_api_url}?api-version={api_version}",
                     headers=headers,
                     json=payload,
                 )
-                
+
                 if response.status_code != 200:
                     error_text = response.text
                     logger.error(f"Foundry image API error {response.status_code}: {error_text[:500]}")
                     results["image_error"] = f"API error {response.status_code}: {error_text[:200]}"
                     return
-                
+
                 response_data = response.json()
-                
+
                 # Extract image data from response
                 data = response_data.get("data", [])
                 if not data:
                     logger.error("No image data in Foundry API response")
                     results["image_error"] = "No image data in API response"
                     return
-                
+
                 image_item = data[0]
-                
+
                 # Try to get base64 data (check both 'b64_json' and 'b64' fields)
                 image_base64 = image_item.get("b64_json") or image_item.get("b64")
-                
+
                 if not image_base64:
                     # If URL is provided instead, fetch the image
                     image_url = image_item.get("url")
@@ -1306,15 +1306,15 @@ Important:
                         logger.error(f"No base64 or URL in response. Keys: {list(image_item.keys())}")
                         results["image_error"] = f"No image data in response. Keys: {list(image_item.keys())}"
                         return
-                
+
                 # Store revised prompt if available
                 revised_prompt = image_item.get("revised_prompt")
                 if revised_prompt:
                     results["image_revised_prompt"] = revised_prompt
                     logger.info(f"Revised prompt: {revised_prompt[:100]}...")
-                
+
                 logger.info(f"Received image data ({len(image_base64)} chars)")
-                
+
                 # Validate base64 data
                 try:
                     decoded = base64.b64decode(image_base64)
@@ -1323,10 +1323,10 @@ Important:
                     logger.error(f"Failed to decode image data: {e}")
                     results["image_error"] = f"Failed to decode image: {e}"
                     return
-                
+
                 # Save to blob storage
                 await self._save_image_to_blob(image_base64, results)
-                
+
         except httpx.TimeoutException:
             logger.error("Foundry image generation request timed out")
             results["image_error"] = "Image generation timed out after 120 seconds"
@@ -1336,7 +1336,7 @@ Important:
 
     async def _save_image_to_blob(self, image_base64: str, results: dict) -> None:
         """Save generated image to blob storage.
-        
+
         Args:
             image_base64: Base64-encoded image data
             results: The results dict to update with blob URL or base64 fallback
@@ -1344,16 +1344,16 @@ Important:
         try:
             from services.blob_service import BlobStorageService
             from datetime import datetime
-            
+
             blob_service = BlobStorageService()
             gen_id = datetime.utcnow().strftime("%Y%m%d%H%M%S")
             logger.info(f"Saving image to blob storage (size: {len(image_base64)} bytes)...")
-            
+
             blob_url = await blob_service.save_generated_image(
                 conversation_id=f"gen_{gen_id}",
                 image_base64=image_base64
             )
-            
+
             if blob_url:
                 results["image_blob_url"] = blob_url
                 logger.info(f"Image saved to blob: {blob_url}")
@@ -1372,18 +1372,18 @@ Important:
     ) -> dict:
         """
         Generate complete content package from a confirmed creative brief.
-        
+
         Args:
             brief: Confirmed creative brief
             products: List of products to feature
             generate_images: Whether to generate images
-        
+
         Returns:
             dict: Generated content with compliance results
         """
         if not self._initialized:
             self.initialize()
-        
+
         results = {
             "text_content": None,
             "image_prompt": None,
@@ -1391,7 +1391,7 @@ Important:
             "violations": [],
             "requires_modification": False
         }
-        
+
         # Build the generation request for text content
         text_request = f"""
 Generate marketing content based on this creative brief:
@@ -1406,12 +1406,12 @@ CTA: {brief.cta}
 
 Products to feature: {json.dumps(products or [])}
 """
-        
+
         try:
             # Generate text content
             text_response = await self._agents["text_content"].run(text_request)
             results["text_content"] = str(text_response)
-            
+
             # Generate image prompt if requested
             if generate_images:
                 # Build product context for image generation
@@ -1426,16 +1426,16 @@ Products to feature: {json.dumps(products or [])}
                         desc = p.get('description', p.get('marketing_description', ''))
                         tags = p.get('tags', '')
                         product_details.append(f"- {name}: {desc} (Tags: {tags})")
-                        
+
                         # Include detailed image description if available
                         img_desc = p.get('image_description')
                         if img_desc:
                             image_descriptions.append(f"### {name} - Detailed Visual Description:\n{img_desc}")
-                    
+
                     product_context = "\n".join(product_details)
                     if image_descriptions:
                         detailed_image_context = "\n\n".join(image_descriptions)
-                
+
                 image_request = f"""
 Create an image generation prompt for this marketing campaign:
 
@@ -1455,34 +1455,34 @@ IMPORTANT: The generated image should visually represent the featured products u
 For paint products, show the paint colors in context (on walls, swatches, or room settings).
 Use the detailed visual descriptions above to ensure accurate color reproduction in the generated image.
 """
-                
+
                 # In Foundry mode, build the image prompt directly and use direct API
                 # In Direct mode, use the image agent to create the prompt
                 if self._use_foundry:
                     # Build a direct image prompt for Foundry
                     image_prompt_parts = ["Generate a professional marketing image:"]
-                    
+
                     if brief.visual_guidelines:
                         image_prompt_parts.append(f"Visual style: {brief.visual_guidelines}")
-                    
+
                     if brief.tone_and_style:
                         image_prompt_parts.append(f"Mood and tone: {brief.tone_and_style}")
-                    
+
                     if product_context:
                         image_prompt_parts.append(f"Products to feature: {product_context}")
-                    
+
                     if detailed_image_context:
                         image_prompt_parts.append(f"Product details: {detailed_image_context[:500]}")
-                    
+
                     if brief.key_message:
                         image_prompt_parts.append(f"Key message to convey: {brief.key_message}")
-                    
+
                     image_prompt_parts.append("Style: High-quality, photorealistic marketing photography with professional lighting.")
-                    
+
                     image_prompt = " ".join(image_prompt_parts)
                     results["image_prompt"] = image_prompt
                     logger.info(f"Created Foundry image prompt: {image_prompt[:200]}...")
-                    
+
                     # Generate image using direct Foundry API
                     logger.info("Generating image via Foundry direct API...")
                     await self._generate_foundry_image(image_prompt, results)
@@ -1490,14 +1490,14 @@ Use the detailed visual descriptions above to ensure accurate color reproduction
                     # Direct mode: use image agent to create prompt, then generate via DALL-E
                     image_response = await self._agents["image_content"].run(image_request)
                     results["image_prompt"] = str(image_response)
-                    
+
                     # Extract clean prompt from the response and generate actual image
                     try:
                         from agents.image_content_agent import generate_dalle_image
-                        
+
                         # Try to extract a clean prompt from the agent response
                         prompt_text = str(image_response)
-                        
+
                         # If response is JSON, extract the prompt field
                         if '{' in prompt_text:
                             try:
@@ -1511,13 +1511,17 @@ Use the detailed visual descriptions above to ensure accurate color reproduction
                                     try:
                                         prompt_data = json.loads(json_match.group(1))
                                         prompt_text = prompt_data.get('prompt', prompt_data.get('image_prompt', prompt_text))
-                                    except:
-                                        pass
-                        
+                                    except Exception:
+                                        logger.debug(
+                                            "Failed to parse JSON image prompt from markdown code block; "
+                                            "continuing with original prompt_text.",
+                                            exc_info=True
+                                        )
+
                         # Build product description for DALL-E context
                         # Include detailed image descriptions if available for better color accuracy
                         product_description = detailed_image_context if detailed_image_context else product_context
-                        
+
                         # Generate the actual image using DALL-E
                         logger.info(f"Generating DALL-E image with prompt: {prompt_text[:200]}...")
                         image_result = await generate_dalle_image(
@@ -1525,22 +1529,22 @@ Use the detailed visual descriptions above to ensure accurate color reproduction
                             product_description=product_description,
                             scene_description=brief.visual_guidelines
                         )
-                        
+
                         if image_result.get("success"):
                             image_base64 = image_result.get("image_base64")
                             results["image_revised_prompt"] = image_result.get("revised_prompt")
                             logger.info("DALL-E image generated successfully")
-                            
+
                             # Save to blob storage
                             await self._save_image_to_blob(image_base64, results)
                         else:
                             logger.warning(f"DALL-E image generation failed: {image_result.get('error')}")
                             results["image_error"] = image_result.get("error")
-                            
+
                     except Exception as img_error:
                         logger.exception(f"Error generating DALL-E image: {img_error}")
                         results["image_error"] = str(img_error)
-            
+
             # Run compliance check
             compliance_request = f"""
 Review this marketing content for compliance:
@@ -1555,7 +1559,7 @@ Check against brand guidelines and flag any issues.
 """
             compliance_response = await self._agents["compliance"].run(compliance_request)
             results["compliance"] = str(compliance_response)
-            
+
             # Try to parse compliance violations
             try:
                 compliance_data = json.loads(str(compliance_response))
@@ -1576,18 +1580,19 @@ Check against brand guidelines and flag any issues.
                     for v in results["violations"]
                 )
             except (json.JSONDecodeError, KeyError):
-                pass
-                
+                # Failed to parse compliance response JSON; violations will remain empty
+                logger.debug("Could not parse compliance violations from response", exc_info=True)
+
         except Exception as e:
             logger.exception(f"Error generating content: {e}")
             results["error"] = str(e)
-        
+
         # Log results summary before returning
         logger.info(f"Orchestrator returning results with keys: {list(results.keys())}")
         has_image = bool(results.get("image_base64"))
         image_size = len(results.get("image_base64", "")) if has_image else 0
         logger.info(f"Orchestrator results: has_image={has_image}, image_size={image_size}, has_error={bool(results.get('error'))}")
-        
+
         return results
 
     async def regenerate_image(
@@ -1599,24 +1604,24 @@ Check against brand guidelines and flag any issues.
     ) -> dict:
         """
         Regenerate just the image based on a user modification request.
-        
+
         This method is called when the user wants to modify the generated image
         after initial content generation (e.g., "show a kitchen instead of dining room").
-        
+
         Args:
             modification_request: User's request for how to modify the image
             brief: The confirmed creative brief
             products: List of products to feature
             previous_image_prompt: The previous image prompt (if available)
-        
+
         Returns:
             dict: Regenerated image with updated prompt
         """
         if not self._initialized:
             self.initialize()
-        
+
         logger.info(f"Regenerating image with modification: {modification_request[:100]}...")
-        
+
         # PROACTIVE CONTENT SAFETY CHECK
         is_harmful, matched_pattern = _check_input_for_harmful_content(modification_request)
         if is_harmful:
@@ -1626,7 +1631,7 @@ Check against brand guidelines and flag any issues.
                 "rai_blocked": True,
                 "blocked_reason": "harmful_content_detected"
             }
-        
+
         results = {
             "image_prompt": None,
             "image_base64": None,
@@ -1634,7 +1639,7 @@ Check against brand guidelines and flag any issues.
             "image_revised_prompt": None,
             "message": None
         }
-        
+
         # Build product context
         product_context = ""
         detailed_image_context = ""
@@ -1646,24 +1651,24 @@ Check against brand guidelines and flag any issues.
                 desc = p.get('description', p.get('marketing_description', ''))
                 tags = p.get('tags', '')
                 product_details.append(f"- {name}: {desc} (Tags: {tags})")
-                
+
                 img_desc = p.get('image_description')
                 if img_desc:
                     image_descriptions.append(f"### {name} - Detailed Visual Description:\n{img_desc}")
-            
+
             product_context = "\n".join(product_details)
             if image_descriptions:
                 detailed_image_context = "\n\n".join(image_descriptions)
-        
+
         # Prepare optional sections for the prompt
         detailed_product_section = ""
         if detailed_image_context:
             detailed_product_section = f"DETAILED PRODUCT DESCRIPTIONS:\n{detailed_image_context}"
-        
+
         previous_prompt_section = ""
         if previous_image_prompt:
             previous_prompt_section = f"PREVIOUS IMAGE PROMPT:\n{previous_image_prompt}"
-        
+
         try:
             # Use the image content agent to create a modified prompt
             modification_prompt = f"""
@@ -1694,41 +1699,41 @@ Return JSON with:
 - "style": Visual style description
 - "change_summary": Brief summary of what was changed
 """
-            
+
             if self._use_foundry:
                 # Foundry mode: build prompt directly and call image API
                 # Combine original brief context with modification
                 new_prompt_parts = ["Generate a professional marketing image:"]
-                
+
                 # Apply the modification to visual guidelines
                 if brief.visual_guidelines:
                     new_prompt_parts.append(f"Visual style: {brief.visual_guidelines}")
-                
+
                 if brief.tone_and_style:
                     new_prompt_parts.append(f"Mood and tone: {brief.tone_and_style}")
-                
+
                 if product_context:
                     new_prompt_parts.append(f"Products to feature: {product_context}")
-                
+
                 # The key modification - incorporate user's change
                 new_prompt_parts.append(f"IMPORTANT MODIFICATION: {modification_request}")
-                
+
                 if brief.key_message:
                     new_prompt_parts.append(f"Key message to convey: {brief.key_message}")
-                
+
                 new_prompt_parts.append("Style: High-quality, photorealistic marketing photography with professional lighting.")
-                
+
                 image_prompt = " ".join(new_prompt_parts)
                 results["image_prompt"] = image_prompt
                 results["message"] = f"Regenerating image with your requested changes: {modification_request}"
-                
+
                 logger.info(f"Created modified Foundry image prompt: {image_prompt[:200]}...")
                 await self._generate_foundry_image(image_prompt, results)
             else:
                 # Direct mode: use image agent to interpret the modification
                 image_response = await self._agents["image_content"].run(modification_prompt)
                 prompt_text = str(image_response)
-                
+
                 # Extract the prompt from JSON response
                 change_summary = modification_request
                 if '{' in prompt_text:
@@ -1744,25 +1749,31 @@ Return JSON with:
                                 prompt_data = json.loads(json_match.group(1))
                                 prompt_text = prompt_data.get('prompt', prompt_text)
                                 change_summary = prompt_data.get('change_summary', modification_request)
-                            except:
-                                pass
-                
+                            except Exception:
+                                # If JSON extraction fails here, fall back to the original
+                                # prompt_text and change_summary values set earlier.
+                                logger.debug(
+                                    "Failed to parse JSON from markdown in regenerate_image; "
+                                    "using original prompt_text and modification_request.",
+                                    exc_info=True
+                                )
+
                 results["image_prompt"] = prompt_text
                 results["message"] = f"Regenerating image: {change_summary}"
-                
+
                 # Generate the actual image
                 try:
                     from agents.image_content_agent import generate_dalle_image
-                    
+
                     product_description = detailed_image_context if detailed_image_context else product_context
-                    
+
                     logger.info(f"Generating modified DALL-E image: {prompt_text[:200]}...")
                     image_result = await generate_dalle_image(
                         prompt=prompt_text,
                         product_description=product_description,
                         scene_description=brief.visual_guidelines
                     )
-                    
+
                     if image_result.get("success"):
                         image_base64 = image_result.get("image_base64")
                         results["image_revised_prompt"] = image_result.get("revised_prompt")
@@ -1771,17 +1782,17 @@ Return JSON with:
                     else:
                         logger.warning(f"Modified DALL-E image generation failed: {image_result.get('error')}")
                         results["image_error"] = image_result.get("error")
-                        
+
                 except Exception as img_error:
                     logger.exception(f"Error generating modified DALL-E image: {img_error}")
                     results["image_error"] = str(img_error)
-            
+
             logger.info(f"Image regeneration complete. Has image: {bool(results.get('image_base64') or results.get('image_blob_url'))}")
-            
+
         except Exception as e:
             logger.exception(f"Error regenerating image: {e}")
             results["error"] = str(e)
-        
+
         return results
 
 

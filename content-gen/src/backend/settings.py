@@ -62,16 +62,16 @@ class _AzureOpenAISettings(BaseSettings):
 
     gpt_model: str = Field(default="gpt-5", alias="AZURE_OPENAI_GPT_MODEL")
     model: str = "gpt-5"
-    
+
     # Image generation model settings
     # Supported models: "dall-e-3" or "gpt-image-1" or "gpt-image-1.5"
     image_model: str = Field(default="dall-e-3", alias="AZURE_OPENAI_IMAGE_MODEL")
     dalle_model: str = Field(default="dall-e-3", alias="AZURE_OPENAI_DALLE_MODEL")  # Legacy alias
     dalle_endpoint: Optional[str] = Field(default=None, alias="AZURE_OPENAI_DALLE_ENDPOINT")
-    
+
     # gpt-image-1 or gpt-image-1.5 specific endpoint (if different from DALL-E endpoint)
     gpt_image_endpoint: Optional[str] = Field(default=None, alias="AZURE_OPENAI_GPT_IMAGE_ENDPOINT")
-    
+
     resource: Optional[str] = None
     endpoint: Optional[str] = None
     temperature: float = 0.7
@@ -81,20 +81,20 @@ class _AzureOpenAISettings(BaseSettings):
     api_version: str = "2024-06-01"
     preview_api_version: str = "2024-02-01"
     image_api_version: str = Field(default="2025-04-01-preview", alias="AZURE_OPENAI_IMAGE_API_VERSION")
-    
+
     # Image generation settings
     # For dall-e-3: 1024x1024, 1024x1792, 1792x1024
     # For gpt-image-1: 1024x1024, 1536x1024, 1024x1536, auto
     image_size: str = "1024x1024"
     image_quality: str = "hd"  # dall-e-3: standard/hd, gpt-image-1: low/medium/high/auto
-    
+
     @property
     def effective_image_model(self) -> str:
         """Get the effective image model, preferring image_model over dalle_model."""
         # If image_model is explicitly set and not the default, use it
         # Otherwise fall back to dalle_model for backwards compatibility
         return self.image_model if self.image_model else self.dalle_model
-    
+
     @property
     def image_endpoint(self) -> Optional[str]:
         """Get the appropriate endpoint for the configured image model."""
@@ -105,22 +105,22 @@ class _AzureOpenAISettings(BaseSettings):
     @property
     def image_generation_enabled(self) -> bool:
         """Check if image generation is available.
-        
+
         Image generation requires either:
         - A DALL-E endpoint configured, OR
         - A gpt-image-1 or gpt-image-1.5 endpoint configured, OR
         - Using the main OpenAI endpoint with an image model configured
-        
+
         Returns False if image_model is explicitly set to empty string or "none".
         """
         # Check if image generation is explicitly disabled
         if not self.image_model or self.image_model.lower() in ("none", "disabled", ""):
             return False
-        
+
         # Check if we have an endpoint that can handle image generation
         # Either a dedicated image endpoint or the main OpenAI endpoint
         has_image_endpoint = bool(self.dalle_endpoint or self.gpt_image_endpoint or self.endpoint)
-        
+
         return has_image_endpoint
 
     @model_validator(mode="after")
@@ -164,7 +164,7 @@ class _CosmosSettings(BaseSettings):
 
 class _AIFoundrySettings(BaseSettings):
     """Azure AI Foundry configuration for agent-based workflows.
-    
+
     When USE_FOUNDRY=true, the orchestrator uses Azure AI Foundry's
     project endpoint instead of direct Azure OpenAI endpoints.
     """
@@ -177,7 +177,7 @@ class _AIFoundrySettings(BaseSettings):
     use_foundry: bool = Field(default=False, alias="USE_FOUNDRY")
     project_endpoint: Optional[str] = Field(default=None, alias="AZURE_AI_PROJECT_ENDPOINT")
     project_name: Optional[str] = Field(default=None, alias="AZURE_AI_PROJECT_NAME")
-    
+
     # Model deployment names in Foundry
     model_deployment: Optional[str] = Field(default=None, alias="AZURE_AI_MODEL_DEPLOYMENT_NAME")
     image_deployment: str = Field(default="gpt-image-1", alias="AZURE_AI_IMAGE_MODEL_DEPLOYMENT")
@@ -201,7 +201,7 @@ class _SearchSettings(BaseSettings):
 class _BrandGuidelinesSettings(BaseSettings):
     """
     Brand guidelines stored as solution parameters.
-    
+
     These are injected into all agent instructions for content strategy
     and compliance validation.
     """
@@ -215,32 +215,32 @@ class _BrandGuidelinesSettings(BaseSettings):
     # Voice and tone
     tone: str = "Professional yet approachable"
     voice: str = "Innovative, trustworthy, customer-focused"
-    
+
     # Content restrictions (stored as comma-separated strings)
     prohibited_words_str: str = Field(default="", alias="BRAND_PROHIBITED_WORDS")
     required_disclosures_str: str = Field(default="", alias="BRAND_REQUIRED_DISCLOSURES")
-    
+
     # Visual guidelines
     primary_color: str = "#0078D4"
     secondary_color: str = "#107C10"
     image_style: str = "Modern, clean, minimalist with bright lighting"
     typography: str = "Sans-serif, bold headlines, readable body text"
-    
+
     # Compliance rules
     max_headline_length: int = 60
     max_body_length: int = 500
     require_cta: bool = True
-    
+
     @property
     def prohibited_words(self) -> List[str]:
         """Parse prohibited words from comma-separated string."""
         return parse_comma_separated(self.prohibited_words_str)
-    
+
     @property
     def required_disclosures(self) -> List[str]:
         """Parse required disclosures from comma-separated string."""
         return parse_comma_separated(self.required_disclosures_str)
-    
+
     def get_compliance_prompt(self) -> str:
         """Generate compliance rules text for agent instructions."""
         return f"""
@@ -319,8 +319,8 @@ When generating images:
 - Avoid culturally insensitive or appropriative imagery
 
 **IMPORTANT - Photorealistic Product Images Are ACCEPTABLE:**
-Photorealistic style for PRODUCT photography (e.g., paint cans, products, room scenes, textures) 
-is our standard marketing style and should NOT be flagged as a violation. Only flag photorealistic 
+Photorealistic style for PRODUCT photography (e.g., paint cans, products, room scenes, textures)
+is our standard marketing style and should NOT be flagged as a violation. Only flag photorealistic
 content when it involves:
 - Fake/deepfake identifiable real people (SEVERITY: ERROR)
 - Misleading contexts designed to deceive consumers (SEVERITY: ERROR)
@@ -444,7 +444,7 @@ class _AppSettings(BaseModel):
     ai_foundry: _AIFoundrySettings = _AIFoundrySettings()
     brand_guidelines: _BrandGuidelinesSettings = _BrandGuidelinesSettings()
     ui: Optional[_UiSettings] = _UiSettings()
-    
+
     # Constructed properties
     chat_history: Optional[_ChatHistorySettings] = None
     blob: Optional[_StorageSettings] = None
