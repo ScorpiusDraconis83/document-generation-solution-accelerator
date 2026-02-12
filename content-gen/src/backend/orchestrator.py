@@ -1512,7 +1512,11 @@ Use the detailed visual descriptions above to ensure accurate color reproduction
                                         prompt_data = json.loads(json_match.group(1))
                                         prompt_text = prompt_data.get('prompt', prompt_data.get('image_prompt', prompt_text))
                                     except Exception:
-                                        pass
+                                        logger.debug(
+                                            "Failed to parse JSON image prompt from markdown code block; "
+                                            "continuing with original prompt_text.",
+                                            exc_info=True
+                                        )
 
                         # Build product description for DALL-E context
                         # Include detailed image descriptions if available for better color accuracy
@@ -1745,7 +1749,13 @@ Return JSON with:
                                 prompt_text = prompt_data.get('prompt', prompt_text)
                                 change_summary = prompt_data.get('change_summary', modification_request)
                             except Exception:
-                                pass
+                                # If JSON extraction fails here, fall back to the original
+                                # prompt_text and change_summary values set earlier.
+                                logger.debug(
+                                    "Failed to parse JSON from markdown in regenerate_image; "
+                                    "using original prompt_text and modification_request.",
+                                    exc_info=True
+                                )
 
                 results["image_prompt"] = prompt_text
                 results["message"] = f"Regenerating image: {change_summary}"
