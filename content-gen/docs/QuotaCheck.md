@@ -8,14 +8,14 @@ Before deploying the Content Generation Solution Accelerator, **ensure sufficien
 
 
 ### Login if you have not done so already
-```
-azd auth login
+```sh
+az login
 ```
 
 
 ### 📌 Default Models & Capacities:
 ```
-gpt-5.1:150, gpt-image-1:1
+gpt-5.1:150,gpt-image-1:1
 ```
 **Note:** GPT-5.1 capacity is in tokens, GPT-Image-1 capacity is in RPM (Requests Per Minute).
 ### 📌 Default Regions:

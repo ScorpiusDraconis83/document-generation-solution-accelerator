@@ -52,7 +52,7 @@ if [ "$SUB_COUNT" -eq 0 ]; then
     exit 1
 elif [ "$SUB_COUNT" -eq 1 ]; then
     # If only one subscription, automatically select it
-    AZURE_SUBSCRIPTION_ID=$(echo "$SUBSCRIPTIONS" | awk '{print $2}')
+    AZURE_SUBSCRIPTION_ID=$(echo "$SUBSCRIPTIONS" | awk -F '\t' '{print $2}')
     if [ -z "$AZURE_SUBSCRIPTION_ID" ]; then
         echo "❌ ERROR: No active Azure subscriptions found. Please log in using 'az login' and ensure you have an active subscription."
         exit 1
@@ -61,7 +61,7 @@ elif [ "$SUB_COUNT" -eq 1 ]; then
 else
     # If multiple subscriptions exist, prompt the user to choose one
     echo "Multiple subscriptions found:"
-    echo "$SUBSCRIPTIONS" | awk '{print NR")", $1, "-", $2}'
+    echo "$SUBSCRIPTIONS" | awk -F '\t' '{print NR")", $1, "-", $2}'
 
     while true; do
         echo "Enter the number of the subscription to use:"
@@ -69,7 +69,7 @@ else
 
         # Validate user input
         if [[ "$SUB_INDEX" =~ ^[0-9]+$ ]] && [ "$SUB_INDEX" -ge 1 ] && [ "$SUB_INDEX" -le "$SUB_COUNT" ]; then
-            AZURE_SUBSCRIPTION_ID=$(echo "$SUBSCRIPTIONS" | awk -v idx="$SUB_INDEX" 'NR==idx {print $2}')
+            AZURE_SUBSCRIPTION_ID=$(echo "$SUBSCRIPTIONS" | awk -F '\t' -v idx="$SUB_INDEX" 'NR==idx {print $2}')
             echo "✅ Selected Subscription: $AZURE_SUBSCRIPTION_ID"
             break
         else
