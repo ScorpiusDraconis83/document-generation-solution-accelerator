@@ -26,19 +26,9 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# Fallback to defaults if not provided
-[[ -z "$MODELS" ]]
-[[ -z "$REGIONS" ]]
-
 echo "Models: $MODELS"
 echo "Regions: $REGIONS"
 echo "Verbose: $VERBOSE"
-
-for arg in "$@"; do
-  if [ "$arg" = "--verbose" ]; then
-    VERBOSE=true
-  fi
-done
 
 log_verbose() {
   if [ "$VERBOSE" = true ]; then
