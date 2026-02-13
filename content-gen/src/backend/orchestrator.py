@@ -1253,7 +1253,7 @@ Important:
                 api_version = app_settings.azure_openai.preview_api_version or "2024-02-01"
             else:
                 api_version = app_settings.azure_openai.image_api_version or "2025-04-01-preview"
-            
+
             logger.info(f"Calling Foundry direct image API: {image_api_url}")
             logger.info(f"Prompt: {image_prompt[:200]}...")
 
@@ -1261,7 +1261,7 @@ Important:
                 "Authorization": f"Bearer {token.token}",
                 "Content-Type": "application/json",
             }
-            
+
             # Build model-appropriate payload
             if is_dalle3:
                 # dall-e-3: quality must be "standard" or "hd"; needs response_format; 4000-char prompt limit
@@ -1280,7 +1280,7 @@ Important:
                     "size": "1024x1024",
                     "quality": "medium",
                 }
-            
+
             async with httpx.AsyncClient(timeout=120.0) as client:
                 response = await client.post(
                     f"{image_api_url}?api-version={api_version}",
