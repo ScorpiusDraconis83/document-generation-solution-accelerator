@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.40.2.10011",
-      "templateHash": "16442623120600133305"
+      "templateHash": "9008126217899627179"
     },
     "name": "Intelligent Content Generation Accelerator",
     "description": "Solution Accelerator for multimodal marketing content generation using Microsoft Agent Framework.\n"
@@ -289,8 +289,6 @@
       "westus2": "westus",
       "westus3": "westus3"
     },
-    "requestedAiLocation": "[if(empty(parameters('azureAiServiceLocation')), variables('solutionLocation'), parameters('azureAiServiceLocation'))]",
-    "aiServiceLocation": "[if(contains(variables('validAiServiceRegions'), variables('requestedAiLocation')), variables('requestedAiLocation'), coalesce(tryGet(variables('aiServiceRegionFallback'), variables('solutionLocation')), 'eastus2'))]",
     "acrResourceName": "[parameters('acrName')]",
     "solutionSuffix": "[toLower(trim(replace(replace(replace(replace(replace(replace(format('{0}{1}', parameters('solutionName'), parameters('solutionUniqueText')), '-', ''), '_', ''), '.', ''), '/', ''), ' ', ''), '*', '')))]",
     "cosmosDbZoneRedundantHaRegionPairs": {
@@ -14079,8 +14077,8 @@
       },
       "dependsOn": [
         "aiFoundryAiServices",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
         "virtualNetwork"
       ]
     },
@@ -33809,7 +33807,7 @@
       },
       "value": "[if(and(parameters('enableMonitoring'), not(variables('useExistingLogAnalytics'))), reference('applicationInsights').outputs.connectionString.value, '')]"
     },
-    "AI_SERVICE_LOCATION": {
+    "AZURE_ENV_OPENAI_LOCATION": {
       "type": "string",
       "metadata": {
         "description": "Contains the location used for AI Services deployment"

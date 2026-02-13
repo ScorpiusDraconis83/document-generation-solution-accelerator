@@ -190,15 +190,6 @@ var aiServiceRegionFallback = {
   westus3: 'westus3'
 }
 
-// Determine effective AI service location:
-// 1. If explicitly set via parameter, use that (user override)
-// 2. If main location is valid for AI services, use it
-// 3. Otherwise, use the fallback mapping
-var requestedAiLocation = empty(azureAiServiceLocation) ? solutionLocation : azureAiServiceLocation
-var aiServiceLocation = contains(validAiServiceRegions, requestedAiLocation) 
-  ? requestedAiLocation 
-  : (aiServiceRegionFallback[?solutionLocation] ?? 'eastus2')
-
 // acrName is required - points to existing ACR with pre-built images
 var acrResourceName = acrName
 var solutionSuffix = toLower(trim(replace(
@@ -1014,7 +1005,7 @@ output AZURE_AI_AGENT_API_VERSION string = azureAiAgentApiVersion
 output AZURE_APPLICATION_INSIGHTS_CONNECTION_STRING string = (enableMonitoring && !useExistingLogAnalytics) ? applicationInsights!.outputs.connectionString : ''
 
 @description('Contains the location used for AI Services deployment')
-output AI_SERVICE_LOCATION string = azureAiServiceLocation
+output AZURE_ENV_OPENAI_LOCATION string = azureAiServiceLocation
 
 @description('Contains Container Instance Name')
 output CONTAINER_INSTANCE_NAME string = containerInstance.outputs.name
