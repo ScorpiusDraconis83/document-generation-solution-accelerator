@@ -47,7 +47,7 @@ param secondaryLocation string = 'uksouth'
     ]
   }
 })
-@description('Optional. Location for AI deployments. If not specified, uses the main location.')
+@description('Required. Location for AI deployments.')
 param azureAiServiceLocation string
 
 @minLength(1)
@@ -132,63 +132,6 @@ param createdBy string = contains(deployer(), 'userPrincipalName')? split(deploy
 // ============== //
 
 var solutionLocation = empty(location) ? resourceGroup().location : location
-
-// Regions that support GPT-5.1, GPT-Image-1, and text-embedding models with GlobalStandard SKU
-// Update this list as Azure expands model availability
-var validAiServiceRegions = [
-  'australiaeast'
-  'eastus'
-  'eastus2'
-  'francecentral'
-  'japaneast'
-  'koreacentral'
-  'swedencentral'
-  'switzerlandnorth'
-  'uaenorth'
-  'uksouth'
-  'westus'
-  'westus3'
-]
-
-// Map regions to recommended AI service regions (for when main region lacks model support)
-var aiServiceRegionFallback = {
-  australiaeast: 'australiaeast'
-  australiasoutheast: 'australiaeast'
-  brazilsouth: 'eastus2'
-  canadacentral: 'eastus2'
-  canadaeast: 'eastus2'
-  centralindia: 'uksouth'
-  centralus: 'eastus2'
-  eastasia: 'japaneast'
-  eastus: 'eastus'
-  eastus2: 'eastus2'
-  francecentral: 'francecentral'
-  germanywestcentral: 'swedencentral'
-  japaneast: 'japaneast'
-  japanwest: 'japaneast'
-  koreacentral: 'koreacentral'
-  koreasouth: 'koreacentral'
-  northcentralus: 'eastus2'
-  northeurope: 'swedencentral'
-  norwayeast: 'swedencentral'
-  polandcentral: 'swedencentral'
-  qatarcentral: 'uaenorth'
-  southafricanorth: 'uksouth'
-  southcentralus: 'eastus2'
-  southeastasia: 'japaneast'
-  southindia: 'uksouth'
-  swedencentral: 'swedencentral'
-  switzerlandnorth: 'switzerlandnorth'
-  uaenorth: 'uaenorth'
-  uksouth: 'uksouth'
-  ukwest: 'uksouth'
-  westcentralus: 'westus'
-  westeurope: 'swedencentral'
-  westindia: 'uksouth'
-  westus: 'westus'
-  westus2: 'westus'
-  westus3: 'westus3'
-}
 
 // acrName is required - points to existing ACR with pre-built images
 var acrResourceName = acrName

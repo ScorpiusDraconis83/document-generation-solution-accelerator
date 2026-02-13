@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.40.2.10011",
-      "templateHash": "9008126217899627179"
+      "templateHash": "13692784047172844036"
     },
     "name": "Intelligent Content Generation Accelerator",
     "description": "Solution Accelerator for multimodal marketing content generation using Microsoft Agent Framework.\n"
@@ -70,7 +70,7 @@
             "OpenAI.GlobalStandard.gpt-image-1,1"
           ]
         },
-        "description": "Optional. Location for AI deployments. If not specified, uses the main location."
+        "description": "Required. Location for AI deployments."
       }
     },
     "gptModelDeploymentType": {
@@ -237,58 +237,6 @@
   },
   "variables": {
     "solutionLocation": "[if(empty(parameters('location')), resourceGroup().location, parameters('location'))]",
-    "validAiServiceRegions": [
-      "australiaeast",
-      "eastus",
-      "eastus2",
-      "francecentral",
-      "japaneast",
-      "koreacentral",
-      "swedencentral",
-      "switzerlandnorth",
-      "uaenorth",
-      "uksouth",
-      "westus",
-      "westus3"
-    ],
-    "aiServiceRegionFallback": {
-      "australiaeast": "australiaeast",
-      "australiasoutheast": "australiaeast",
-      "brazilsouth": "eastus2",
-      "canadacentral": "eastus2",
-      "canadaeast": "eastus2",
-      "centralindia": "uksouth",
-      "centralus": "eastus2",
-      "eastasia": "japaneast",
-      "eastus": "eastus",
-      "eastus2": "eastus2",
-      "francecentral": "francecentral",
-      "germanywestcentral": "swedencentral",
-      "japaneast": "japaneast",
-      "japanwest": "japaneast",
-      "koreacentral": "koreacentral",
-      "koreasouth": "koreacentral",
-      "northcentralus": "eastus2",
-      "northeurope": "swedencentral",
-      "norwayeast": "swedencentral",
-      "polandcentral": "swedencentral",
-      "qatarcentral": "uaenorth",
-      "southafricanorth": "uksouth",
-      "southcentralus": "eastus2",
-      "southeastasia": "japaneast",
-      "southindia": "uksouth",
-      "swedencentral": "swedencentral",
-      "switzerlandnorth": "switzerlandnorth",
-      "uaenorth": "uaenorth",
-      "uksouth": "uksouth",
-      "ukwest": "uksouth",
-      "westcentralus": "westus",
-      "westeurope": "swedencentral",
-      "westindia": "uksouth",
-      "westus": "westus",
-      "westus2": "westus",
-      "westus3": "westus3"
-    },
     "acrResourceName": "[parameters('acrName')]",
     "solutionSuffix": "[toLower(trim(replace(replace(replace(replace(replace(replace(format('{0}{1}', parameters('solutionName'), parameters('solutionUniqueText')), '-', ''), '_', ''), '.', ''), '/', ''), ' ', ''), '*', '')))]",
     "cosmosDbZoneRedundantHaRegionPairs": {
@@ -14077,8 +14025,8 @@
       },
       "dependsOn": [
         "aiFoundryAiServices",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
         "virtualNetwork"
       ]
     },
