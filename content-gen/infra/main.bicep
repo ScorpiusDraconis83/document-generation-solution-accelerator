@@ -36,8 +36,19 @@ param location string
 @description('Optional. Secondary location for databases creation.')
 param secondaryLocation string = 'uksouth'
 
+// NOTE: Metadata must be compile-time constants. Update usageName manually if you change model parameters.
+// Format: 'OpenAI.<DeploymentType>.<ModelName>,<Capacity>'
+@metadata({
+  azd: {
+    type: 'location'
+    usageName: [
+      'OpenAI.GlobalStandard.gpt-5.1,150'
+      'OpenAI.GlobalStandard.gpt-image-1,1'
+    ]
+  }
+})
 @description('Optional. Location for AI deployments. If not specified, uses the main location.')
-param azureAiServiceLocation string = ''
+param azureAiServiceLocation string
 
 @minLength(1)
 @allowed([
@@ -463,7 +474,7 @@ module aiFoundryAiServices 'br/public:avm/res/cognitive-services/account:0.14.0'
   name: take('avm.res.cognitive-services.account.${aiFoundryAiServicesResourceName}', 64)
   params: {
     name: aiFoundryAiServicesResourceName
-    location: aiServiceLocation
+    location: azureAiServiceLocation
     tags: tags
     sku: 'S0'
     kind: 'AIServices'
@@ -557,7 +568,7 @@ module aiFoundryAiServicesProject 'modules/ai-project.bicep' = if (!useExistingA
   name: take('module.ai-project.${aiFoundryAiProjectResourceName}', 64)
   params: {
     name: aiFoundryAiProjectResourceName
-    location: aiServiceLocation
+    location: azureAiServiceLocation
     tags: tags
     desc: aiFoundryAiProjectDescription
     aiServicesName: aiFoundryAiServicesResourceName
@@ -1003,7 +1014,7 @@ output AZURE_AI_AGENT_API_VERSION string = azureAiAgentApiVersion
 output AZURE_APPLICATION_INSIGHTS_CONNECTION_STRING string = (enableMonitoring && !useExistingLogAnalytics) ? applicationInsights!.outputs.connectionString : ''
 
 @description('Contains the location used for AI Services deployment')
-output AI_SERVICE_LOCATION string = aiServiceLocation
+output AI_SERVICE_LOCATION string = azureAiServiceLocation
 
 @description('Contains Container Instance Name')
 output CONTAINER_INSTANCE_NAME string = containerInstance.outputs.name
