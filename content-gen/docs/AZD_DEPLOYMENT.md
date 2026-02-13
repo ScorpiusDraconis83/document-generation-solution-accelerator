@@ -121,7 +121,7 @@ This single command will:
 
 ```bash
 # Set the resource ID of your existing AI Project
-azd env set azureExistingAIProjectResourceId "/subscriptions/<sub-id>/resourceGroups/<rg>/providers/Microsoft.MachineLearningServices/workspaces/<project-name>"
+azd env set AZURE_EXISTING_AI_PROJECT_RESOURCE_ID "/subscriptions/<sub-id>/resourceGroups/<rg>/providers/Microsoft.MachineLearningServices/workspaces/<project-name>"
 ```
 
 ### Reuse Existing Log Analytics Workspace
@@ -224,7 +224,7 @@ Error: The model 'gpt-4o' is not available in region 'westeurope'
 
 **Solution**: Set a different region for AI Services:
 ```bash
-azd env set azureAiServiceLocation eastus
+azd env set AZURE_ENV_OPENAI_LOCATION eastus
 ```
 
 #### 3. Container Build Fails
