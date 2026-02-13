@@ -128,7 +128,7 @@ azd env set AZURE_EXISTING_AI_PROJECT_RESOURCE_ID "/subscriptions/<sub-id>/resou
 
 ```bash
 # Set the resource ID of your existing Log Analytics workspace
-azd env set existingLogAnalyticsWorkspaceId "/subscriptions/<sub-id>/resourceGroups/<rg>/providers/Microsoft.OperationalInsights/workspaces/<workspace-name>"
+azd env set AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID "/subscriptions/<sub-id>/resourceGroups/<rg>/providers/Microsoft.OperationalInsights/workspaces/<workspace-name>"
 ```
 
 ## Post-Deployment
@@ -308,5 +308,6 @@ When `enablePrivateNetworking` is enabled:
 
 ## Related Documentation
 
+- [Deployment Guide](DEPLOYMENT.md)
 - [Image Generation Configuration](IMAGE_GENERATION.md)
 - [Azure Developer CLI Documentation](https://learn.microsoft.com/azure/developer/azure-developer-cli/)
