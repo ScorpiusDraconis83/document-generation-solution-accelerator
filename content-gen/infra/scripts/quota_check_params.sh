@@ -84,7 +84,7 @@ az account set --subscription "$AZURE_SUBSCRIPTION_ID"
 echo "🎯 Active Subscription: $(az account show --query '[name, id]' --output tsv)"
 
 # Default Regions supporting GPT-5.1 and GPT-Image-1 with GlobalStandard SKU
-DEFAULT_REGIONS="australiaeast,centralus,eastasia,eastus,eastus2,japaneast,northeurope,southeastasia,swedencentral,uksouth,westus,westus3"
+DEFAULT_REGIONS="australiaeast,canadaeast,eastus2,japaneast,koreacentral,swedencentral,switzerlandnorth,uksouth"
 IFS=',' read -r -a DEFAULT_REGION_ARRAY <<< "$DEFAULT_REGIONS"
 
 # Read parameters (if any)

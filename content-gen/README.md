@@ -183,8 +183,7 @@ BRAND_SECONDARY_COLOR=#107C10
 - [AZD Deployment Guide](docs/AZD_DEPLOYMENT.md) - Deploy with Azure Developer CLI
 - [Manual Deployment Guide](docs/DEPLOYMENT.md) - Step-by-step manual deployment
 - [Image Generation Configuration](docs/IMAGE_GENERATION.md) - DALL-E 3 and GPT-Image-1 setup
-- [API Reference](docs/API.md)
 
 ## License
 
-MIT License - See [LICENSE](LICENSE) for details.
+MIT License - See [LICENSE](../LICENSE) for details.
