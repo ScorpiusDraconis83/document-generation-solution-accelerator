@@ -1245,8 +1245,15 @@ Important:
 
             # The direct image API endpoint
             image_api_url = f"{image_endpoint}/openai/deployments/{image_deployment}/images/generations"
-            api_version = app_settings.azure_openai.image_api_version or "2025-04-01-preview"
 
+            # Adapt API version and payload to the deployed image model
+            is_dalle3 = image_deployment.lower().startswith("dall-e")
+
+            if is_dalle3:
+                api_version = app_settings.azure_openai.preview_api_version or "2024-02-01"
+            else:
+                api_version = app_settings.azure_openai.image_api_version or "2025-04-01-preview"
+            
             logger.info(f"Calling Foundry direct image API: {image_api_url}")
             logger.info(f"Prompt: {image_prompt[:200]}...")
 
@@ -1254,15 +1261,26 @@ Important:
                 "Authorization": f"Bearer {token.token}",
                 "Content-Type": "application/json",
             }
-
-            # gpt-image-1 parameters (no response_format parameter)
-            payload = {
-                "prompt": image_prompt,
-                "n": 1,
-                "size": "1024x1024",
-                "quality": "medium",  # gpt-image-1 uses low/medium/high/auto
-            }
-
+            
+            # Build model-appropriate payload
+            if is_dalle3:
+                # dall-e-3: quality must be "standard" or "hd"; needs response_format; 4000-char prompt limit
+                payload = {
+                    "prompt": image_prompt[:4000],
+                    "n": 1,
+                    "size": app_settings.azure_openai.image_size or "1024x1024",
+                    "quality": app_settings.azure_openai.image_quality or "hd",
+                    "response_format": "b64_json",
+                }
+            else:
+                # gpt-image-1 / gpt-image-1.5: quality is low/medium/high/auto; no response_format
+                payload = {
+                    "prompt": image_prompt,
+                    "n": 1,
+                    "size": "1024x1024",
+                    "quality": "medium",
+                }
+            
             async with httpx.AsyncClient(timeout=120.0) as client:
                 response = await client.post(
                     f"{image_api_url}?api-version={api_version}",
