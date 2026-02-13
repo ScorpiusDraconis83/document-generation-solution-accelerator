@@ -86,6 +86,7 @@ on:
 permissions:
   contents: read
   actions: read
+  packages: write  # Required by deploy-orchestrator → job-deploy → job-deploy-devcontainer for GHCR
   
 jobs:
   validate-inputs:
