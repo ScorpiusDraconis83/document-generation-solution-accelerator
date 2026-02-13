@@ -36,8 +36,19 @@ param location string
 @description('Optional. Secondary location for databases creation.')
 param secondaryLocation string = 'uksouth'
 
-@description('Optional. Location for AI deployments. If not specified, uses the main location.')
-param azureAiServiceLocation string = ''
+// NOTE: Metadata must be compile-time constants. Update usageName manually if you change model parameters.
+// Format: 'OpenAI.<DeploymentType>.<ModelName>,<Capacity>'
+@metadata({
+  azd: {
+    type: 'location'
+    usageName: [
+      'OpenAI.GlobalStandard.gpt-5.1,150'
+      'OpenAI.GlobalStandard.gpt-image-1,1'
+    ]
+  }
+})
+@description('Required. Location for AI deployments.')
+param azureAiServiceLocation string
 
 @minLength(1)
 @allowed([
@@ -121,72 +132,6 @@ param createdBy string = contains(deployer(), 'userPrincipalName')? split(deploy
 // ============== //
 
 var solutionLocation = empty(location) ? resourceGroup().location : location
-
-// Regions that support GPT-5.1, GPT-Image-1, and text-embedding models with GlobalStandard SKU
-// Update this list as Azure expands model availability
-var validAiServiceRegions = [
-  'australiaeast'
-  'eastus'
-  'eastus2'
-  'francecentral'
-  'japaneast'
-  'koreacentral'
-  'swedencentral'
-  'switzerlandnorth'
-  'uaenorth'
-  'uksouth'
-  'westus'
-  'westus3'
-]
-
-// Map regions to recommended AI service regions (for when main region lacks model support)
-var aiServiceRegionFallback = {
-  australiaeast: 'australiaeast'
-  australiasoutheast: 'australiaeast'
-  brazilsouth: 'eastus2'
-  canadacentral: 'eastus2'
-  canadaeast: 'eastus2'
-  centralindia: 'uksouth'
-  centralus: 'eastus2'
-  eastasia: 'japaneast'
-  eastus: 'eastus'
-  eastus2: 'eastus2'
-  francecentral: 'francecentral'
-  germanywestcentral: 'swedencentral'
-  japaneast: 'japaneast'
-  japanwest: 'japaneast'
-  koreacentral: 'koreacentral'
-  koreasouth: 'koreacentral'
-  northcentralus: 'eastus2'
-  northeurope: 'swedencentral'
-  norwayeast: 'swedencentral'
-  polandcentral: 'swedencentral'
-  qatarcentral: 'uaenorth'
-  southafricanorth: 'uksouth'
-  southcentralus: 'eastus2'
-  southeastasia: 'japaneast'
-  southindia: 'uksouth'
-  swedencentral: 'swedencentral'
-  switzerlandnorth: 'switzerlandnorth'
-  uaenorth: 'uaenorth'
-  uksouth: 'uksouth'
-  ukwest: 'uksouth'
-  westcentralus: 'westus'
-  westeurope: 'swedencentral'
-  westindia: 'uksouth'
-  westus: 'westus'
-  westus2: 'westus'
-  westus3: 'westus3'
-}
-
-// Determine effective AI service location:
-// 1. If explicitly set via parameter, use that (user override)
-// 2. If main location is valid for AI services, use it
-// 3. Otherwise, use the fallback mapping
-var requestedAiLocation = empty(azureAiServiceLocation) ? solutionLocation : azureAiServiceLocation
-var aiServiceLocation = contains(validAiServiceRegions, requestedAiLocation) 
-  ? requestedAiLocation 
-  : (aiServiceRegionFallback[?solutionLocation] ?? 'eastus2')
 
 // acrName is required - points to existing ACR with pre-built images
 var acrResourceName = acrName
@@ -463,7 +408,7 @@ module aiFoundryAiServices 'br/public:avm/res/cognitive-services/account:0.14.0'
   name: take('avm.res.cognitive-services.account.${aiFoundryAiServicesResourceName}', 64)
   params: {
     name: aiFoundryAiServicesResourceName
-    location: aiServiceLocation
+    location: azureAiServiceLocation
     tags: tags
     sku: 'S0'
     kind: 'AIServices'
@@ -557,7 +502,7 @@ module aiFoundryAiServicesProject 'modules/ai-project.bicep' = if (!useExistingA
   name: take('module.ai-project.${aiFoundryAiProjectResourceName}', 64)
   params: {
     name: aiFoundryAiProjectResourceName
-    location: aiServiceLocation
+    location: azureAiServiceLocation
     tags: tags
     desc: aiFoundryAiProjectDescription
     aiServicesName: aiFoundryAiServicesResourceName
@@ -1003,7 +948,7 @@ output AZURE_AI_AGENT_API_VERSION string = azureAiAgentApiVersion
 output AZURE_APPLICATION_INSIGHTS_CONNECTION_STRING string = (enableMonitoring && !useExistingLogAnalytics) ? applicationInsights!.outputs.connectionString : ''
 
 @description('Contains the location used for AI Services deployment')
-output AI_SERVICE_LOCATION string = aiServiceLocation
+output AZURE_ENV_OPENAI_LOCATION string = azureAiServiceLocation
 
 @description('Contains Container Instance Name')
 output CONTAINER_INSTANCE_NAME string = containerInstance.outputs.name
