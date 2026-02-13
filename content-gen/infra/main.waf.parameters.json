@@ -52,6 +52,15 @@
     },
     "imageTag": {
       "value": "${IMAGE_TAG=latest}"
+    },
+    "enablePrivateNetworking": {
+      "value": true
+    },
+    "enableMonitoring": {
+      "value": true
+    },
+    "enableScalability": {
+      "value": true
     }
   }
 }
