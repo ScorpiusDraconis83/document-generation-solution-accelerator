@@ -553,7 +553,8 @@ describe('ChatHistoryListItemCell', () => {
   }, 10000)
 
   test('shows error when trying to rename to an existing title', async () => {
-    (historyRename as jest.Mock).mockResolvedValueOnce({
+    const existingTitle = 'Existing Chat Title'
+    ;(historyRename as jest.Mock).mockResolvedValueOnce({
       ok: false,
       json: async () => ({ message: 'Title already exists' })
     })

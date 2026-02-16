@@ -6,6 +6,9 @@ import {
   Dialog,
   DialogType,
   Stack,
+  IStackTokens,
+  mergeStyleSets,
+  IModalStyles,
   Spinner,
   SpinnerSize
 } from '@fluentui/react'
