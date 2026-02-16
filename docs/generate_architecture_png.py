@@ -68,7 +68,7 @@ def draw_service_box(draw, x, y, w, h, title, subtitle="", icon_type="default", 
     try:
         font_title = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 13)
         font_sub = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 10)
-    except Exception:
+    except OSError:
         font_title = ImageFont.load_default()
         font_sub = ImageFont.load_default()
     
@@ -208,7 +208,7 @@ def main():
     # Copyright
     try:
         font_copy = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 10)
-    except Exception:
+    except OSError:
         font_copy = ImageFont.load_default()
     
     draw.text((50, HEIGHT-30), "© 2024 Microsoft Corporation All rights reserved.", fill=TEXT_GRAY, font=font_copy)
