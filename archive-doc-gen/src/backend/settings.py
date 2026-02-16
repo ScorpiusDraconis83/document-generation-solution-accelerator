@@ -266,7 +266,6 @@ class _AzureSearchSettings(BaseSettings, DatasourcePayloadConstructor):
         extra="ignore",
         env_ignore_empty=True,
     )
-
     _type: Literal["azure_search"] = PrivateAttr(default="azure_search")
     top_k: int = Field(default=5, serialization_alias="top_n_documents")
     strictness: int = 3
