@@ -2505,7 +2505,6 @@ def test_bug_7571_removed_sections_not_returning(request, login_logout):
         
         # Select 3 sections to remove from the initial list
         sections_to_remove = []
-        
         if initial_count >= 3:
             # Remove sections at positions 1, 2, and 3 (avoid removing first section for stability)
             indices_to_remove = [1, 2, 3] if initial_count > 3 else list(range(1, initial_count))
@@ -2739,9 +2738,6 @@ def test_bug_9825_navigate_between_sections(request, login_logout):
         logger.info("  ✅ Successfully navigated to Draft page (after clicking on Generate draft)")
         
         page.wait_for_timeout(1000)
-        
-        duration = time.time() - start
-        logger.info("Execution Time for Step 6: %.2fs", duration)
         
         logger.info("\n" + "="*80)
         logger.info("✅ TC 10157 Test Summary - Navigate between sections")
