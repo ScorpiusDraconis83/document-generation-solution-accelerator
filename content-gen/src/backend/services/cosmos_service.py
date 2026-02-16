@@ -315,7 +315,7 @@ class CosmosDBService:
                 user_id,
                 exc,
             )
-        
+
         return None
 
     async def save_conversation(

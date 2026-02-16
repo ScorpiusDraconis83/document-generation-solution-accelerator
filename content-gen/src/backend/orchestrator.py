@@ -1536,7 +1536,7 @@ Use the detailed visual descriptions above to ensure accurate color reproduction
                                             "Failed to parse JSON from markdown code block for image prompt: %s",
                                             parse_error,
                                         )
-                        
+
                         # Build product description for DALL-E context
                         # Include detailed image descriptions if available for better color accuracy
                         product_description = detailed_image_context if detailed_image_context else product_context
@@ -1606,7 +1606,7 @@ Check against brand guidelines and flag any issues.
                     "proceeding without 'violations' / 'requires_modification'.",
                     exc_info=True,
                 )
-                
+
         except Exception as e:
             logger.exception(f"Error generating content: {e}")
             results["error"] = str(e)
@@ -1778,7 +1778,7 @@ Return JSON with:
                                     "Failed to parse JSON from image modification response fallback: %s",
                                     parse_error,
                                 )
-                
+
                 results["image_prompt"] = prompt_text
                 results["message"] = f"Regenerating image: {change_summary}"
 
