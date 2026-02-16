@@ -7,26 +7,39 @@ assignees: ''
 
 ---
 
-**Describe the bug**
+# Describe the bug
 A clear and concise description of what the bug is.
 
-**To Reproduce**
+# Expected behavior
+A clear and concise description of what you expected to happen.
+
+# How does this bug make you feel?
+_Share a gif from [giphy](https://giphy.com/) to tells us how you'd feel_
+
+---
+
+# Debugging information
+
+## Steps to reproduce
 Steps to reproduce the behavior:
 1. Go to '...'
 2. Click on '....'
 3. Scroll down to '....'
 4. See error
 
-**Expected behavior**
-A clear and concise description of what you expected to happen.
-
-**Screenshots**
+## Screenshots
 If applicable, add screenshots to help explain your problem.
 
-**Configuration: Please provide the following**
- - Azure OpenAI model name and version (e.g. 'gpt-35-turbo-16k, version 0613')
- - Is chat history enabled?
- - Are you using data? If so, what data source? (e.g. Azure AI Search, Azure CosmosDB Mongo vCore, etc)
+## Logs
 
-**Additional context**
-Add any other context about the problem here.
+If applicable, add logs to help the engineer debug the problem.
+
+---
+
+# Tasks
+
+_To be filled in by the engineer picking up the issue_
+
+- [ ] Task 1
+- [ ] Task 2
+- [ ] ...

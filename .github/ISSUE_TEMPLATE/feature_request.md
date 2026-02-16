@@ -7,20 +7,26 @@ assignees: ''
 
 ---
 
-**Is your feature request related to this sample app, or to an Azure service, such as Azure OpenAI or Azure AI Search?**
-Describe the scope of your request. This forum is focused on features relating to this sample app and its functionality, not the functionality of underlying Azure services.
+# Motivation
 
-**Is your feature request related to a problem? Please describe.**
-A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+A clear and concise description of why this feature would be useful and the value it would bring.
+Explain any alternatives considered and why they are not sufficient.
 
-**Describe the solution you'd like**
-A clear and concise description of what you want to happen.
+# How would you feel if this feature request was implemented?
 
-**Is this feature specific to your use case or your organization, or would it apply broadly across other uses of this app?**
-Describe how you and others might leverage this feature.
+_Share a gif from [giphy](https://giphy.com/) to tells us how you'd feel. Format: ![alt_text](https://media.giphy.com/media/xxx/giphy.gif)_
 
-**Describe alternatives you've considered**
-A clear and concise description of any alternative solutions or features you've considered.
+# Requirements
 
-**Additional context**
-Add any other context or screenshots about the feature request here.
+A list of requirements to consider this feature delivered
+- Requirement 1
+- Requirement 2
+- ...
+
+# Tasks
+
+_To be filled in by the engineer picking up the issue_
+
+- [ ] Task 1
+- [ ] Task 2
+- [ ] ...
