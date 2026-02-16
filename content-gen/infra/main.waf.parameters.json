@@ -26,8 +26,8 @@
     "imageModelChoice": {
       "value": "${imageModelChoice}"
     },
-    "dalleModelCapacity": {
-      "value": "${dalleModelCapacity}"
+    "imageModelCapacity": {
+      "value": "${imageModelCapacity}"
     },
     "embeddingModel": {
       "value": "${embeddingModel}"

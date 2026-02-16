@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.40.2.10011",
-      "templateHash": "13692784047172844036"
+      "templateHash": "8403017938611050215"
     },
     "name": "Intelligent Content Generation Accelerator",
     "description": "Solution Accelerator for multimodal marketing content generation using Microsoft Agent Framework.\n"
@@ -106,11 +106,10 @@
       "allowedValues": [
         "gpt-image-1",
         "gpt-image-1.5",
-        "dall-e-3",
         "none"
       ],
       "metadata": {
-        "description": "Optional. Image model to deploy: gpt-image-1, gpt-image-1.5, dall-e-3, or none to skip."
+        "description": "Optional. Image model to deploy: gpt-image-1, gpt-image-1.5, or none to skip."
       }
     },
     "azureOpenaiAPIVersion": {
@@ -135,7 +134,7 @@
         "description": "Optional. AI model deployment token capacity."
       }
     },
-    "dalleModelCapacity": {
+    "imageModelCapacity": {
       "type": "int",
       "defaultValue": 1,
       "minValue": 1,
@@ -300,18 +299,13 @@
         "version": "2025-12-16",
         "sku": "GlobalStandard"
       },
-      "dall-e-3": {
-        "name": "dall-e-3",
-        "version": "3.0",
-        "sku": "Standard"
-      },
       "none": {
         "name": "",
         "version": "",
         "sku": ""
       }
     },
-    "imageModelDeployment": "[if(not(equals(parameters('imageModelChoice'), 'none')), createArray(createObject('format', 'OpenAI', 'name', variables('imageModelConfig')[parameters('imageModelChoice')].name, 'model', variables('imageModelConfig')[parameters('imageModelChoice')].name, 'sku', createObject('name', variables('imageModelConfig')[parameters('imageModelChoice')].sku, 'capacity', parameters('dalleModelCapacity')), 'version', variables('imageModelConfig')[parameters('imageModelChoice')].version, 'raiPolicyName', 'Microsoft.Default')), createArray())]",
+    "imageModelDeployment": "[if(not(equals(parameters('imageModelChoice'), 'none')), createArray(createObject('format', 'OpenAI', 'name', variables('imageModelConfig')[parameters('imageModelChoice')].name, 'model', variables('imageModelConfig')[parameters('imageModelChoice')].name, 'sku', createObject('name', variables('imageModelConfig')[parameters('imageModelChoice')].sku, 'capacity', parameters('imageModelCapacity')), 'version', variables('imageModelConfig')[parameters('imageModelChoice')].version, 'raiPolicyName', 'Microsoft.Default')), createArray())]",
     "aiFoundryAiServicesModelDeployment": "[concat(variables('baseModelDeployments'), variables('imageModelDeployment'))]",
     "aiFoundryAiProjectDescription": "Content Generation AI Foundry Project",
     "logAnalyticsWorkspaceResourceName": "[format('log-{0}', variables('solutionSuffix'))]",
