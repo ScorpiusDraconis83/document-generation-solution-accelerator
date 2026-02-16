@@ -109,7 +109,6 @@ on:
         options:
           - 'gpt-image-1'
           - 'gpt-image-1.5'
-          - 'dall-e-3'
           - 'none'
         
   schedule:
@@ -311,7 +310,7 @@ jobs:
           
           # Validate and output image_model_choice
           IMAGE_MODEL="${INPUT_IMAGE_MODEL_CHOICE:-gpt-image-1}"
-          ALLOWED_MODELS=("gpt-image-1" "gpt-image-1.5" "dall-e-3" "none")
+          ALLOWED_MODELS=("gpt-image-1" "gpt-image-1.5" "none")
           if [[ ! " ${ALLOWED_MODELS[@]} " =~ " ${IMAGE_MODEL} " ]]; then
             echo "❌ ERROR: image_model_choice '$IMAGE_MODEL' is invalid. Allowed: ${ALLOWED_MODELS[*]}"
             exit 1
