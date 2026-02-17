@@ -1,39 +1,35 @@
-# DALL-E 3 Image Generation: Limitations and Workarounds
+# Image Generation (gpt-image-1 / gpt-image-1.5)
 
 ## Overview
 
-This document describes the limitations of DALL-E 3 for image generation in the Intelligent Content Generation Accelerator and the workarounds implemented to achieve product-seeded marketing image generation.
+The accelerator supports image generation through Azure OpenAI image models:
 
-## DALL-E 3 Limitations
+- `gpt-image-1`
+- `gpt-image-1.5`
 
-### Text-Only Input
+Both models are used through `images.generate()` in the backend image agent. The selected model is controlled by `AZURE_OPENAI_IMAGE_MODEL`.
 
-**DALL-E 3 only accepts text prompts**. Unlike newer models such as GPT-image-1, DALL-E 3 does not support:
+## Current Model Behavior
 
-- Image-to-image generation
-- Reference/seed images as input
-- Image editing or inpainting with image inputs
+### Supported Models
 
-This means you cannot directly pass a product image to DALL-E 3 and ask it to create a marketing image featuring that product.
+| Model | Status | Primary Use |
+|-------|--------|-------------|
+| `gpt-image-1` | Supported | General marketing image generation |
+| `gpt-image-1.5` | Supported | Higher-quality marketing image generation |
 
-### API Capabilities
+### Prompting Strategy
 
-| Capability | DALL-E 3 | GPT-image-1 |
-|------------|----------|-------------|
-| Text prompts | ✅ | ✅ |
-| Image input | ❌ | ✅ |
-| Image editing | ❌ | ✅ |
-| Inpainting | ❌ | ✅ |
-| Multiple images per request | 1 only | 1-10 |
-| Output format | URL or base64 | base64 only |
+The `ImageContentAgent` builds a single consolidated prompt from:
 
-## Implemented Workaround
+- Product context (including ingestion-time image descriptions)
+- Creative brief visual guidance
+- Brand guidelines
+- Safety and style constraints
 
-### GPT-5 Vision for Product Descriptions
+The agent enforces no-text-in-image constraints and color fidelity requirements in the prompt instructions.
 
-To work around DALL-E 3's text-only limitation, we use **GPT-5 Vision** to generate detailed text descriptions of product images during the product ingestion process.
-
-#### Workflow
+## End-to-End Workflow
 
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
@@ -43,14 +39,14 @@ To work around DALL-E 3's text-only limitation, we use **GPT-5 Vision** to gener
                                                         │
                                                         ▼
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│ Marketing Image │◀────│    DALL-E 3     │◀────│ Combined Prompt │
+│ Marketing Image │◀────│ gpt-image-1/1.5 │◀────│ Combined Prompt │
 │    (Output)     │     │   (Generate)    │     │ (Desc + Brief)  │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
 ```
 
 #### Step 1: Product Image Ingestion
 
-When a product image is uploaded to Blob Storage, the `ProductIngestionService` automatically:
+When a product image is uploaded to Blob Storage, ingestion logic can generate a detailed visual description that is later used as image-generation context.
 
 1. Sends the image to GPT-5 Vision
 2. Generates a detailed text description including:
@@ -89,7 +85,7 @@ async def generate_image_description(image_url: str) -> str:
 
 #### Step 2: Marketing Image Generation
 
-The `ImageContentAgent` combines the stored product description with:
+The image generation flow combines product description context with:
 
 - Creative brief visual guidelines
 - Brand guidelines (colors, style, composition rules)
@@ -100,10 +96,10 @@ async def generate_marketing_image(
     product: Product,
     creative_brief: CreativeBrief,
     brand_guidelines: BrandGuidelines
-) -> bytes:
-    """Generate marketing image using DALL-E 3 with product context."""
+) -> dict:
+    """Generate marketing image using the configured GPT image model."""
     
-    prompt = f"""
+    full_prompt = f"""
     Create a professional marketing image for a retail campaign.
     
     PRODUCT (maintain accuracy):
@@ -122,23 +118,52 @@ async def generate_marketing_image(
     - Clean, modern aesthetic
     - Suitable for {creative_brief.deliverable}
     """
+
+    model_name = app_settings.azure_openai.effective_image_model
+    size = app_settings.azure_openai.image_size or "1024x1024"
+    quality = app_settings.azure_openai.image_quality or "medium"
     
     response = await openai_client.images.generate(
-        model="dall-e-3",
-        prompt=prompt,
-        size="1024x1024",
-        quality="hd",
-        n=1
+        model=model_name,
+        prompt=full_prompt,
+        size=size,
+        quality=quality,
+        n=1,
     )
-    
-    return response.data[0].url
+
+    return {"image_base64": response.data[0].b64_json}
 ```
+
+## Configuration
+
+### Required Environment Variables
+
+- `AZURE_OPENAI_ENDPOINT`
+- `AZURE_OPENAI_GPT_MODEL`
+- `AZURE_OPENAI_IMAGE_MODEL` (`gpt-image-1`, `gpt-image-1.5`, or `none`)
+- `AZURE_OPENAI_GPT_IMAGE_ENDPOINT` (optional if same as main endpoint)
+- `AZURE_OPENAI_API_VERSION`
+- `AZURE_OPENAI_IMAGE_API_VERSION`
+
+### Optional Image Controls
+
+- `AZURE_OPENAI_IMAGE_SIZE` (for example: `1024x1024`, `1536x1024`, `1024x1536`, `auto`)
+- `AZURE_OPENAI_IMAGE_QUALITY` (`low`, `medium`, `high`, `auto`)
+
+## API Usage Pattern
+
+The backend image generator calls Azure OpenAI with:
+
+- `images.generate()`
+- `model` set from `AZURE_OPENAI_IMAGE_MODEL`
+- prompt text assembled from brief + product + brand constraints
+- `size` and `quality` from app settings (or request overrides)
 
 ## Limitations of the Workaround
 
 ### Accuracy Trade-offs
 
-1. **Product Representation**: The generated product in the marketing image may not be an exact match to the original product. DALL-E 3 interprets the text description and creates its own version.
+1. **Product Representation**: The generated product in the marketing image may not be an exact match to the original product. The image model interprets the text description and creates its own version.
 
 2. **Brand-Specific Details**: Logos, specific patterns, or unique design elements may not be accurately reproduced.
 
@@ -155,53 +180,13 @@ async def generate_marketing_image(
 | Exact product photography replacement | ❌ Not recommended |
 | Catalog/technical images | ❌ Not recommended |
 
-## Future Upgrade Path: GPT-image-1
 
-### When Available
+### Model Availability Notes
 
-GPT-image-1 (currently in limited access preview) will enable true image-to-image generation:
-
-```python
-# Future implementation with GPT-image-1
-async def generate_marketing_image_with_seed(
-    product_image_path: str,
-    scene_description: str,
-    brand_style: str
-) -> bytes:
-    """Generate marketing image seeded with actual product photo."""
-    
-    response = await openai_client.images.edit(
-        model="gpt-image-1",
-        image=open(product_image_path, "rb"),  # Actual product image as input
-        prompt=f"""
-        Create a marketing image featuring the product shown.
-        Scene: {scene_description}
-        Brand Style: {brand_style}
-        Maintain product accuracy.
-        """,
-        size="1024x1024",
-        quality="high",
-        input_fidelity="high"  # Preserve product details
-    )
-    
-    return base64.b64decode(response.data[0].b64_json)
-```
-
-### How to Request Access
-
-1. Visit [GPT-image-1 Access Request](https://aka.ms/oai/gptimage1access)
-2. Complete the application form
-3. Wait for approval (typically 1-2 weeks)
-4. Update the `ImageContentAgent` to use the Image Edit API
-
-### Migration Steps
-
-When GPT-image-1 access is granted:
-
-1. Update `AZURE_DALLE_MODEL` environment variable to `gpt-image-1`
-2. Modify `ImageContentAgent` to use `images.edit()` instead of `images.generate()`
-3. Update Blob Storage retrieval to pass actual image bytes
-4. Test with sample products before production deployment
+1. Deploy either `gpt-image-1` or `gpt-image-1.5` based on quota and regional availability.
+2. Set `AZURE_OPENAI_IMAGE_MODEL` to the deployed model name.
+3. If using a separate image endpoint, set `AZURE_OPENAI_GPT_IMAGE_ENDPOINT`.
+4. Keep `AZURE_OPENAI_IMAGE_API_VERSION` aligned with the image model API version required by your deployment.
 
 ## Best Practices
 

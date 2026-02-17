@@ -108,7 +108,7 @@ class GeneratedImageContent(BaseModel):
     """Generated marketing image content with compliance status."""
     image_base64: str = Field(description="Base64-encoded image data")
     image_url: Optional[str] = Field(default=None, description="URL if saved to Blob Storage")
-    prompt_used: str = Field(description="DALL-E prompt that generated the image")
+    prompt_used: str = Field(description="Image generation prompt that generated the image")
     alt_text: str = Field(description="Accessibility alt text for the image")
     compliance: ComplianceResult = Field(default_factory=ComplianceResult)
 

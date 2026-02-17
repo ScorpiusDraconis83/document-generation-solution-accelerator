@@ -65,11 +65,10 @@ param gptModelName string = 'gpt-5.1'
 @description('Optional. Version of the GPT model to deploy.')
 param gptModelVersion string = '2025-11-13'
 
-@description('Optional. Image model to deploy: gpt-image-1, gpt-image-1.5, dall-e-3, or none to skip.')
+@description('Optional. Image model to deploy: gpt-image-1, gpt-image-1.5, or none to skip.')
 @allowed([
   'gpt-image-1'
   'gpt-image-1.5'
-  'dall-e-3'
   'none'
 ])
 param imageModelChoice string = 'gpt-image-1'
@@ -86,7 +85,7 @@ param gptModelCapacity int = 150
 
 @minValue(1)
 @description('Optional. Image model deployment capacity (RPM).')
-param dalleModelCapacity int = 1
+param imageModelCapacity int = 1
 
 @description('Optional. Existing Log Analytics Workspace Resource ID.')
 param existingLogAnalyticsWorkspaceId string = ''
@@ -222,11 +221,6 @@ var imageModelConfig = {
     version: '2025-12-16'
     sku: 'GlobalStandard'
   }
-  'dall-e-3': {
-    name: 'dall-e-3'
-    version: '3.0'
-    sku: 'Standard'
-  }
   none: {
     name: ''
     version: ''
@@ -242,7 +236,7 @@ var imageModelDeployment = imageModelChoice != 'none' ? [
     model: imageModelConfig[imageModelChoice].name
     sku: {
       name: imageModelConfig[imageModelChoice].sku
-      capacity: dalleModelCapacity
+      capacity: imageModelCapacity
     }
     version: imageModelConfig[imageModelChoice].version
     raiPolicyName: 'Microsoft.Default'

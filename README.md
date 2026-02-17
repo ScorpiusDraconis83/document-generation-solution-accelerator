@@ -49,7 +49,7 @@ The sample data includes synthetic product catalogs and brand guidelines. The da
   Parse free-text creative briefs into structured fields (overview, objectives, target audience, key message, tone/style, deliverable, timelines, visual guidelines, CTA).
 
   - **Multimodal Content Generation** <br/>
-  Generate marketing copy and images using GPT models and DALL-E 3 grounded in enterprise product data.
+  Generate marketing copy and images using GPT models grounded in enterprise product data.
 
   - **Brand Compliance Validation** <br/>
   Validate all generated content against brand guidelines with severity-categorized feedback (Error, Warning, Info).
@@ -102,7 +102,7 @@ _Note: This is not meant to outline all costs as selected SKUs, scaled use, cust
 |---|---|---|
 | [Azure AI Foundry](https://learn.microsoft.com/en-us/azure/ai-foundry/) | Free tier. Build generative AI applications on an enterprise-grade platform. | [Pricing](https://azure.microsoft.com/pricing/details/ai-studio/) |
 | [Azure Storage Account](https://learn.microsoft.com/en-us/azure/storage/blobs/) | Standard tier, LRS. Pricing is based on storage and operations. Blob storage for product images and generated content. | [Pricing](https://azure.microsoft.com/pricing/details/storage/blobs/) |
-| [Azure AI Services](https://learn.microsoft.com/en-us/azure/ai-services/) | S0 tier, defaults to gpt-5.1 (GPT) and gpt-image-1 (DALL-E 3) models. Pricing is based on token count. | [Pricing](https://azure.microsoft.com/pricing/details/cognitive-services/) |
+| [Azure AI Services](https://learn.microsoft.com/en-us/azure/ai-services/) | S0 tier, defaults to gpt-5.1 (GPT) and gpt-image-1 models. Pricing is based on token count. | [Pricing](https://azure.microsoft.com/pricing/details/cognitive-services/) |
 | [Azure Container Instance](https://learn.microsoft.com/en-us/azure/container-instances/) | Backend API hosting with private VNet integration. Pricing is based on resource allocation. | [Pricing](https://azure.microsoft.com/pricing/details/container-instances/) |
 | [Azure App Service](https://learn.microsoft.com/en-us/azure/app-service/) | B1 tier. Frontend hosting with Node.js proxy server. | [Pricing](https://azure.microsoft.com/pricing/details/app-service/) |
 | [Azure Container Registry](https://learn.microsoft.com/en-us/azure/container-registry/) | Basic tier. Build, store, and manage container images and artifacts in a private registry for all types of container deployments | [Pricing](https://azure.microsoft.com/pricing/details/container-registry/) |
@@ -140,7 +140,7 @@ Accelerate your marketing content creation by leveraging AI to interpret creativ
   Parse unstructured creative briefs into structured fields automatically, ensuring all campaign requirements are captured.
 
   - **Generate multimodal content** <br/>
-  Create marketing copy and images that align with your brand voice and product catalog using GPT and DALL-E 3.
+  Create marketing copy and images that align with your brand voice and product catalog using GPT models (text and image generation models).
 
   - **Ensure brand compliance** <br/>
   Validate all generated content against brand guidelines with severity-categorized feedback before publication.

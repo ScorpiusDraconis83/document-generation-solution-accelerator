@@ -143,7 +143,7 @@ class BlobStorageService:
         content_type: str = "image/png"
     ) -> str:
         """
-        Save a DALL-E generated image to blob storage.
+        Save the generated image to blob storage.
 
         Args:
             conversation_id: ID of the conversation that generated the image
@@ -205,8 +205,7 @@ class BlobStorageService:
         Generate a detailed text description of an image using GPT-5 Vision.
 
         This is used to create descriptions of product images that can be
-        used as context for DALL-E 3 image generation (since DALL-E 3
-        cannot accept image inputs directly).
+        used as context for image generation.
 
         Args:
             image_data: Raw image bytes
