@@ -1526,11 +1526,12 @@ Use the detailed visual descriptions above to ensure accurate color reproduction
                                     try:
                                         prompt_data = json.loads(json_match.group(1))
                                         prompt_text = prompt_data.get('prompt', prompt_data.get('image_prompt', prompt_text))
-                                    except Exception:
+                                    except Exception as parse_error:
+                                        # Best-effort JSON extraction from markdown code block; on failure,
+                                        # fall back to the original prompt_text without interrupting image generation.
                                         logger.debug(
-                                            "Failed to parse JSON image prompt from markdown code block; "
-                                            "continuing with original prompt_text.",
-                                            exc_info=True
+                                            "Failed to parse JSON from markdown code block for image prompt: %s",
+                                            parse_error,
                                         )
 
                         # Build product description for image generation context
@@ -1595,8 +1596,13 @@ Check against brand guidelines and flag any issues.
                     for v in results["violations"]
                 )
             except (json.JSONDecodeError, KeyError):
-                # Failed to parse compliance response JSON; violations will remain empty
-                logger.debug("Could not parse compliance violations from response", exc_info=True)
+                # If the compliance response is not valid JSON or missing expected keys,
+                # continue without structured violations data but log for observability.
+                logger.debug(
+                    "Could not parse structured compliance violations from response; "
+                    "proceeding without 'violations' / 'requires_modification'.",
+                    exc_info=True,
+                )
 
         except Exception as e:
             logger.exception(f"Error generating content: {e}")
@@ -1764,13 +1770,10 @@ Return JSON with:
                                 prompt_data = json.loads(json_match.group(1))
                                 prompt_text = prompt_data.get('prompt', prompt_text)
                                 change_summary = prompt_data.get('change_summary', modification_request)
-                            except Exception:
-                                # If JSON extraction fails here, fall back to the original
-                                # prompt_text and change_summary values set earlier.
+                            except Exception as parse_error:
                                 logger.debug(
-                                    "Failed to parse JSON from markdown in regenerate_image; "
-                                    "using original prompt_text and modification_request.",
-                                    exc_info=True
+                                    "Failed to parse JSON from image modification response fallback: %s",
+                                    parse_error,
                                 )
 
                 results["image_prompt"] = prompt_text
