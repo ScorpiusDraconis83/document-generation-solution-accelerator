@@ -1264,8 +1264,8 @@ Important:
                 payload = {
                     "prompt": image_prompt[:4000],
                     "n": 1,
-                    "size": app_settings.azure_openai.image_size or "1024x1024",
-                    "quality": app_settings.azure_openai.image_quality or "hd",
+                    "size": "1024x1024",
+                    "quality": "hd",
                     "response_format": "b64_json",
                 }
             else:
