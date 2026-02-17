@@ -3,14 +3,13 @@
 Sample Image Generation Script
 
 This script demonstrates how to generate marketing images using the
-content-gen image generation capabilities (DALL-E 3 or gpt-image-1).
+content-gen image generation capabilities (gpt-image-1 or gpt-image-1.5).
 
 Prerequisites:
 1. Set up environment variables (or use a .env file):
    - AZURE_OPENAI_ENDPOINT: Your Azure OpenAI endpoint
-   - AZURE_OPENAI_DALLE_ENDPOINT: (Optional) Dedicated DALL-E endpoint
-   - AZURE_OPENAI_DALLE_MODEL: Model name (default: dall-e-3)
-   - AZURE_OPENAI_IMAGE_MODEL: (Optional) Use "gpt-image-1" for GPT Image model
+    - AZURE_OPENAI_GPT_IMAGE_ENDPOINT: (Optional) Dedicated GPT image endpoint
+    - AZURE_OPENAI_IMAGE_MODEL: Use "gpt-image-1" or "gpt-image-1.5"
    
 2. Ensure you have RBAC access:
    - "Cognitive Services OpenAI User" role on the Azure OpenAI resource
@@ -34,7 +33,7 @@ backend_path = Path(__file__).parent.parent / "src" / "backend"
 sys.path.insert(0, str(backend_path))
 
 # Now import the image generation function
-from agents.image_content_agent import generate_dalle_image
+from agents.image_content_agent import generate_image
 from settings import app_settings
 
 
@@ -64,7 +63,7 @@ async def generate_sample_image(
     print("IMAGE GENERATION SAMPLE")
     print(f"{'='*60}")
     print(f"\nModel: {app_settings.azure_openai.effective_image_model}")
-    print(f"Endpoint: {app_settings.azure_openai.dalle_endpoint or app_settings.azure_openai.endpoint}")
+    print(f"Endpoint: {app_settings.azure_openai.image_endpoint or app_settings.azure_openai.endpoint}")
     print(f"Size: {size or app_settings.azure_openai.image_size}")
     print(f"Quality: {quality or app_settings.azure_openai.image_quality}")
     print(f"\nPrompt: {prompt[:200]}{'...' if len(prompt) > 200 else ''}")
@@ -79,7 +78,7 @@ async def generate_sample_image(
     print(f"{'='*60}\n")
     
     # Call the image generation function
-    result = await generate_dalle_image(
+    result = await generate_image(
         prompt=prompt,
         product_description=product_description,
         scene_description=scene_description,
@@ -129,7 +128,7 @@ async def generate_sample_image(
 async def main():
     """Main entry point for the sample script."""
     parser = argparse.ArgumentParser(
-        description="Generate marketing images using DALL-E 3 or gpt-image-1"
+        description="Generate marketing images using gpt-image-1 or gpt-image-1.5"
     )
     parser.add_argument(
         "--prompt", "-p",
@@ -152,14 +151,14 @@ async def main():
     parser.add_argument(
         "--size",
         type=str,
-        choices=["1024x1024", "1024x1792", "1792x1024", "1536x1024", "1024x1536"],
+        choices=["1024x1024", "1536x1024", "1024x1536", "auto"],
         default=None,
         help="Image size (default from settings)"
     )
     parser.add_argument(
         "--quality", "-q",
         type=str,
-        choices=["standard", "hd", "low", "medium", "high"],
+        choices=["low", "medium", "high", "auto"],
         default=None,
         help="Image quality (default from settings)"
     )
@@ -175,8 +174,8 @@ async def main():
     # Check if image generation is enabled
     if not app_settings.azure_openai.image_generation_enabled:
         print("❌ Image generation is not configured.")
-        print("   Please set AZURE_OPENAI_DALLE_ENDPOINT or AZURE_OPENAI_ENDPOINT")
-        print("   and ensure you have access to a DALL-E 3 or gpt-image-1 model.")
+        print("   Please set AZURE_OPENAI_GPT_IMAGE_ENDPOINT or AZURE_OPENAI_ENDPOINT")
+        print("   and ensure you have access to a gpt-image-1 or gpt-image-1.5 model.")
         sys.exit(1)
     
     # Generate the image

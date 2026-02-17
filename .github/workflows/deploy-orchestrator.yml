@@ -62,7 +62,7 @@ on:
         required: true
         type: string
       image_model_choice:
-        description: 'Image model to deploy (gpt-image-1, gpt-image-1.5, dall-e-3, none)'
+        description: 'Image model to deploy (gpt-image-1, gpt-image-1.5, none)'
         required: false
         default: 'gpt-image-1'
         type: string

@@ -150,7 +150,7 @@ def main():
     draw_service_box(draw, COL2_X, ROW2_Y, BOX_W, BOX_H, "Container Instance", "Python/Quart API\nBackend", "container", highlight=True)
     
     # Azure OpenAI Service
-    draw_service_box(draw, COL4_X, ROW2_Y, BOX_W+50, BOX_H, "Azure OpenAI", "GPT & DALL-E 3", "ai")
+    draw_service_box(draw, COL4_X, ROW2_Y, BOX_W+50, BOX_H, "Azure OpenAI", "GPT & GPT-Image", "ai")
     
     # === ROW 3: Data Storage ===
     # Blob Storage
@@ -214,7 +214,7 @@ def main():
     draw.text((50, HEIGHT-30), "© 2024 Microsoft Corporation All rights reserved.", fill=TEXT_GRAY, font=font_copy)
     
     # Save image
-    output_path = "/home/jahunte/content-generation-solution-accelerator/docs/images/readme/solution_architecture.png"
+    output_path = os.path.join(os.path.dirname(__file__), "images", "readme", "solution_architecture.png")
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     img.save(output_path, "PNG")
     print(f"Architecture diagram saved to: {output_path}")

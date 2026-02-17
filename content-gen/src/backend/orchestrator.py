@@ -432,7 +432,7 @@ or hand back to triage_agent with your results.
 """
 
 IMAGE_CONTENT_INSTRUCTIONS = f"""You are an Image Content Agent for MARKETING IMAGE GENERATION ONLY.
-Create detailed image prompts for DALL-E based on marketing requirements.
+Create detailed image prompts for GPT-Image based on marketing requirements.
 Your scope is strictly limited to marketing visuals: product images, ads, social media graphics, and promotional materials.
 Do not generate images for non-marketing purposes such as personal art, entertainment, or general creative projects.
 
@@ -445,7 +445,7 @@ When creating image prompts:
 - Ensure the prompt aligns with campaign objectives
 
 Return JSON with:
-- "prompt": Detailed DALL-E prompt
+- "prompt": Detailed GPT-Image prompt
 - "style": Visual style description
 - "aspect_ratio": Recommended aspect ratio
 - "notes": Additional considerations
@@ -1249,11 +1249,6 @@ Important:
             # Adapt API version and payload to the deployed image model
             is_dalle3 = image_deployment.lower().startswith("dall-e")
 
-            if is_dalle3:
-                api_version = app_settings.azure_openai.preview_api_version or "2024-02-01"
-            else:
-                api_version = app_settings.azure_openai.image_api_version or "2025-04-01-preview"
-
             logger.info(f"Calling Foundry direct image API: {image_api_url}")
             logger.info(f"Prompt: {image_prompt[:200]}...")
 
@@ -1265,20 +1260,22 @@ Important:
             # Build model-appropriate payload
             if is_dalle3:
                 # dall-e-3: quality must be "standard" or "hd"; needs response_format; 4000-char prompt limit
+                api_version = app_settings.azure_openai.preview_api_version or "2024-02-01"
                 payload = {
                     "prompt": image_prompt[:4000],
                     "n": 1,
-                    "size": app_settings.azure_openai.image_size or "1024x1024",
-                    "quality": app_settings.azure_openai.image_quality or "hd",
+                    "size": "1024x1024",
+                    "quality": "hd",
                     "response_format": "b64_json",
                 }
             else:
                 # gpt-image-1 / gpt-image-1.5: quality is low/medium/high/auto; no response_format
+                api_version = app_settings.azure_openai.image_api_version or "2025-04-01-preview"
                 payload = {
                     "prompt": image_prompt,
                     "n": 1,
-                    "size": "1024x1024",
-                    "quality": "medium",
+                    "size": app_settings.azure_openai.image_size or "1024x1024",
+                    "quality": app_settings.azure_openai.image_quality or "medium",
                 }
 
             async with httpx.AsyncClient(timeout=120.0) as client:
@@ -1505,13 +1502,13 @@ Use the detailed visual descriptions above to ensure accurate color reproduction
                     logger.info("Generating image via Foundry direct API...")
                     await self._generate_foundry_image(image_prompt, results)
                 else:
-                    # Direct mode: use image agent to create prompt, then generate via DALL-E
+                    # Direct mode: use image agent to create prompt, then generate via image generation model
                     image_response = await self._agents["image_content"].run(image_request)
                     results["image_prompt"] = str(image_response)
 
                     # Extract clean prompt from the response and generate actual image
                     try:
-                        from agents.image_content_agent import generate_dalle_image
+                        from agents.image_content_agent import generate_image
 
                         # Try to extract a clean prompt from the agent response
                         prompt_text = str(image_response)
@@ -1537,13 +1534,13 @@ Use the detailed visual descriptions above to ensure accurate color reproduction
                                             parse_error,
                                         )
 
-                        # Build product description for DALL-E context
+                        # Build product description for image generation context
                         # Include detailed image descriptions if available for better color accuracy
                         product_description = detailed_image_context if detailed_image_context else product_context
 
-                        # Generate the actual image using DALL-E
-                        logger.info(f"Generating DALL-E image with prompt: {prompt_text[:200]}...")
-                        image_result = await generate_dalle_image(
+                        # Generate the actual image using image generation model
+                        logger.info(f"Generating image with prompt: {prompt_text[:200]}...")
+                        image_result = await generate_image(
                             prompt=prompt_text,
                             product_description=product_description,
                             scene_description=brief.visual_guidelines
@@ -1552,16 +1549,16 @@ Use the detailed visual descriptions above to ensure accurate color reproduction
                         if image_result.get("success"):
                             image_base64 = image_result.get("image_base64")
                             results["image_revised_prompt"] = image_result.get("revised_prompt")
-                            logger.info("DALL-E image generated successfully")
+                            logger.info("Image generated successfully")
 
                             # Save to blob storage
                             await self._save_image_to_blob(image_base64, results)
                         else:
-                            logger.warning(f"DALL-E image generation failed: {image_result.get('error')}")
+                            logger.warning(f"Image generation failed: {image_result.get('error')}")
                             results["image_error"] = image_result.get("error")
 
                     except Exception as img_error:
-                        logger.exception(f"Error generating DALL-E image: {img_error}")
+                        logger.exception(f"Error generating image: {img_error}")
                         results["image_error"] = str(img_error)
 
             # Run compliance check
@@ -1719,7 +1716,7 @@ Create a new image prompt that:
 3. Maintains the campaign's tone and objectives
 
 Return JSON with:
-- "prompt": The new DALL-E prompt incorporating the modification
+- "prompt": The new image generation prompt incorporating the modification
 - "style": Visual style description
 - "change_summary": Brief summary of what was changed
 """
@@ -1784,12 +1781,12 @@ Return JSON with:
 
                 # Generate the actual image
                 try:
-                    from agents.image_content_agent import generate_dalle_image
+                    from agents.image_content_agent import generate_image
 
                     product_description = detailed_image_context if detailed_image_context else product_context
 
-                    logger.info(f"Generating modified DALL-E image: {prompt_text[:200]}...")
-                    image_result = await generate_dalle_image(
+                    logger.info(f"Generating modified image: {prompt_text[:200]}...")
+                    image_result = await generate_image(
                         prompt=prompt_text,
                         product_description=product_description,
                         scene_description=brief.visual_guidelines
@@ -1798,14 +1795,14 @@ Return JSON with:
                     if image_result.get("success"):
                         image_base64 = image_result.get("image_base64")
                         results["image_revised_prompt"] = image_result.get("revised_prompt")
-                        logger.info("Modified DALL-E image generated successfully")
+                        logger.info("Modified image generated successfully")
                         await self._save_image_to_blob(image_base64, results)
                     else:
-                        logger.warning(f"Modified DALL-E image generation failed: {image_result.get('error')}")
+                        logger.warning(f"Modified image generation failed: {image_result.get('error')}")
                         results["image_error"] = image_result.get("error")
 
                 except Exception as img_error:
-                    logger.exception(f"Error generating modified DALL-E image: {img_error}")
+                    logger.exception(f"Error generating modified image: {img_error}")
                     results["image_error"] = str(img_error)
 
             logger.info(f"Image regeneration complete. Has image: {bool(results.get('image_base64') or results.get('image_blob_url'))}")

@@ -64,12 +64,10 @@ class _AzureOpenAISettings(BaseSettings):
     model: str = "gpt-5"
 
     # Image generation model settings
-    # Supported models: "dall-e-3" or "gpt-image-1" or "gpt-image-1.5"
-    image_model: str = Field(default="dall-e-3", alias="AZURE_OPENAI_IMAGE_MODEL")
-    dalle_model: str = Field(default="dall-e-3", alias="AZURE_OPENAI_DALLE_MODEL")  # Legacy alias
-    dalle_endpoint: Optional[str] = Field(default=None, alias="AZURE_OPENAI_DALLE_ENDPOINT")
+    # Supported models: "gpt-image-1" or "gpt-image-1.5"
+    image_model: str = Field(default="gpt-image-1", alias="AZURE_OPENAI_IMAGE_MODEL")
 
-    # gpt-image-1 or gpt-image-1.5 specific endpoint (if different from DALL-E endpoint)
+    # gpt-image-1 or gpt-image-1.5 specific endpoint
     gpt_image_endpoint: Optional[str] = Field(default=None, alias="AZURE_OPENAI_GPT_IMAGE_ENDPOINT")
 
     resource: Optional[str] = None
@@ -83,31 +81,25 @@ class _AzureOpenAISettings(BaseSettings):
     image_api_version: str = Field(default="2025-04-01-preview", alias="AZURE_OPENAI_IMAGE_API_VERSION")
 
     # Image generation settings
-    # For dall-e-3: 1024x1024, 1024x1792, 1792x1024
     # For gpt-image-1: 1024x1024, 1536x1024, 1024x1536, auto
     image_size: str = "1024x1024"
-    image_quality: str = "hd"  # dall-e-3: standard/hd, gpt-image-1: low/medium/high/auto
+    image_quality: str = "medium"   # gpt-image-1/1.5: low/medium/high/auto
 
     @property
     def effective_image_model(self) -> str:
-        """Get the effective image model, preferring image_model over dalle_model."""
-        # If image_model is explicitly set and not the default, use it
-        # Otherwise fall back to dalle_model for backwards compatibility
-        return self.image_model if self.image_model else self.dalle_model
+        """Get the effective image model"""
+        return self.image_model
 
     @property
     def image_endpoint(self) -> Optional[str]:
         """Get the appropriate endpoint for the configured image model."""
-        if self.effective_image_model in ["gpt-image-1", "gpt-image-1.5"] and self.gpt_image_endpoint:
-            return self.gpt_image_endpoint
-        return self.dalle_endpoint
+        return self.gpt_image_endpoint or self.endpoint
 
     @property
     def image_generation_enabled(self) -> bool:
         """Check if image generation is available.
 
         Image generation requires either:
-        - A DALL-E endpoint configured, OR
         - A gpt-image-1 or gpt-image-1.5 endpoint configured, OR
         - Using the main OpenAI endpoint with an image model configured
 
@@ -119,7 +111,7 @@ class _AzureOpenAISettings(BaseSettings):
 
         # Check if we have an endpoint that can handle image generation
         # Either a dedicated image endpoint or the main OpenAI endpoint
-        has_image_endpoint = bool(self.dalle_endpoint or self.gpt_image_endpoint or self.endpoint)
+        has_image_endpoint = bool(self.gpt_image_endpoint or self.endpoint)
 
         return has_image_endpoint
 
