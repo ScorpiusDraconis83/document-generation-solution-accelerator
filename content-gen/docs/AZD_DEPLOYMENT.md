@@ -38,15 +38,14 @@ This guide covers deploying the Content Generation Solution Accelerator using Az
 
 - An Azure subscription with the following permissions:
   - Create Resource Groups
-  - Deploy Azure AI Services (GPT-4o, DALL-E 3 or GPT-Image-1, Text Embeddings)
+  - Deploy Azure AI Services (GPT-5.1, GPT-Image-1)
   - Create Container Registry, Container Instances, App Service
   - Create Cosmos DB, Storage Account, AI Search
   - Assign RBAC roles
 
 - **Quota**: Ensure you have sufficient quota for:
-  - GPT-4o (or your chosen model)
-  - DALL-E 3 or GPT-Image-1 (for image generation)
-  - Text-embedding-3-large
+  - GPT-5.1 (or your chosen model)
+  - GPT-Image-1 (or GPT-Image-1.5 - for image generation)
 
 ## Quick Start
 
@@ -58,6 +57,11 @@ azd auth login
 
 # Login to Azure CLI (required for some post-deployment scripts)
 az login
+```
+ Alternatively, login to Azure using a device code (recommended when using VS Code Web):
+
+```
+az login --use-device-code
 ```
 
 ### 2. Initialize Environment
@@ -72,52 +76,30 @@ azd env new <environment-name>
 azd env new content-gen-dev
 ```
 
-### 3. Configure Parameters (Optional)
+### 3. Choose Deployment Configuration
 
-The deployment has sensible defaults, but you can customize:
+The [`infra`](../infra) folder contains the [`main.bicep`](../infra/main.bicep) Bicep script, which defines all Azure infrastructure components for this solution.
 
-```bash
-# Set the Azure region (default: eastus)
-azd env set AZURE_LOCATION swedencentral
+By default, the `azd up` command uses the [`main.parameters.json`](../infra/main.parameters.json) file to deploy the solution. This file is pre-configured for a **sandbox environment**.
 
-# Set AI Services region (must support your models)
-azd env set AZURE_ENV_OPENAI_LOCATION swedencentral
+For **production deployments**, the repository also provides [`main.waf.parameters.json`](../infra/main.waf.parameters.json), which applies a [Well-Architected Framework (WAF) aligned](https://learn.microsoft.com/en-us/azure/well-architected/) configuration. This can be used for Production scenarios.
 
-# GPT Model configuration
-azd env set gptModelName gpt-4o
-azd env set gptModelVersion 2024-11-20
-azd env set gptModelDeploymentType GlobalStandard
-azd env set gptModelCapacity 50
+**How to choose your deployment configuration:**
 
-# Image generation model (dalle-3 or gpt-image-1)
-azd env set imageModelChoice gpt-image-1
-azd env set dalleModelCapacity 1
+* **To use sandbox/dev environment** — Use the default `main.parameters.json` file.
 
-# Embedding model
-azd env set embeddingModel text-embedding-3-large
-azd env set embeddingDeploymentCapacity 50
+* **To use production configuration:**
 
-# Azure OpenAI API version
-azd env set azureOpenaiAPIVersion 2024-12-01-preview
-```
+Before running `azd up`, copy the contents from the production configuration file to your main parameters file:
 
-### 4. Enable Optional Features (WAF Pillars)
+1. Navigate to the `infra` folder in your project.
+2. Open `main.waf.parameters.json` in a text editor (like Notepad, VS Code, etc.).
+3. Select all content (Ctrl+A) and copy it (Ctrl+C).
+4. Open `main.parameters.json` in the same text editor.
+5. Select all existing content (Ctrl+A) and paste the copied content (Ctrl+V).
+6. Save the file (Ctrl+S).
 
-```bash
-# Enable private networking (VNet integration)
-azd env set enablePrivateNetworking true
-
-# Enable monitoring (Log Analytics + App Insights)
-azd env set enableMonitoring true
-
-# Enable scalability (auto-scaling, higher SKUs)
-azd env set enableScalability true
-
-# Enable redundancy (zone redundancy, geo-replication)
-azd env set enableRedundancy true
-```
-
-### 5. Deploy
+### 4. Deploy
 
 ```bash
 azd up
@@ -131,25 +113,6 @@ This single command will:
 5. **Deploy** the frontend to App Service
 6. **Configure** RBAC and Cosmos DB roles
 7. **Upload** sample data and create the search index
-
-## Deployment Parameters Reference
-
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `AZURE_LOCATION` | eastus | Primary Azure region |
-| `azureAiServiceLocation` | eastus | Region for AI Services (must support chosen models) |
-| `gptModelName` | gpt-4o | GPT model for content generation |
-| `gptModelVersion` | 2024-11-20 | Model version |
-| `gptModelDeploymentType` | GlobalStandard | Deployment type |
-| `gptModelCapacity` | 50 | TPM capacity (in thousands) |
-| `imageModelChoice` | dalle-3 | Image model: `dalle-3` or `gpt-image-1` |
-| `dalleModelCapacity` | 1 | Image model capacity |
-| `embeddingModel` | text-embedding-3-large | Embedding model |
-| `embeddingDeploymentCapacity` | 50 | Embedding TPM capacity |
-| `enablePrivateNetworking` | false | Enable VNet and private endpoints |
-| `enableMonitoring` | false | Enable Log Analytics + App Insights |
-| `enableScalability` | false | Enable auto-scaling |
-| `enableRedundancy` | false | Enable zone/geo redundancy |
 
 ## Using Existing Resources
 
@@ -165,13 +128,6 @@ azd env set AZURE_EXISTING_AI_PROJECT_RESOURCE_ID "/subscriptions/<sub-id>/resou
 ```bash
 # Set the resource ID of your existing Log Analytics workspace
 azd env set AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID "/subscriptions/<sub-id>/resourceGroups/<rg>/providers/Microsoft.OperationalInsights/workspaces/<workspace-name>"
-```
-
-### Use Existing Container Registry
-
-```bash
-# Set the name of your existing ACR
-azd env set ACR_NAME myexistingacr
 ```
 
 ## Post-Deployment
@@ -203,51 +159,6 @@ azd env get-value WEB_APP_URL
 
 # Get resource group name
 azd env get-value RESOURCE_GROUP_NAME
-```
-
-## Day-2 Operations
-
-### Update the Application
-
-After making code changes:
-
-```bash
-# Rebuild and redeploy everything
-azd up
-
-# Or just redeploy (no infra changes)
-azd deploy
-```
-
-### Update Only the Backend (Container)
-
-```bash
-# Get ACR and ACI names
-ACR_NAME=$(azd env get-value ACR_NAME)
-ACI_NAME=$(azd env get-value CONTAINER_INSTANCE_NAME)
-RG_NAME=$(azd env get-value RESOURCE_GROUP_NAME)
-
-# Build and push new image
-az acr build --registry $ACR_NAME --image content-gen-app:latest --file ./src/WebApp.Dockerfile ./src
-
-# Restart ACI to pull new image
-az container restart --name $ACI_NAME --resource-group $RG_NAME
-```
-
-### Update Only the Frontend
-
-```bash
-cd src/app/frontend
-npm install && npm run build
-
-cd ../frontend-server
-zip -r frontend-deploy.zip static/ server.js package.json package-lock.json
-
-az webapp deploy \
-  --resource-group $(azd env get-value RESOURCE_GROUP_NAME) \
-  --name $(azd env get-value APP_SERVICE_NAME) \
-  --src-path frontend-deploy.zip \
-  --type zip
 ```
 
 ### View Logs
@@ -324,7 +235,7 @@ Error: az acr build failed
 **Solution**: Check the Dockerfile and ensure all required files are present:
 ```bash
 # Manual build for debugging
-cd src
+cd src/app
 docker build -f WebApp.Dockerfile -t content-gen-app:test .
 ```
 
@@ -389,13 +300,13 @@ When `enablePrivateNetworking` is enabled:
 │          │                                                      │
 │  ┌───────▼──────────┐      ┌───────────────────────────────┐   │
 │  │  Storage Account │      │      Azure AI Services        │   │
-│  └──────────────────┘      │  (GPT-4o, DALL-E, Embeddings) │   │
+│  └──────────────────┘      │  (GPT-5.1, GPT-Image-1) │   │
 │                            └───────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
 ## Related Documentation
 
-- [Manual Deployment Guide](DEPLOYMENT.md)
+- [Deployment Guide](DEPLOYMENT.md)
 - [Image Generation Configuration](IMAGE_GENERATION.md)
 - [Azure Developer CLI Documentation](https://learn.microsoft.com/azure/developer/azure-developer-cli/)

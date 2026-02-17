@@ -148,10 +148,9 @@ Changes to source files will automatically trigger a reload.
 |----------|----------|-------------|
 | `AZURE_OPENAI_ENDPOINT` | Yes | Azure OpenAI endpoint URL (e.g., `https://your-resource.openai.azure.com/`) |
 | `AZURE_OPENAI_GPT_MODEL` | Yes | GPT model deployment name (e.g., `gpt-4o`, `gpt-5.1`) |
-| `AZURE_OPENAI_IMAGE_MODEL` | Yes | Image generation model (`dall-e-3` or `gpt-image-1`) |
+| `AZURE_OPENAI_IMAGE_MODEL` | Yes | Image generation model (`gpt-image-1` or `gpt-image-1.5`) |
 | `AZURE_OPENAI_GPT_IMAGE_ENDPOINT` | No | Separate endpoint for gpt-image-1 (if different from main endpoint) |
 | `AZURE_OPENAI_API_VERSION` | Yes | API version (e.g., `2024-06-01`) |
-| `AZURE_OPENAI_PREVIEW_API_VERSION` | No | Preview API version for new features |
 | `AZURE_OPENAI_TEMPERATURE` | No | Generation temperature (default: `0.7`) |
 | `AZURE_OPENAI_MAX_TOKENS` | No | Max tokens for generation (default: `2000`) |
 
@@ -162,11 +161,7 @@ Changes to source files will automatically trigger a reload.
 | `AZURE_OPENAI_IMAGE_SIZE` | `1024x1024` | Image dimensions |
 | `AZURE_OPENAI_IMAGE_QUALITY` | `medium` | Image quality setting |
 
-**DALL-E 3 Options:**
-- Sizes: `1024x1024`, `1024x1792`, `1792x1024`
-- Quality: `standard`, `hd`
-
-**GPT-Image-1 Options:**
+**GPT-Image-1/1.5 Options:**
 - Sizes: `1024x1024`, `1536x1024`, `1024x1536`, `auto`
 - Quality: `low`, `medium`, `high`, `auto`
 
@@ -376,4 +371,4 @@ az role assignment create \
 
 - [AZD Deployment Guide](AZD_DEPLOYMENT.md) - Deploy to Azure with `azd up`
 - [Manual Deployment Guide](DEPLOYMENT.md) - Step-by-step Azure deployment
-- [Image Generation Configuration](IMAGE_GENERATION.md) - DALL-E 3 and GPT-Image-1 setup
+- [Image Generation Configuration](IMAGE_GENERATION.md) - GPT Image model setup

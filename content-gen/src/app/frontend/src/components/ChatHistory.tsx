@@ -322,21 +322,29 @@ function ConversationItem({
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [renameValue, setRenameValue] = useState(conversation.title || '');
+  const [renameError, setRenameError] = useState<string>('');
   const renameInputRef = useRef<HTMLInputElement>(null);
 
   const handleRenameClick = () => {
     setRenameValue(conversation.title || '');
+    setRenameError('');
     setIsRenameDialogOpen(true);
     setIsMenuOpen(false);
   };
 
   const handleRenameConfirm = async () => {
     const trimmedValue = renameValue.trim();
-    if (trimmedValue && trimmedValue !== conversation.title) {
-      await onRename(conversation.id, trimmedValue);
-      onRefresh();
+    
+    if (trimmedValue === conversation.title) {
+      setIsRenameDialogOpen(false);
+      setRenameError('');
+      return;
     }
+    
+    await onRename(conversation.id, trimmedValue);
+    onRefresh();
     setIsRenameDialogOpen(false);
+    setRenameError('');
   };
 
   const handleDeleteClick = () => {
@@ -446,9 +454,17 @@ function ConversationItem({
               <Input
                 ref={renameInputRef}
                 value={renameValue}
-                onChange={(e) => setRenameValue(e.target.value)}
+                onChange={(e) => {
+                  const newValue = e.target.value;
+                  setRenameValue(newValue);
+                  if (newValue.trim() === '') {
+                    setRenameError('Conversation name cannot be empty or contain only spaces');
+                  } else {
+                    setRenameError('');
+                  }
+                }}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
+                  if (e.key === 'Enter' && renameValue.trim()) {
                     handleRenameConfirm();
                   } else if (e.key === 'Escape') {
                     setIsRenameDialogOpen(false);
@@ -457,13 +473,32 @@ function ConversationItem({
                 placeholder="Enter conversation name"
                 style={{ width: '100%' }}
               />
+              {renameError && (
+                <Text 
+                  size={200} 
+                  style={{ 
+                    color: tokens.colorPaletteRedForeground1, 
+                    marginTop: '8px',
+                    display: 'block'
+                  }}
+                >
+                  {renameError}
+                </Text>
+              )}
             </DialogContent>
           </DialogBody>
           <DialogActions style={{ marginTop: '8px', paddingTop: '8px', paddingBottom: '8px' }}>
-            <Button appearance="secondary" onClick={() => setIsRenameDialogOpen(false)}>
+            <Button appearance="secondary" onClick={() => {
+              setIsRenameDialogOpen(false);
+              setRenameError('');
+            }}>
               Cancel
             </Button>
-            <Button appearance="primary" onClick={handleRenameConfirm}>
+            <Button 
+              appearance="primary" 
+              onClick={handleRenameConfirm}
+              disabled={!renameValue.trim()}
+            >
               Rename
             </Button>
           </DialogActions>

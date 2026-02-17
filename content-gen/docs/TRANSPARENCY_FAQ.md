@@ -8,7 +8,7 @@
     **Key Capabilities:**
     - Parse free-text creative briefs into structured fields
     - Generate marketing copy using GPT models
-    - Generate marketing images using DALL-E 3
+    - Generate marketing images using GPT image generation models
     - Validate content against brand guidelines with severity-categorized compliance checks
     - Ground content in product catalog data from Cosmos DB
 
