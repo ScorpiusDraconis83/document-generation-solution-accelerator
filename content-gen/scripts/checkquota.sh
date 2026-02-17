@@ -11,7 +11,6 @@
 # Usage (local):
 #   bash checkquota.sh [image_model_choice]
 #   bash checkquota.sh gpt-image-1
-#   bash checkquota.sh dall-e-3
 #   bash checkquota.sh none
 #
 # Usage (CI - via env vars):
@@ -49,12 +48,11 @@ declare -A IMAGE_MODEL_QUOTA_NAME
 IMAGE_MODEL_QUOTA_NAME=(
   ["gpt-image-1"]="OpenAI.GlobalStandard.gpt-image-1"
   ["gpt-image-1.5"]="OpenAI.GlobalStandard.gpt-image-1.5"
-  ["dall-e-3"]="OpenAI.Standard.dall-e-3"
   ["none"]=""
 )
 
 # ---- Validate image model choice ----
-ALLOWED_MODELS=("gpt-image-1" "gpt-image-1.5" "dall-e-3" "none")
+ALLOWED_MODELS=("gpt-image-1" "gpt-image-1.5" "none")
 if [[ ! " ${ALLOWED_MODELS[@]} " =~ " ${IMAGE_MODEL_CHOICE} " ]]; then
     echo "❌ ERROR: Invalid image model choice: '$IMAGE_MODEL_CHOICE'"
     echo "   Allowed values: ${ALLOWED_MODELS[*]}"

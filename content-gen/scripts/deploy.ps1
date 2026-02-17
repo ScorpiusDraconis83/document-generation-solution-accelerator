@@ -84,7 +84,7 @@ Write-Host "  - Azure App Service (frontend)"
 Write-Host "  - Azure Cosmos DB (products, conversations containers)"
 Write-Host "  - Azure Blob Storage (product-images, generated-images containers)"
 Write-Host "  - Azure OpenAI (GPT model for text generation)"
-Write-Host "  - Azure OpenAI (DALL-E 3 for image generation - can be separate resource)"
+Write-Host "  - Azure OpenAI (GPT image model for image generation - can be separate resource)"
 Write-Host ""
 
 $continue = Read-Host "Continue with deployment? (y/n)"
@@ -174,11 +174,11 @@ if ($continue -eq "y" -or $continue -eq "Y") {
             Write-Host "     --role 'Cognitive Services OpenAI User' ``"
             Write-Host "     --scope <GPT_RESOURCE_ID>"
             Write-Host ""
-            Write-Host "2. Azure OpenAI (DALL-E model - if separate resource):" -ForegroundColor Cyan
+            Write-Host "2. Azure OpenAI (GPT image model - if separate resource):" -ForegroundColor Cyan
             Write-Host "   Role: Cognitive Services OpenAI User"
             Write-Host "   az role assignment create --assignee $principalId ``"
             Write-Host "     --role 'Cognitive Services OpenAI User' ``"
-            Write-Host "     --scope <DALLE_RESOURCE_ID>"
+            Write-Host "     --scope <IMAGE_RESOURCE_ID>"
             Write-Host ""
             Write-Host "3. Azure Cosmos DB:" -ForegroundColor Cyan
             Write-Host "   Role: Cosmos DB Built-in Data Contributor (data plane)"
