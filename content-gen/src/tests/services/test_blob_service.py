@@ -5,13 +5,14 @@ These tests mock only the Azure SDK clients (BlobServiceClient, ContainerClient)
 while allowing the actual BlobStorageService code to execute for coverage.
 """
 
-import base64
+
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from services import blob_service
 from services.blob_service import BlobStorageService, get_blob_service
+
 
 @pytest.mark.asyncio
 async def test_initialize_with_managed_identity():
@@ -39,6 +40,7 @@ async def test_initialize_with_managed_identity():
         mock_cred.assert_called_once_with(client_id="test-client-id")
         mock_client.assert_called_once()
 
+
 @pytest.mark.asyncio
 async def test_initialize_with_default_credential():
     """Test initialization with default Azure credential."""
@@ -64,6 +66,7 @@ async def test_initialize_with_default_credential():
 
         mock_cred.assert_called_once()
 
+
 @pytest.mark.asyncio
 async def test_initialize_idempotent():
     """Test that initialize only runs once."""
@@ -86,6 +89,7 @@ async def test_initialize_idempotent():
         await service.initialize()  # Second call should be no-op
 
         assert mock_client.call_count == 1
+
 
 @pytest.mark.asyncio
 async def test_close_client():
@@ -111,6 +115,7 @@ async def test_close_client():
 
         mock_blob_client.close.assert_called_once()
         assert service._client is None
+
 
 @pytest.fixture
 def mock_blob_service_with_containers():
@@ -145,6 +150,7 @@ def mock_blob_service_with_containers():
 
         yield service
 
+
 @pytest.mark.asyncio
 async def test_upload_product_image_success(mock_blob_service_with_containers):
     """Test uploading a product image successfully."""
@@ -169,6 +175,7 @@ async def test_upload_product_image_success(mock_blob_service_with_containers):
         assert description == "A beautiful product image"
         mock_blob_client.upload_blob.assert_called_once()
 
+
 @pytest.mark.asyncio
 async def test_upload_product_image_png(mock_blob_service_with_containers):
     """Test uploading a PNG product image."""
@@ -190,6 +197,7 @@ async def test_upload_product_image_png(mock_blob_service_with_containers):
         )
 
         assert ".png" in mock_blob_client.url or "image.png" in mock_blob_client.url
+
 
 @pytest.mark.asyncio
 async def test_get_product_image_url_found(mock_blob_service_with_containers):
@@ -215,6 +223,7 @@ async def test_get_product_image_url_found(mock_blob_service_with_containers):
     assert url is not None
     assert "SKU123" in url
 
+
 @pytest.mark.asyncio
 async def test_get_product_image_url_not_found(mock_blob_service_with_containers):
     """Test getting product image URL when no images exist."""
@@ -229,8 +238,9 @@ async def test_get_product_image_url_not_found(mock_blob_service_with_containers
 
     assert url is None
 
+
 @pytest.mark.asyncio
-async def test_save_generated_image_success(mock_blob_service_with_containers):
+async def test_save_generated_image_success(mock_blob_service_with_containers, fake_image_base64):
     """Test saving a generated image successfully."""
     mock_blob_client = MagicMock()
     mock_blob_client.upload_blob = AsyncMock()
@@ -240,10 +250,9 @@ async def test_save_generated_image_success(mock_blob_service_with_containers):
 
     await mock_blob_service_with_containers.initialize()
 
-    image_base64 = base64.b64encode(b"fake image data").decode("utf-8")
     url = await mock_blob_service_with_containers.save_generated_image(
         "conv-123",
-        image_base64,
+        fake_image_base64,
         "image/png"
     )
 
@@ -251,8 +260,9 @@ async def test_save_generated_image_success(mock_blob_service_with_containers):
     assert "conv-123" in url
     mock_blob_client.upload_blob.assert_called_once()
 
+
 @pytest.mark.asyncio
-async def test_save_generated_image_jpeg(mock_blob_service_with_containers):
+async def test_save_generated_image_jpeg(mock_blob_service_with_containers, fake_image_base64):
     """Test saving a generated JPEG image."""
     mock_blob_client = MagicMock()
     mock_blob_client.upload_blob = AsyncMock()
@@ -262,14 +272,14 @@ async def test_save_generated_image_jpeg(mock_blob_service_with_containers):
 
     await mock_blob_service_with_containers.initialize()
 
-    image_base64 = base64.b64encode(b"fake jpeg data").decode("utf-8")
     url = await mock_blob_service_with_containers.save_generated_image(
         "conv-456",
-        image_base64,
+        fake_image_base64,
         "image/jpeg"
     )
 
     assert url is not None
+
 
 @pytest.mark.asyncio
 async def test_get_generated_images_multiple(mock_blob_service_with_containers):
@@ -294,6 +304,7 @@ async def test_get_generated_images_multiple(mock_blob_service_with_containers):
 
     assert len(urls) == 2
 
+
 @pytest.mark.asyncio
 async def test_get_generated_images_empty(mock_blob_service_with_containers):
     """Test getting generated images when none exist."""
@@ -307,6 +318,7 @@ async def test_get_generated_images_empty(mock_blob_service_with_containers):
     urls = await mock_blob_service_with_containers.get_generated_images("conv-empty")
 
     assert urls == []
+
 
 @pytest.fixture
 def mock_blob_service_basic():
@@ -332,6 +344,7 @@ def mock_blob_service_basic():
 
         yield service
 
+
 @pytest.mark.asyncio
 async def test_generate_image_description_success(mock_blob_service_basic):
     """Test successful image description generation."""
@@ -352,6 +365,7 @@ async def test_generate_image_description_success(mock_blob_service_basic):
         assert description == "A sleek black smartphone with a 6.5-inch display"
         mock_openai_instance.chat.completions.create.assert_called_once()
 
+
 @pytest.mark.asyncio
 async def test_generate_image_description_error_returns_fallback(mock_blob_service_basic):
     """Test that errors return fallback description."""
@@ -368,6 +382,7 @@ async def test_generate_image_description_error_returns_fallback(mock_blob_servi
         description = await mock_blob_service_basic.generate_image_description(image_data)
 
         assert description == "Product image - description unavailable"
+
 
 @pytest.mark.asyncio
 async def test_generate_image_description_encodes_base64(mock_blob_service_basic):
@@ -390,6 +405,7 @@ async def test_generate_image_description_encodes_base64(mock_blob_service_basic
         messages = call_args.kwargs.get('messages') or call_args[1].get('messages')
 
         assert len(messages) == 2
+
 
 @pytest.mark.asyncio
 async def test_get_blob_service_creates_singleton():

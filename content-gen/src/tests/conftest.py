@@ -17,6 +17,7 @@ from typing import AsyncGenerator
 import pytest
 from quart import Quart
 
+
 def pytest_configure(config):
     """Set minimal env vars required for backend imports before test collection.
 
@@ -35,6 +36,7 @@ def pytest_configure(config):
     # Set Windows event loop policy (fixes pytest-asyncio auto mode compatibility)
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+
 
 def pytest_sessionfinish(session, exitstatus):  # noqa: ARG001
     """Clean up any remaining async resources after test session.
@@ -59,6 +61,7 @@ def pytest_sessionfinish(session, exitstatus):  # noqa: ARG001
             loop.close()
     except Exception:
         pass
+
 
 @pytest.fixture(scope="function", autouse=True)
 def mock_environment(monkeypatch):
@@ -104,6 +107,7 @@ def mock_environment(monkeypatch):
 
     yield
 
+
 @pytest.fixture
 async def app() -> AsyncGenerator[Quart, None]:
     """Create a test Quart app instance."""
@@ -114,10 +118,12 @@ async def app() -> AsyncGenerator[Quart, None]:
 
     yield quart_app
 
+
 @pytest.fixture
 async def client(app: Quart):
     """Create a test client for the Quart app."""
     return app.test_client()
+
 
 @pytest.fixture
 def sample_product_dict():
@@ -135,11 +141,13 @@ def sample_product_dict():
         "updated_at": datetime.now(timezone.utc).isoformat()
     }
 
+
 @pytest.fixture
 def sample_product(sample_product_dict):
     """Sample product as Pydantic model."""
     from models import Product
     return Product(**sample_product_dict)
+
 
 @pytest.fixture
 def sample_creative_brief_dict():
@@ -156,11 +164,13 @@ def sample_creative_brief_dict():
         "cta": "Shop Now - Free Shipping"
     }
 
+
 @pytest.fixture
 def sample_creative_brief(sample_creative_brief_dict):
     """Sample creative brief as Pydantic model."""
     from models import CreativeBrief
     return CreativeBrief(**sample_creative_brief_dict)
+
 
 @pytest.fixture
 def authenticated_headers():
@@ -171,9 +181,118 @@ def authenticated_headers():
         "X-Ms-Client-Principal-Idp": "aad"
     }
 
+
 @pytest.fixture
 def admin_headers():
     """Headers with admin API key."""
     return {
         "X-Admin-API-Key": "test-admin-key"
     }
+
+
+# =============================================================================
+# Shared Mock Service Fixtures
+# =============================================================================
+
+
+@pytest.fixture
+def fake_image_base64():
+    """Base64-encoded fake image data for testing uploads."""
+    import base64
+    return base64.b64encode(b"fake-image-data").decode()
+
+
+@pytest.fixture
+def mock_cosmos_service_instance():
+    """Pre-configured AsyncMock for CosmosDB service.
+
+    Returns a mock with common methods pre-configured. Use in tests that
+    need a Cosmos service mock without patching.
+    """
+    from unittest.mock import AsyncMock
+    mock = AsyncMock()
+    mock.add_message_to_conversation = AsyncMock()
+    mock.get_conversation = AsyncMock(return_value=None)
+    mock.upsert_conversation = AsyncMock()
+    mock.get_all_products = AsyncMock(return_value=[])
+    mock.get_product_by_sku = AsyncMock(return_value=None)
+    mock.upsert_product = AsyncMock()
+    mock.delete_product = AsyncMock(return_value=True)
+    return mock
+
+
+@pytest.fixture
+def mock_blob_service_instance():
+    """Pre-configured AsyncMock for Blob Storage service.
+
+    Returns a mock with common attributes set up. Use in tests that need
+    a blob service mock without patching.
+    """
+    from unittest.mock import AsyncMock, MagicMock
+    mock = AsyncMock()
+    mock.initialize = AsyncMock()
+
+    # Set up container mocks
+    mock_blob_client = AsyncMock()
+    mock_blob_client.upload_blob = AsyncMock()
+    mock_blob_client.url = "https://test.blob.core.windows.net/images/test.jpg"
+
+    mock_container = MagicMock()
+    mock_container.get_blob_client = MagicMock(return_value=mock_blob_client)
+
+    mock._product_images_container = mock_container
+    mock._generated_images_container = mock_container
+    mock._mock_blob_client = mock_blob_client  # Expose for assertions
+
+    return mock
+
+
+@pytest.fixture
+def mock_orchestrator_instance():
+    """Pre-configured AsyncMock for ContentGenerationOrchestrator.
+
+    Returns a mock with common methods pre-configured.
+    """
+    from unittest.mock import AsyncMock
+    mock = AsyncMock()
+    mock.parse_brief = AsyncMock()
+    mock.generate_content_stream = AsyncMock()
+    mock.process_message = AsyncMock()
+    mock.initialize = AsyncMock()
+    mock.confirm_brief = AsyncMock()
+    return mock
+
+
+def create_mock_process_message(responses):
+    """Factory to create mock_process_message async generator.
+
+    Args:
+        responses: List of dicts to yield from the generator
+
+    Returns:
+        Async generator function suitable for mock_orchestrator.process_message
+
+    Example:
+        mock_orchestrator.process_message = create_mock_process_message([
+            {"type": "message", "content": "Hello", "is_final": True}
+        ])
+    """
+    async def mock_process_message(*_args, **_kwargs):
+        for response in responses:
+            yield response
+    return mock_process_message
+
+
+def create_mock_generate_content_stream(responses):
+    """Factory to create mock_generate_content_stream async generator.
+
+    Args:
+        responses: List of dicts to yield from the generator
+
+    Returns:
+        Async generator function for mock_orchestrator.generate_content_stream
+    """
+    async def mock_generate_content_stream(*_args, **_kwargs):
+        for response in responses:
+            yield response
+    return mock_generate_content_stream

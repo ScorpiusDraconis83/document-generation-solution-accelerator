@@ -3,18 +3,22 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from agents.image_content_agent import (_generate_gpt_image,
+                                        _truncate_for_image,
+                                        generate_dalle_image, generate_image)
+
+
 def test_truncate_short_description_unchanged():
     """Test that short descriptions are returned unchanged."""
-    from agents.image_content_agent import _truncate_for_image
 
     short_desc = "A beautiful blue paint with hex code #0066CC"
     result = _truncate_for_image(short_desc, max_chars=1500)
 
     assert result == short_desc
 
+
 def test_truncate_empty_description():
     """Test handling of empty description."""
-    from agents.image_content_agent import _truncate_for_image
 
     result = _truncate_for_image("", max_chars=1500)
     assert result == ""
@@ -22,9 +26,9 @@ def test_truncate_empty_description():
     result = _truncate_for_image(None, max_chars=1500)
     assert result is None
 
+
 def test_truncate_long_description_truncated():
     """Test that very long descriptions are truncated."""
-    from agents.image_content_agent import _truncate_for_image
 
     long_desc = "This is a test description. " * 200  # ~5600 chars
     result = _truncate_for_image(long_desc, max_chars=1500)
@@ -32,9 +36,9 @@ def test_truncate_long_description_truncated():
     assert len(result) <= 1500
     assert "[Additional details truncated for image generation]" in result or len(result) <= 1500
 
+
 def test_truncate_preserves_hex_codes():
     """Test that hex color codes are preserved in truncation."""
-    from agents.image_content_agent import _truncate_for_image
 
     desc_with_hex = """### Product A
 This is a nice paint color.
@@ -49,9 +53,9 @@ More filler text that makes this very long.
 
     assert "### Product A" in result or "#FF5733" in result or len(result) <= 500
 
+
 def test_truncate_preserves_product_headers():
     """Test that product headers (### ...) are preserved."""
-    from agents.image_content_agent import _truncate_for_image
 
     desc = """### Snow Veil White
 A pure white paint for interiors.
@@ -66,9 +70,9 @@ Hex code: #CCCCCC
 
     assert len(result) <= 300
 
+
 def test_truncate_preserves_finish_descriptions():
     """Test that finish descriptions (matte, eggshell) are considered."""
-    from agents.image_content_agent import _truncate_for_image
 
     desc = """### Product
 Color description here.
@@ -79,6 +83,7 @@ Hex: #123456
     result = _truncate_for_image(desc, max_chars=400)
 
     assert len(result) <= 400
+
 
 @pytest.mark.asyncio
 async def test_generate_dalle_image_success():
@@ -115,8 +120,6 @@ async def test_generate_dalle_image_success():
         mock_openai.close = AsyncMock()
         mock_client.return_value = mock_openai
 
-        from agents.image_content_agent import generate_dalle_image
-
         result = await generate_dalle_image(
             prompt="Create a marketing image for paint",
             product_description="Blue paint with hex #0066CC",
@@ -126,6 +129,7 @@ async def test_generate_dalle_image_success():
         assert result["success"] is True
         assert "image_base64" in result
         assert result["model"] == "dall-e-3"
+
 
 @pytest.mark.asyncio
 async def test_generate_dalle_image_with_managed_identity():
@@ -161,12 +165,11 @@ async def test_generate_dalle_image_with_managed_identity():
         mock_openai.close = AsyncMock()
         mock_client.return_value = mock_openai
 
-        from agents.image_content_agent import generate_dalle_image
-
         result = await generate_dalle_image(prompt="Test prompt")
 
         assert result["success"] is True
         mock_cred.assert_called_once_with(client_id="test-client-id")
+
 
 @pytest.mark.asyncio
 async def test_generate_dalle_image_error_handling():
@@ -188,13 +191,12 @@ async def test_generate_dalle_image_error_handling():
 
         mock_cred.side_effect = Exception("Authentication failed")
 
-        from agents.image_content_agent import generate_dalle_image
-
         result = await generate_dalle_image(prompt="Test prompt")
 
         assert result["success"] is False
         assert "error" in result
         assert "Authentication failed" in result["error"]
+
 
 @pytest.mark.asyncio
 async def test_generate_gpt_image_success():
@@ -230,8 +232,6 @@ async def test_generate_gpt_image_success():
         mock_openai.close = AsyncMock()
         mock_client.return_value = mock_openai
 
-        from agents.image_content_agent import _generate_gpt_image
-
         result = await _generate_gpt_image(
             prompt="Create a marketing image",
             product_description="Paint product",
@@ -241,6 +241,7 @@ async def test_generate_gpt_image_success():
         assert result["success"] is True
         assert "image_base64" in result
         assert result["model"] == "gpt-image-1"
+
 
 @pytest.mark.asyncio
 async def test_generate_gpt_image_quality_passthrough():
@@ -276,12 +277,11 @@ async def test_generate_gpt_image_quality_passthrough():
         mock_openai.close = AsyncMock()
         mock_client.return_value = mock_openai
 
-        from agents.image_content_agent import _generate_gpt_image
-
         _ = await _generate_gpt_image(prompt="Test")
 
         call_kwargs = mock_openai.images.generate.call_args.kwargs
         assert call_kwargs["quality"] == "medium"
+
 
 @pytest.mark.asyncio
 async def test_generate_gpt_image_no_b64_falls_back_to_url():
@@ -330,11 +330,10 @@ async def test_generate_gpt_image_no_b64_falls_back_to_url():
         mock_resp.__aexit__ = AsyncMock()
         mock_session.return_value = mock_session_instance
 
-        from agents.image_content_agent import _generate_gpt_image
-
         result = await _generate_gpt_image(prompt="Test")
 
         assert result["success"] is True
+
 
 @pytest.mark.asyncio
 async def test_generate_gpt_image_error_handling():
@@ -356,12 +355,11 @@ async def test_generate_gpt_image_error_handling():
 
         mock_cred.side_effect = Exception("Auth error")
 
-        from agents.image_content_agent import _generate_gpt_image
-
         result = await _generate_gpt_image(prompt="Test")
 
         assert result["success"] is False
         assert "error" in result
+
 
 @pytest.mark.asyncio
 async def test_routes_to_dalle_for_dalle_model():
@@ -374,13 +372,12 @@ async def test_routes_to_dalle_for_dalle_model():
         mock_dalle.return_value = {"success": True, "model": "dall-e-3"}
         mock_gpt.return_value = {"success": True, "model": "gpt-image-1"}
 
-        from agents.image_content_agent import generate_dalle_image
-
         result = await generate_dalle_image(prompt="Test")
 
         mock_dalle.assert_called_once()
         mock_gpt.assert_not_called()
         assert result["model"] == "dall-e-3"
+
 
 @pytest.mark.asyncio
 async def test_routes_to_gpt_image_for_gpt_model():
@@ -393,13 +390,12 @@ async def test_routes_to_gpt_image_for_gpt_model():
         mock_dalle.return_value = {"success": True, "model": "dall-e-3"}
         mock_gpt.return_value = {"success": True, "model": "gpt-image-1"}
 
-        from agents.image_content_agent import generate_dalle_image
-
         result = await generate_dalle_image(prompt="Test")
 
         mock_gpt.assert_called_once()
         mock_dalle.assert_not_called()
         assert result["model"] == "gpt-image-1"
+
 
 @pytest.mark.asyncio
 async def test_routes_to_gpt_image_for_gpt_image_1_5():
@@ -412,16 +408,14 @@ async def test_routes_to_gpt_image_for_gpt_image_1_5():
         mock_dalle.return_value = {"success": True, "model": "dall-e-3"}
         mock_gpt.return_value = {"success": True, "model": "gpt-image-1.5"}
 
-        from agents.image_content_agent import generate_dalle_image
-
         _ = await generate_dalle_image(prompt="Test")
 
         mock_gpt.assert_called_once()
         mock_dalle.assert_not_called()
 
+
 def test_truncate_preserves_hex_in_middle_of_line():
     """Test hex code in middle of line is preserved."""
-    from agents.image_content_agent import _truncate_for_image
 
     # Text with #hex in the middle of lines
     desc = """### Product Name
@@ -433,9 +427,9 @@ More content here with another # reference.
     # Should contain some hex reference
     assert len(result) <= 400
 
+
 def test_truncate_preserves_description_quotes():
     """Test quoted descriptions with 'appears as' are preserved."""
-    from agents.image_content_agent import _truncate_for_image
 
     desc = '''### Product
 "This color appears as a soft blue tone. It has variations in the light."
@@ -445,9 +439,9 @@ More details here.
     result = _truncate_for_image(desc, max_chars=500)
     assert len(result) <= 500
 
+
 def test_truncate_with_eggshell_finish():
     """Test that eggshell finish descriptions are considered."""
-    from agents.image_content_agent import _truncate_for_image
 
     desc = """### Product
 Basic description.
@@ -457,6 +451,7 @@ Hex: #AABBCC
 
     result = _truncate_for_image(desc, max_chars=400)
     assert len(result) <= 400
+
 
 @pytest.mark.asyncio
 async def test_generate_image_truncates_very_long_prompt():
@@ -499,8 +494,6 @@ async def test_generate_image_truncates_very_long_prompt():
         mock_openai.images.generate = AsyncMock(return_value=mock_response)
         mock_openai.close = AsyncMock()
         mock_client.return_value = mock_openai
-
-        from agents.image_content_agent import generate_image
 
         # Create very long product description (~10000 chars)
         very_long_product_desc = "Product description with details. " * 300

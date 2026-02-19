@@ -1,11 +1,11 @@
-import base64
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from models import Product
 
+
 @pytest.mark.asyncio
-async def test_upload_images_without_api_key(client):
+async def test_upload_images_without_api_key(client, fake_image_base64):
     """Test upload images endpoint without API key (should be allowed in dev)."""
     with patch("api.admin.get_blob_service") as mock_blob:
         mock_blob_service = AsyncMock()
@@ -18,8 +18,6 @@ async def test_upload_images_without_api_key(client):
         mock_blob_service._product_images_container = mock_container
         mock_blob.return_value = mock_blob_service
 
-        test_image_data = base64.b64encode(b"fake-image-data").decode()
-
         response = await client.post(
             "/api/admin/upload-images",
             json={
@@ -27,13 +25,14 @@ async def test_upload_images_without_api_key(client):
                     {
                         "filename": "test.jpg",
                         "content_type": "image/jpeg",
-                        "data": test_image_data
+                        "data": fake_image_base64
                     }
                 ]
             }
         )
 
         assert response.status_code == 200
+
 
 @pytest.mark.asyncio
 async def test_upload_images_with_invalid_api_key(client):
@@ -51,6 +50,7 @@ async def test_upload_images_with_invalid_api_key(client):
         data = await response.get_json()
         assert "Unauthorized" in data.get("error", "")
 
+
 @pytest.mark.asyncio
 async def test_load_sample_data_unauthorized(client):
     """Test load sample data endpoint with invalid API key returns 401."""
@@ -63,6 +63,7 @@ async def test_load_sample_data_unauthorized(client):
 
         assert response.status_code == 401
 
+
 @pytest.mark.asyncio
 async def test_create_search_index_unauthorized(client):
     """Test create search index endpoint with invalid API key returns 401."""
@@ -74,8 +75,9 @@ async def test_create_search_index_unauthorized(client):
 
         assert response.status_code == 401
 
+
 @pytest.mark.asyncio
-async def test_upload_images_with_valid_api_key(client, admin_headers):
+async def test_upload_images_with_valid_api_key(client, admin_headers, fake_image_base64):
     """Test upload images with valid API key."""
     with patch("api.admin.get_blob_service") as mock_blob, \
          patch("api.admin.ADMIN_API_KEY", "test-admin-key"):
@@ -90,8 +92,6 @@ async def test_upload_images_with_valid_api_key(client, admin_headers):
         mock_blob_service._product_images_container = mock_container
         mock_blob.return_value = mock_blob_service
 
-        test_image_data = base64.b64encode(b"fake-image-data").decode()
-
         response = await client.post(
             "/api/admin/upload-images",
             headers=admin_headers,
@@ -100,7 +100,7 @@ async def test_upload_images_with_valid_api_key(client, admin_headers):
                     {
                         "filename": "test.jpg",
                         "content_type": "image/jpeg",
-                        "data": test_image_data
+                        "data": fake_image_base64
                     }
                 ]
             }
@@ -108,8 +108,9 @@ async def test_upload_images_with_valid_api_key(client, admin_headers):
 
         assert response.status_code == 200
 
+
 @pytest.mark.asyncio
-async def test_upload_images_success(client):
+async def test_upload_images_success(client, fake_image_base64):
     """Test successful image upload."""
     with patch("api.admin.get_blob_service") as mock_blob:
         mock_blob_service = AsyncMock()
@@ -125,8 +126,6 @@ async def test_upload_images_success(client):
 
         mock_blob.return_value = mock_blob_service
 
-        test_image_data = base64.b64encode(b"fake-image-data").decode()
-
         response = await client.post(
             "/api/admin/upload-images",
             json={
@@ -134,7 +133,7 @@ async def test_upload_images_success(client):
                     {
                         "filename": "test.jpg",
                         "content_type": "image/jpeg",
-                        "data": test_image_data
+                        "data": fake_image_base64
                     }
                 ]
             }
@@ -147,8 +146,9 @@ async def test_upload_images_success(client):
         assert data["failed"] == 0
         assert len(data["results"]) == 1
 
+
 @pytest.mark.asyncio
-async def test_upload_images_multiple(client):
+async def test_upload_images_multiple(client, fake_image_base64):
     """Test uploading multiple images."""
     with patch("api.admin.get_blob_service") as mock_blob:
         mock_blob_service = AsyncMock()
@@ -164,8 +164,6 @@ async def test_upload_images_multiple(client):
 
         mock_blob.return_value = mock_blob_service
 
-        test_image_data = base64.b64encode(b"fake-image").decode()
-
         response = await client.post(
             "/api/admin/upload-images",
             json={
@@ -173,12 +171,12 @@ async def test_upload_images_multiple(client):
                     {
                         "filename": "image1.jpg",
                         "content_type": "image/jpeg",
-                        "data": test_image_data
+                        "data": fake_image_base64
                     },
                     {
                         "filename": "image2.png",
                         "content_type": "image/png",
-                        "data": test_image_data
+                        "data": fake_image_base64
                     }
                 ]
             }
@@ -188,6 +186,7 @@ async def test_upload_images_multiple(client):
         data = await response.get_json()
         assert data["uploaded"] == 2
         assert len(data["results"]) == 2
+
 
 @pytest.mark.asyncio
 async def test_upload_images_missing_data(client):
@@ -214,6 +213,7 @@ async def test_upload_images_missing_data(client):
         assert data["failed"] == 1
         assert data["uploaded"] == 0
 
+
 @pytest.mark.asyncio
 async def test_upload_images_no_images(client):
     """Test upload with empty images array."""
@@ -225,6 +225,7 @@ async def test_upload_images_no_images(client):
     assert response.status_code == 400
     data = await response.get_json()
     assert "error" in data
+
 
 @pytest.mark.asyncio
 async def test_upload_images_invalid_base64(client):
@@ -251,8 +252,9 @@ async def test_upload_images_invalid_base64(client):
         data = await response.get_json()
         assert data["failed"] == 1
 
+
 @pytest.mark.asyncio
-async def test_upload_images_blob_error(client):
+async def test_upload_images_blob_error(client, fake_image_base64):
     """Test upload when blob service fails."""
     with patch("api.admin.get_blob_service") as mock_blob:
         mock_blob_service = AsyncMock()
@@ -269,8 +271,6 @@ async def test_upload_images_blob_error(client):
 
         mock_blob.return_value = mock_blob_service
 
-        test_image_data = base64.b64encode(b"fake").decode()
-
         response = await client.post(
             "/api/admin/upload-images",
             json={
@@ -278,7 +278,7 @@ async def test_upload_images_blob_error(client):
                     {
                         "filename": "test.jpg",
                         "content_type": "image/jpeg",
-                        "data": test_image_data
+                        "data": fake_image_base64
                     }
                 ]
             }
@@ -288,8 +288,9 @@ async def test_upload_images_blob_error(client):
         data = await response.get_json()
         assert data["failed"] == 1
 
+
 @pytest.mark.asyncio
-async def test_upload_images_internal_server_error(client):
+async def test_upload_images_internal_server_error(client, fake_image_base64):
     """Test upload_images returns 500 when outer exception occurs."""
     with patch("api.admin.get_blob_service") as mock_blob:
         mock_blob_service = AsyncMock()
@@ -298,8 +299,6 @@ async def test_upload_images_internal_server_error(client):
         )
         mock_blob.return_value = mock_blob_service
 
-        test_image_data = base64.b64encode(b"fake").decode()
-
         response = await client.post(
             "/api/admin/upload-images",
             json={
@@ -307,7 +306,7 @@ async def test_upload_images_internal_server_error(client):
                     {
                         "filename": "test.jpg",
                         "content_type": "image/jpeg",
-                        "data": test_image_data
+                        "data": fake_image_base64
                     }
                 ]
             }
@@ -317,6 +316,7 @@ async def test_upload_images_internal_server_error(client):
         data = await response.get_json()
         assert "error" in data
         assert "Internal server error" in data["error"]
+
 
 @pytest.mark.asyncio
 async def test_load_sample_data_success(client, sample_product_dict):
@@ -341,6 +341,7 @@ async def test_load_sample_data_success(client, sample_product_dict):
         assert data["loaded"] == 1
         assert data["failed"] == 0
 
+
 @pytest.mark.asyncio
 async def test_load_sample_data_multiple(client, sample_product_dict):
     """Test loading multiple products."""
@@ -364,6 +365,7 @@ async def test_load_sample_data_multiple(client, sample_product_dict):
         data = await response.get_json()
         assert data["loaded"] == 3
 
+
 @pytest.mark.asyncio
 async def test_load_sample_data_clear_existing(client, sample_product_dict):
     """Test loading with clear_existing flag."""
@@ -386,6 +388,7 @@ async def test_load_sample_data_clear_existing(client, sample_product_dict):
         assert data["deleted"] == 5
         assert data["loaded"] == 1
 
+
 @pytest.mark.asyncio
 async def test_load_sample_data_no_products(client):
     """Test loading with no products."""
@@ -397,6 +400,7 @@ async def test_load_sample_data_no_products(client):
     assert response.status_code == 400
     data = await response.get_json()
     assert "error" in data
+
 
 @pytest.mark.asyncio
 async def test_load_sample_data_invalid_product(client):
@@ -423,6 +427,7 @@ async def test_load_sample_data_invalid_product(client):
         assert response.status_code == 200
         data = await response.get_json()
         assert data["failed"] == 1
+
 
 @pytest.mark.asyncio
 async def test_load_sample_data_partial_failure(client, sample_product_dict):
@@ -458,6 +463,7 @@ async def test_load_sample_data_partial_failure(client, sample_product_dict):
         assert data["failed"] == 1
         assert data["success"] is False
 
+
 @pytest.mark.asyncio
 async def test_load_sample_data_internal_server_error(client, sample_product_dict):
     """Test load_sample_data returns 500 when outer exception occurs."""
@@ -473,6 +479,7 @@ async def test_load_sample_data_internal_server_error(client, sample_product_dic
         data = await response.get_json()
         assert "error" in data
         assert "Internal server error" in data["error"]
+
 
 @pytest.mark.asyncio
 async def test_create_search_index_success(client, sample_product):
@@ -511,6 +518,7 @@ async def test_create_search_index_success(client, sample_product):
         data = await response.get_json()
         assert data["success"] is True
 
+
 @pytest.mark.asyncio
 async def test_create_search_index_no_products(client):
     """Test index creation with no products."""
@@ -540,6 +548,7 @@ async def test_create_search_index_no_products(client):
 
         assert response.status_code == 200
 
+
 @pytest.mark.asyncio
 async def test_create_search_index_search_not_configured(client):
     """Test create_search_index returns 500 when search endpoint not configured."""
@@ -554,6 +563,7 @@ async def test_create_search_index_search_not_configured(client):
         assert "error" in data
         assert "Search service not configured" in data["error"]
 
+
 @pytest.mark.asyncio
 async def test_create_search_index_with_no_search_settings(client):
     """Test create_search_index returns 500 when search settings object is None."""
@@ -566,6 +576,7 @@ async def test_create_search_index_with_no_search_settings(client):
         data = await response.get_json()
         assert "error" in data
         assert "Search service not configured" in data["error"]
+
 
 @pytest.mark.asyncio
 async def test_create_search_index_document_indexing_internal_error(client, sample_product):
@@ -605,8 +616,9 @@ async def test_create_search_index_document_indexing_internal_error(client, samp
         assert "error" in data
         assert "Failed to index documents" in data["error"] or "Internal server error" in data["error"]
 
+
 @pytest.mark.asyncio
-async def test_full_data_loading_workflow(client, sample_product_dict):
+async def test_full_data_loading_workflow(client, sample_product_dict, fake_image_base64):
     """Test complete workflow: upload images -> load data -> create index."""
     # Step 1: Upload images
     with patch("api.admin.get_blob_service") as mock_blob:
@@ -623,15 +635,13 @@ async def test_full_data_loading_workflow(client, sample_product_dict):
 
         mock_blob.return_value = mock_blob_service
 
-        test_image_data = base64.b64encode(b"image").decode()
-
         response1 = await client.post(
             "/api/admin/upload-images",
             json={
                 "images": [{
                     "filename": "test.jpg",
                     "content_type": "image/jpeg",
-                    "data": test_image_data
+                    "data": fake_image_base64
                 }]
             }
         )
@@ -653,6 +663,7 @@ async def test_full_data_loading_workflow(client, sample_product_dict):
         data2 = await response2.get_json()
         assert data2["loaded"] == 1
 
+
 @pytest.mark.asyncio
 async def test_create_search_index_missing_endpoint(client):
     """Test create search index fails without search endpoint."""
@@ -667,6 +678,7 @@ async def test_create_search_index_missing_endpoint(client):
         assert response.status_code == 500
         data = await response.get_json()
         assert "error" in data
+
 
 @pytest.mark.asyncio
 async def test_upload_images_validation_error(client):

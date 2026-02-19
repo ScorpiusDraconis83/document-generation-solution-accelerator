@@ -11,6 +11,7 @@ from unittest.mock import patch
 import pytest
 from settings import parse_comma_separated
 
+
 class TestParseCommaSeparated:
     """Tests for comma-separated string parsing utility."""
 
@@ -43,6 +44,7 @@ class TestParseCommaSeparated:
         """Test parsing with empty items between commas."""
         result = parse_comma_separated("a,,b,  ,c")
         assert result == ["a", "b", "c"]
+
 
 class TestAzureOpenAIImageProperties:
     """Tests for Azure OpenAI image-related properties."""
@@ -78,6 +80,7 @@ class TestAzureOpenAIImageProperties:
         }, clear=False):
             settings = _AzureOpenAISettings()
             assert settings.effective_image_model == "gpt-image-1.5"
+
 
 class TestImageGenerationEnabled:
     """Tests for image_generation_enabled property logic."""
@@ -115,6 +118,7 @@ class TestImageGenerationEnabled:
             settings = _AzureOpenAISettings()
             assert settings.image_generation_enabled is True
 
+
 class TestAzureOpenAIEndpointValidator:
     """Tests for AzureOpenAI ensure_endpoint validator."""
 
@@ -138,6 +142,7 @@ class TestAzureOpenAIEndpointValidator:
         }, clear=True):
             settings = _AzureOpenAISettings()
             assert settings.endpoint == "https://my-openai-resource.openai.azure.com"
+
 
 class TestAppSettingsValidatorExceptionHandling:
     """Tests for AppSettings validator exception handling."""
@@ -174,6 +179,7 @@ class TestAppSettingsValidatorExceptionHandling:
             settings = _AppSettings()
             assert settings.chat_history is None
 
+
 class TestBrandGuidelinesProperties:
     """Tests for brand guidelines computed properties."""
 
@@ -203,6 +209,7 @@ class TestBrandGuidelinesProperties:
         }, clear=False):
             guidelines = _BrandGuidelinesSettings()
             assert guidelines.required_disclosures == ["Terms apply", "See store for details"]
+
 
 class TestBrandGuidelinesPromptMethods:
     """Tests for brand guidelines prompt generation methods."""
