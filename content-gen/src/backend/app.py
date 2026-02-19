@@ -967,7 +967,7 @@ async def regenerate_content():
                 except Exception as e:
                     logger.warning(f"Failed to save regenerated image to blob: {e}")
 
-            # Save assistant response
+            # Save assistant response and update persisted generated_content
             try:
                 cosmos_service = await get_cosmos_service()
                 await cosmos_service.add_message_to_conversation(
@@ -979,6 +979,31 @@ async def regenerate_content():
                         "agent": "ImageAgent",
                         "timestamp": datetime.now(timezone.utc).isoformat()
                     }
+                )
+
+                # Persist the regenerated image and updated products to generated_content
+                # so the latest image and color/product name are restored on conversation reload
+                new_image_url = response.get("image_url")
+                new_image_prompt = response.get("image_prompt")
+                new_image_revised_prompt = response.get("image_revised_prompt")
+
+                existing_conversation = await cosmos_service.get_conversation(conversation_id, user_id)
+                raw_content = (existing_conversation or {}).get("generated_content")
+                existing_content = raw_content if isinstance(raw_content, dict) else {}
+                old_image_url = existing_content.get("image_url")
+
+                updated_content = {
+                    **existing_content,
+                    "image_url": new_image_url if new_image_url else old_image_url,
+                    "image_prompt": new_image_prompt if new_image_prompt else existing_content.get("image_prompt"),
+                    "image_revised_prompt": new_image_revised_prompt if new_image_revised_prompt else existing_content.get("image_revised_prompt"),
+                    "selected_products": products_data if products_data else existing_content.get("selected_products", []),
+                }
+
+                await cosmos_service.save_generated_content(
+                    conversation_id=conversation_id,
+                    user_id=user_id,
+                    generated_content=updated_content
                 )
             except Exception as e:
                 logger.warning(f"Failed to save regeneration response to CosmosDB: {e}")
