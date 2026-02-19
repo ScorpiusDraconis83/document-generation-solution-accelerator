@@ -1319,6 +1319,29 @@ async def update_conversation(conversation_id: str):
         return jsonify({"error": "Failed to rename conversation"}), 500
 
 
+@app.route("/api/conversations", methods=["DELETE"])
+async def delete_all_conversations():
+    """
+    Delete all conversations for the current user.
+    
+    Uses authenticated user from EasyAuth headers.
+    """
+    auth_user = get_authenticated_user()
+    user_id = auth_user["user_principal_id"]
+    
+    try:
+        cosmos_service = await get_cosmos_service()
+        deleted_count = await cosmos_service.delete_all_conversations(user_id)
+        return jsonify({
+            "success": True,
+            "message": f"Deleted {deleted_count} conversations",
+            "deleted_count": deleted_count
+        })
+    except Exception as e:
+        logger.warning(f"Failed to delete all conversations: {e}")
+        return jsonify({"error": "Failed to delete conversations"}), 500
+
+
 # ==================== Brand Guidelines Endpoints ====================
 
 @app.route("/api/brand-guidelines", methods=["GET"])

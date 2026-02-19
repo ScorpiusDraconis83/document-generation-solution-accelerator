@@ -24,6 +24,7 @@ import {
   Compose20Regular,
   Delete20Regular,
   Edit20Regular,
+  DismissCircle20Regular,
 } from '@fluentui/react-icons';
 
 interface ConversationSummary {
@@ -55,7 +56,29 @@ export function ChatHistory({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const [isClearAllDialogOpen, setIsClearAllDialogOpen] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
   const INITIAL_COUNT = 5;
+
+  const handleClearAllConversations = useCallback(async () => {
+    setIsClearing(true);
+    try {
+      const response = await fetch('/api/conversations', {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        setConversations([]);
+        onNewConversation();
+        setIsClearAllDialogOpen(false);
+      } else {
+        console.error('Failed to clear all conversations');
+      }
+    } catch (err) {
+      console.error('Error clearing all conversations:', err);
+    } finally {
+      setIsClearing(false);
+    }
+  }, [onNewConversation]);
 
   const handleDeleteConversation = useCallback(async (conversationId: string) => {
     try {
@@ -170,17 +193,51 @@ export function ChatHistory({
       backgroundColor: tokens.colorNeutralBackground3,
       overflow: 'hidden',
     }}>
-      <Text 
-        weight="semibold" 
-        size={300}
-        style={{ 
-          marginBottom: '12px',
-          color: tokens.colorNeutralForeground1,
-          flexShrink: 0,
-        }}
-      >
-        Chat History
-      </Text>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '12px',
+        flexShrink: 0,
+      }}>
+        <Text 
+          weight="semibold" 
+          size={300}
+          style={{ 
+            color: tokens.colorNeutralForeground1,
+          }}
+        >
+          Chat History
+        </Text>
+        <Menu>
+          <MenuTrigger disableButtonEnhancement>
+            <Button
+              appearance="subtle"
+              icon={<MoreHorizontal20Regular />}
+              size="small"
+              title="More options"
+              disabled={isGenerating}
+              style={{ 
+                minWidth: '24px', 
+                height: '24px',
+                padding: '2px',
+                color: tokens.colorNeutralForeground3,
+              }}
+            />
+          </MenuTrigger>
+          <MenuPopover>
+            <MenuList>
+              <MenuItem 
+                icon={<DismissCircle20Regular />}
+                onClick={() => setIsClearAllDialogOpen(true)}
+                disabled={displayConversations.length === 0}
+              >
+                Clear all chat history
+              </MenuItem>
+            </MenuList>
+          </MenuPopover>
+        </Menu>
+      </div>
 
       <div style={{ 
         borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
@@ -295,6 +352,28 @@ export function ChatHistory({
           </Link>
         </div>
       </div>
+
+      {/* Clear All Confirmation Dialog */}
+      <Dialog open={isClearAllDialogOpen} onOpenChange={(_, data) => !isClearing && setIsClearAllDialogOpen(data.open)}>
+        <DialogSurface>
+          <DialogTitle>Clear all chat history</DialogTitle>
+          <DialogBody>
+            <DialogContent>
+              <Text>
+                Are you sure you want to delete all chat history? This action cannot be undone and all conversations will be permanently removed.
+              </Text>
+            </DialogContent>
+          </DialogBody>
+          <DialogActions>
+            <Button appearance="secondary" onClick={() => setIsClearAllDialogOpen(false)} disabled={isClearing}>
+              Cancel
+            </Button>
+            <Button appearance="primary" onClick={handleClearAllConversations} disabled={isClearing}>
+              {isClearing ? 'Clearing...' : 'Clear All'}
+            </Button>
+          </DialogActions>
+        </DialogSurface>
+      </Dialog>
     </div>
   );
 }
