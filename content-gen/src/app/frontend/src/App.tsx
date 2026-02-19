@@ -20,6 +20,7 @@ import ContosoLogo from './styles/images/contoso.svg';
 
 function App() {
   const [conversationId, setConversationId] = useState<string>(() => uuidv4());
+  const [conversationTitle, setConversationTitle] = useState<string | null>(null);
   const [userId, setUserId] = useState<string>('');
   const [userName, setUserName] = useState<string>('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -104,6 +105,7 @@ function App() {
       if (response.ok) {
         const data = await response.json();
         setConversationId(selectedConversationId);
+        setConversationTitle(null); // Will use title from conversation list
         const loadedMessages: ChatMessage[] = (data.messages || []).map((msg: { role: string; content: string; timestamp?: string; agent?: string }, index: number) => ({
           id: `${selectedConversationId}-${index}`,
           role: msg.role as 'user' | 'assistant',
@@ -175,6 +177,7 @@ function App() {
   // Handle starting a new conversation
   const handleNewConversation = useCallback(() => {
     setConversationId(uuidv4());
+    setConversationTitle(null);
     setMessages([]);
     setPendingBrief(null);
     setAwaitingClarification(false);
@@ -216,6 +219,9 @@ function App() {
           
           setGenerationStatus('Updating creative brief...');
           const parsed = await parseBrief(refinementPrompt, conversationId, userId, signal);
+          if (parsed.generated_title && !conversationTitle) {
+            setConversationTitle(parsed.generated_title);
+          }
           if (parsed.brief) {
             setPendingBrief(parsed.brief);
           }
@@ -427,6 +433,11 @@ function App() {
           // Parse as a creative brief
           setGenerationStatus('Analyzing creative brief...');
           const parsed = await parseBrief(content, conversationId, userId, signal);
+          
+          // Set conversation title from generated title
+          if (parsed.generated_title && !conversationTitle) {
+            setConversationTitle(parsed.generated_title);
+          }
           
           // Check if request was blocked due to harmful content
           if (parsed.rai_blocked) {
@@ -799,6 +810,7 @@ function App() {
           <div className="history-panel">
             <ChatHistory
             currentConversationId={conversationId}
+            currentConversationTitle={conversationTitle}
             currentMessages={messages}
             onSelectConversation={handleSelectConversation}
             onNewConversation={handleNewConversation}

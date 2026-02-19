@@ -21,6 +21,7 @@ from models import CreativeBrief, Product
 from orchestrator import get_orchestrator
 from services.cosmos_service import get_cosmos_service
 from services.blob_service import get_blob_service
+from services.title_service import get_title_service
 from api.admin import admin_bp
 
 # In-memory task storage for generation tasks
@@ -106,6 +107,16 @@ async def chat():
     # Try to save to CosmosDB but don't fail if it's unavailable
     try:
         cosmos_service = await get_cosmos_service()
+
+        generated_title = None
+        existing_conversation = await cosmos_service.get_conversation(conversation_id, user_id)
+        existing_metadata = existing_conversation.get("metadata", {}) if existing_conversation else {}
+        has_existing_title = bool(existing_metadata.get("custom_title") or existing_metadata.get("generated_title"))
+
+        if not has_existing_title:
+            title_service = get_title_service()
+            generated_title = await title_service.generate_title(message)
+
         await cosmos_service.add_message_to_conversation(
             conversation_id=conversation_id,
             user_id=user_id,
@@ -113,7 +124,8 @@ async def chat():
                 "role": "user",
                 "content": message,
                 "timestamp": datetime.now(timezone.utc).isoformat()
-            }
+            },
+            generated_title=generated_title
         )
     except Exception as e:
         logger.warning(f"Failed to save message to CosmosDB: {e}")
@@ -187,9 +199,22 @@ async def parse_brief():
     if not brief_text:
         return jsonify({"error": "Brief text is required"}), 400
 
+    orchestrator = get_orchestrator()
+    generated_title = None
+
     # Save the user's brief text as a message to CosmosDB
     try:
         cosmos_service = await get_cosmos_service()
+
+        # Generate title for new conversations
+        existing_conversation = await cosmos_service.get_conversation(conversation_id, user_id)
+        existing_metadata = existing_conversation.get("metadata", {}) if existing_conversation else {}
+        has_existing_title = bool(existing_metadata.get("custom_title") or existing_metadata.get("generated_title"))
+
+        if not has_existing_title:
+            title_service = get_title_service()
+            generated_title = await title_service.generate_title(brief_text)
+
         await cosmos_service.add_message_to_conversation(
             conversation_id=conversation_id,
             user_id=user_id,
@@ -197,12 +222,12 @@ async def parse_brief():
                 "role": "user",
                 "content": brief_text,
                 "timestamp": datetime.now(timezone.utc).isoformat()
-            }
+            },
+            generated_title=generated_title
         )
     except Exception as e:
         logger.warning(f"Failed to save brief message to CosmosDB: {e}")
 
-    orchestrator = get_orchestrator()
     parsed_brief, clarifying_questions, rai_blocked = await orchestrator.parse_brief(brief_text)
 
     # Check if request was blocked due to harmful content
@@ -228,6 +253,7 @@ async def parse_brief():
             "requires_clarification": False,
             "requires_confirmation": False,
             "conversation_id": conversation_id,
+            "generated_title": generated_title,
             "message": clarifying_questions
         })
 
@@ -255,6 +281,7 @@ async def parse_brief():
             "requires_confirmation": False,
             "clarifying_questions": clarifying_questions,
             "conversation_id": conversation_id,
+            "generated_title": generated_title,
             "message": clarifying_questions
         })
 
@@ -279,6 +306,7 @@ async def parse_brief():
         "requires_clarification": False,
         "requires_confirmation": True,
         "conversation_id": conversation_id,
+        "generated_title": generated_title,
         "message": "Please review and confirm the parsed creative brief"
     })
 
