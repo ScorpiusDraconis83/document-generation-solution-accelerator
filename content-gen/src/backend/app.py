@@ -1351,12 +1351,12 @@ async def update_conversation(conversation_id: str):
 async def delete_all_conversations():
     """
     Delete all conversations for the current user.
-    
+
     Uses authenticated user from EasyAuth headers.
     """
     auth_user = get_authenticated_user()
     user_id = auth_user["user_principal_id"]
-    
+
     try:
         cosmos_service = await get_cosmos_service()
         deleted_count = await cosmos_service.delete_all_conversations(user_id)

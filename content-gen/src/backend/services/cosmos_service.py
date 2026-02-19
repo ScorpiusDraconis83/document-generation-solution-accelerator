@@ -624,18 +624,18 @@ class CosmosDBService:
     ) -> int:
         """
         Delete all conversations for a user.
-        
+
         Args:
             user_id: User ID to delete conversations for
-        
+
         Returns:
             Number of conversations deleted
         """
         await self.initialize()
-        
+
         # First get all conversations for the user
         conversations = await self.get_user_conversations(user_id, limit=1000)
-        
+
         deleted_count = 0
         for conv in conversations:
             try:
@@ -643,7 +643,7 @@ class CosmosDBService:
                 deleted_count += 1
             except Exception as e:
                 logger.warning(f"Failed to delete conversation {conv['id']}: {e}")
-        
+
         logger.info(f"Deleted {deleted_count} conversations for user {user_id}")
         return deleted_count
 
