@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.40.2.10011",
-      "templateHash": "8403017938611050215"
+      "templateHash": "18177824041085730709"
     },
     "name": "Intelligent Content Generation Accelerator",
     "description": "Solution Accelerator for multimodal marketing content generation using Microsoft Agent Framework.\n"
@@ -308,6 +308,7 @@
     "imageModelDeployment": "[if(not(equals(parameters('imageModelChoice'), 'none')), createArray(createObject('format', 'OpenAI', 'name', variables('imageModelConfig')[parameters('imageModelChoice')].name, 'model', variables('imageModelConfig')[parameters('imageModelChoice')].name, 'sku', createObject('name', variables('imageModelConfig')[parameters('imageModelChoice')].sku, 'capacity', parameters('imageModelCapacity')), 'version', variables('imageModelConfig')[parameters('imageModelChoice')].version, 'raiPolicyName', 'Microsoft.Default')), createArray())]",
     "aiFoundryAiServicesModelDeployment": "[concat(variables('baseModelDeployments'), variables('imageModelDeployment'))]",
     "aiFoundryAiProjectDescription": "Content Generation AI Foundry Project",
+    "existingTags": "[coalesce(resourceGroup().tags, createObject())]",
     "logAnalyticsWorkspaceResourceName": "[format('log-{0}', variables('solutionSuffix'))]",
     "applicationInsightsResourceName": "[format('appi-{0}', variables('solutionSuffix'))]",
     "userAssignedIdentityResourceName": "[format('id-{0}', variables('solutionSuffix'))]",
@@ -364,7 +365,7 @@
       "apiVersion": "2021-04-01",
       "name": "default",
       "properties": {
-        "tags": "[shallowMerge(createArray(resourceGroup().tags, parameters('tags'), createObject('TemplateName', 'ContentGen', 'Type', if(parameters('enablePrivateNetworking'), 'WAF', 'Non-WAF'), 'CreatedBy', parameters('createdBy'))))]"
+        "tags": "[union(variables('existingTags'), parameters('tags'), createObject('TemplateName', 'ContentGen', 'Type', if(parameters('enablePrivateNetworking'), 'WAF', 'Non-WAF'), 'CreatedBy', parameters('createdBy')))]"
       }
     },
     "aiSearchFoundryConnection": {
@@ -14019,8 +14020,8 @@
       },
       "dependsOn": [
         "aiFoundryAiServices",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
         "virtualNetwork"
       ]
     },
