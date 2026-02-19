@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.40.2.10011",
-      "templateHash": "8403017938611050215"
+      "templateHash": "14662930066054172114"
     },
     "name": "Intelligent Content Generation Accelerator",
     "description": "Solution Accelerator for multimodal marketing content generation using Microsoft Agent Framework.\n"
@@ -62,6 +62,19 @@
     },
     "azureAiServiceLocation": {
       "type": "string",
+      "allowedValues": [
+        "australiaeast",
+        "canadaeast",
+        "eastus2",
+        "japaneast",
+        "koreacentral",
+        "polandcentral",
+        "swedencentral",
+        "switzerlandnorth",
+        "uaenorth",
+        "uksouth",
+        "westus3"
+      ],
       "metadata": {
         "azd": {
           "type": "location",
@@ -14019,8 +14032,8 @@
       },
       "dependsOn": [
         "aiFoundryAiServices",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
         "virtualNetwork"
       ]
     },
