@@ -501,28 +501,67 @@ Hex: #AABBCC
 
 @pytest.mark.asyncio
 async def test_generate_image_truncates_very_long_prompt():
-    """Test generate_image handles very long prompts by truncating."""
-    with patch("agents.image_content_agent.app_settings") as mock_settings, \
-         patch("agents.image_content_agent._generate_dalle_image") as mock_dalle:
+    """Test that _generate_dalle_image truncates very long product descriptions.
 
+    Verifies that when a very long product description is passed, it gets
+    truncated before being sent to the OpenAI API.
+    """
+    with patch("agents.image_content_agent.app_settings") as mock_settings, \
+         patch("agents.image_content_agent.DefaultAzureCredential") as mock_cred, \
+         patch("agents.image_content_agent.AsyncAzureOpenAI") as mock_client:
+
+        # Setup settings (using correct attribute names matching settings.py)
         mock_settings.azure_openai.effective_image_model = "dall-e-3"
-        mock_settings.brand.primary_color = "#FF0000"
-        mock_settings.brand.secondary_color = "#00FF00"
-        mock_dalle.return_value = {"success": True, "image_base64": "abc123"}
+        mock_settings.azure_openai.image_endpoint = "https://test.openai.azure.com"
+        mock_settings.azure_openai.endpoint = "https://test.openai.azure.com"
+        mock_settings.azure_openai.preview_api_version = "2024-02-15-preview"
+        mock_settings.azure_openai.image_model = "dall-e-3"
+        mock_settings.azure_openai.image_size = "1024x1024"
+        mock_settings.azure_openai.image_quality = "standard"
+        mock_settings.base_settings.azure_client_id = None
+        mock_settings.brand_guidelines.get_image_generation_prompt.return_value = "Brand style"
+        mock_settings.brand_guidelines.primary_color = "#FF0000"
+        mock_settings.brand_guidelines.secondary_color = "#00FF00"
+
+        # Setup credential mock
+        mock_credential = AsyncMock()
+        mock_token = MagicMock()
+        mock_token.token = "test-token"
+        mock_credential.get_token = AsyncMock(return_value=mock_token)
+        mock_cred.return_value = mock_credential
+
+        # Setup OpenAI client mock - capture the prompt argument
+        mock_openai = AsyncMock()
+        mock_image_data = MagicMock()
+        mock_image_data.b64_json = base64.b64encode(b"fake-image").decode()
+        mock_image_data.revised_prompt = None
+        mock_response = MagicMock()
+        mock_response.data = [mock_image_data]
+        mock_openai.images.generate = AsyncMock(return_value=mock_response)
+        mock_openai.close = AsyncMock()
+        mock_client.return_value = mock_openai
 
         from agents.image_content_agent import generate_image
 
-        very_long_product_desc = "Product description. " * 500  # ~10000 chars
+        # Create very long product description (~10000 chars)
+        very_long_product_desc = "Product description with details. " * 300
 
-        _ = await generate_image(
+        result = await generate_image(
             prompt="Create marketing image",
             product_description=very_long_product_desc,
             scene_description="Modern kitchen"
         )
 
-        # Should still succeed despite long input
-        mock_dalle.assert_called_once()
-        # Verify prompt was truncated (check call args)
-        call_args = mock_dalle.call_args
-        actual_prompt = call_args[1]["prompt"] if call_args[1] else call_args[0][0]
-        assert len(actual_prompt) <= 4200  # Should be truncated
+        # Verify success
+        assert result["success"] is True
+
+        # Verify the prompt was truncated before being sent to OpenAI
+        call_kwargs = mock_openai.images.generate.call_args.kwargs
+        prompt_sent = call_kwargs["prompt"]
+
+        # The full prompt should be under DALL-E's limit (~4000 chars)
+        # despite the ~10000 char input
+        assert len(prompt_sent) < 4000, f"Prompt not truncated: {len(prompt_sent)} chars"
+
+        # Also verify via prompt_used in result
+        assert len(result["prompt_used"]) < 4000

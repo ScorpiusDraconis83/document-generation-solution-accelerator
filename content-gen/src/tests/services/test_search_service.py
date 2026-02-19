@@ -8,6 +8,8 @@ the actual SearchService code to execute for coverage.
 import pytest
 from unittest.mock import MagicMock, patch, AsyncMock
 
+from services.search_service import SearchService, get_search_service
+
 
 # =============================================================================
 # Shared Fixtures
@@ -30,7 +32,6 @@ def mock_search_service():
         mock_client = MagicMock()
         mock_search_client.return_value = mock_client
 
-        from services.search_service import SearchService
         service = SearchService()
         service._mock_client = mock_client
         service._images_client = mock_client
@@ -53,7 +54,6 @@ def test_get_credential_rbac_success():
         mock_credential = MagicMock()
         mock_cred.return_value = mock_credential
 
-        from services.search_service import SearchService
         service = SearchService()
         cred = service._get_credential()
 
@@ -76,7 +76,6 @@ def test_get_credential_api_key_fallback():
         mock_key_credential = MagicMock()
         mock_key_cred.return_value = mock_key_credential
 
-        from services.search_service import SearchService
         service = SearchService()
         cred = service._get_credential()
 
@@ -94,7 +93,6 @@ def test_get_credential_cached():
         mock_credential = MagicMock()
         mock_cred.return_value = mock_credential
 
-        from services.search_service import SearchService
         service = SearchService()
 
         cred1 = service._get_credential()
@@ -121,7 +119,6 @@ def test_get_products_client_creates_once():
         mock_cred.return_value = MagicMock()
         mock_search_client.return_value = MagicMock()
 
-        from services.search_service import SearchService
         service = SearchService()
 
         client1 = service._get_products_client()
@@ -144,7 +141,6 @@ def test_get_images_client_creates_once():
         mock_cred.return_value = MagicMock()
         mock_search_client.return_value = MagicMock()
 
-        from services.search_service import SearchService
         service = SearchService()
 
         client1 = service._get_images_client()
@@ -159,7 +155,6 @@ def test_get_products_client_raises_without_endpoint():
     with patch("services.search_service.app_settings") as mock_settings:
         mock_settings.search = None
 
-        from services.search_service import SearchService
         service = SearchService()
 
         with pytest.raises(ValueError, match="endpoint not configured"):
@@ -171,7 +166,6 @@ def test_get_images_client_raises_without_endpoint():
     with patch("services.search_service.app_settings") as mock_settings:
         mock_settings.search = None
 
-        from services.search_service import SearchService
         service = SearchService()
 
         with pytest.raises(ValueError, match="endpoint not configured"):
@@ -189,7 +183,6 @@ def test_get_credential_no_credentials():
         # Make RBAC fail
         mock_cred.side_effect = Exception("No credentials")
 
-        from services.search_service import SearchService
         service = SearchService()
 
         with pytest.raises(ValueError, match="No valid search credentials available"):
@@ -398,8 +391,6 @@ def test_build_summary_with_products():
     """Test building summary with product data."""
     with patch("services.search_service.app_settings") as mock_settings:
         mock_settings.search = None
-
-        from services.search_service import SearchService
         service = SearchService()
 
         products = [
@@ -424,8 +415,6 @@ def test_build_summary_with_images():
     """Test building summary with image data."""
     with patch("services.search_service.app_settings") as mock_settings:
         mock_settings.search = None
-
-        from services.search_service import SearchService
         service = SearchService()
 
         images = [
@@ -450,8 +439,6 @@ def test_build_summary_empty_inputs():
     """Test building summary with empty inputs."""
     with patch("services.search_service.app_settings") as mock_settings:
         mock_settings.search = None
-
-        from services.search_service import SearchService
         service = SearchService()
 
         summary = service._build_grounding_summary([], [])
@@ -467,8 +454,6 @@ def test_build_summary_empty_inputs():
 async def test_get_search_service_returns_singleton():
     """Test that get_search_service returns a singleton."""
     with patch("services.search_service._search_service", None):
-        from services.search_service import get_search_service, SearchService
-
         # Reset global
         import services.search_service as module
         module._search_service = None

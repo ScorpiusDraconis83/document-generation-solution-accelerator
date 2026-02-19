@@ -720,7 +720,11 @@ async def test_create_search_index_missing_endpoint(client):
 
 @pytest.mark.asyncio
 async def test_upload_images_validation_error(client):
-    """Test upload images endpoint validation."""
+    """Test upload images endpoint validation for missing data field.
+
+    The endpoint returns 200 with per-image results (not 400) for bulk operations,
+    allowing partial success. Images missing required fields are marked as failed.
+    """
     # Missing required data field
     response = await client.post(
         "/api/admin/upload-images",
@@ -732,5 +736,16 @@ async def test_upload_images_validation_error(client):
         }
     )
 
-    # Should handle validation error
-    assert response.status_code in [200, 400, 500]
+    # Endpoint returns 200 with per-image results for bulk operations
+    assert response.status_code == 200
+    data = await response.get_json()
+
+    # Should indicate failure at the operation level
+    assert data["success"] is False
+    assert data["failed"] == 1
+    assert data["uploaded"] == 0
+
+    # Should have detailed per-image failure info
+    assert len(data["results"]) == 1
+    assert data["results"][0]["status"] == "failed"
+    assert "Missing filename or data" in data["results"][0]["error"]

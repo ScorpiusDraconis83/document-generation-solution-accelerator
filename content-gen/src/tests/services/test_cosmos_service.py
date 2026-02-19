@@ -8,6 +8,8 @@ while allowing the actual CosmosDBService code to execute for coverage.
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from services.cosmos_service import CosmosDBService
+
 
 # ==================== Shared Fixtures ====================
 
@@ -35,7 +37,6 @@ def mock_cosmos_service():
         )
         mock_client.return_value = mock_cosmos_client
 
-        from services.cosmos_service import CosmosDBService
         service = CosmosDBService()
         service._mock_products_container = mock_products_container
         service._mock_conversations_container = mock_conversations_container
@@ -68,7 +69,6 @@ async def test_initialize_with_managed_identity():
         mock_database.get_container_client.return_value = MagicMock()
         mock_client.return_value = mock_cosmos_client
 
-        from services.cosmos_service import CosmosDBService
         service = CosmosDBService()
         await service.initialize()
 
@@ -100,7 +100,6 @@ async def test_initialize_with_default_credential():
         mock_database.get_container_client.return_value = MagicMock()
         mock_client.return_value = mock_cosmos_client
 
-        from services.cosmos_service import CosmosDBService
         service = CosmosDBService()
         await service.initialize()
 
@@ -127,7 +126,6 @@ async def test_close_client():
         mock_database.get_container_client.return_value = MagicMock()
         mock_client.return_value = mock_cosmos_client
 
-        from services.cosmos_service import CosmosDBService
         service = CosmosDBService()
         await service.initialize()
         await service.close()
@@ -155,7 +153,7 @@ async def test_get_product_by_sku_found(mock_cosmos_service):
         "price": 29.99
     }
 
-    async def mock_query(*args, **kwargs):
+    async def mock_query(*_args, **_kwargs):
         yield sample_product_data
 
     mock_cosmos_service._mock_products_container.query_items = mock_query
@@ -171,9 +169,9 @@ async def test_get_product_by_sku_found(mock_cosmos_service):
 @pytest.mark.asyncio
 async def test_get_product_by_sku_not_found(mock_cosmos_service):
     """Test retrieving a product by SKU when it doesn't exist."""
-    async def mock_query(*args, **kwargs):
-        return
-        yield  # Empty async generator
+    async def mock_query(*_args, **_kwargs):
+        if False:
+            yield  # Empty async generator
 
     mock_cosmos_service._mock_products_container.query_items = mock_query
 
@@ -202,7 +200,7 @@ async def test_get_products_by_category(mock_cosmos_service):
         }
     ]
 
-    async def mock_query(*args, **kwargs):
+    async def mock_query(*_args, **_kwargs):
         for p in sample_products:
             yield p
 
@@ -234,7 +232,7 @@ async def test_get_products_by_category_with_subcategory(mock_cosmos_service):
         }
     ]
 
-    async def mock_query(*args, **kwargs):
+    async def mock_query(*_args, **_kwargs):
         for p in sample_products:
             yield p
 
@@ -266,7 +264,7 @@ async def test_search_products(mock_cosmos_service):
         }
     ]
 
-    async def mock_query(*args, **kwargs):
+    async def mock_query(*_args, **_kwargs):
         for p in sample_products:
             yield p
 
@@ -340,7 +338,7 @@ async def test_delete_all_products(mock_cosmos_service):
     """Test deleting all products."""
     items = [{"id": "SKU-1"}, {"id": "SKU-2"}]
 
-    async def mock_query(*args, **kwargs):
+    async def mock_query(*_args, **_kwargs):
         for item in items:
             yield item
 
@@ -359,13 +357,13 @@ async def test_delete_all_products_with_failures(mock_cosmos_service):
     """Test delete_all_products handles individual delete failures gracefully."""
     items = [{"id": "SKU-1"}, {"id": "SKU-2"}, {"id": "SKU-3"}]
 
-    async def mock_query(*args, **kwargs):
+    async def mock_query(*_args, **_kwargs):
         for item in items:
             yield item
 
     delete_count = 0
 
-    async def mock_delete(*args, **kwargs):
+    async def mock_delete(*_args, **_kwargs):
         nonlocal delete_count
         delete_count += 1
         if delete_count == 2:
@@ -401,7 +399,7 @@ async def test_get_all_products(mock_cosmos_service):
         for i in range(3)
     ]
 
-    async def mock_query(*args, **kwargs):
+    async def mock_query(*_args, **_kwargs):
         for p in sample_products:
             yield p
 
@@ -443,9 +441,9 @@ async def test_get_conversation_not_found(mock_cosmos_service):
         side_effect=Exception("Not found")
     )
 
-    async def mock_query(*args, **kwargs):
-        return
-        yield  # Empty
+    async def mock_query(*_args, **_kwargs):
+        if False:
+            yield  # Empty
 
     mock_cosmos_service._mock_conversations_container.query_items = mock_query
 
@@ -463,7 +461,7 @@ async def test_get_user_conversations(mock_cosmos_service):
         {"id": "conv-2", "user_id": "user-123", "title": "Conv 2"}
     ]
 
-    async def mock_query(*args, **kwargs):
+    async def mock_query(*_args, **_kwargs):
         for c in conversations:
             yield c
 
@@ -678,7 +676,7 @@ async def test_get_user_conversations_anonymous(mock_cosmos_service):
         }
     ]
 
-    async def mock_query(*args, **kwargs):
+    async def mock_query(*_args, **_kwargs):
         for c in conversations:
             yield c
 
@@ -705,7 +703,7 @@ async def test_get_user_conversations_with_custom_title(mock_cosmos_service):
         }
     ]
 
-    async def mock_query(*args, **kwargs):
+    async def mock_query(*_args, **_kwargs):
         for c in conversations:
             yield c
 
@@ -731,7 +729,7 @@ async def test_get_user_conversations_no_title_fallback(mock_cosmos_service):
         }
     ]
 
-    async def mock_query(*args, **kwargs):
+    async def mock_query(*_args, **_kwargs):
         for c in conversations:
             yield c
 
@@ -760,7 +758,7 @@ async def test_get_user_conversations_title_from_first_user_message(mock_cosmos_
         }
     ]
 
-    async def mock_query(*args, **kwargs):
+    async def mock_query(*_args, **_kwargs):
         for c in conversations:
             yield c
 
@@ -791,7 +789,7 @@ async def test_get_user_conversations_title_from_user_message_skips_assistant(mo
         }
     ]
 
-    async def mock_query(*args, **kwargs):
+    async def mock_query(*_args, **_kwargs):
         for c in conversations:
             yield c
 
@@ -815,9 +813,10 @@ async def test_get_conversation_cross_partition_exception_logs_warning(mock_cosm
     )
 
     # Cross-partition query also fails
-    async def mock_query_fails(*args, **kwargs):
+    async def mock_query_fails(*_args, **_kwargs):
+        if False:
+            yield  # Makes this an async generator
         raise Exception("Cross-partition query failed")
-        yield  # Makes this an async generator
 
     mock_cosmos_service._mock_conversations_container.query_items = mock_query_fails
 

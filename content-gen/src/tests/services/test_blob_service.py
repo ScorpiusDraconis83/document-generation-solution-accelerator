@@ -9,6 +9,9 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 import base64
 
+from services import blob_service
+from services.blob_service import BlobStorageService, get_blob_service
+
 
 # ==================== Initialization Tests ====================
 
@@ -32,7 +35,6 @@ async def test_initialize_with_managed_identity():
         mock_blob_client.get_container_client.return_value = mock_container
         mock_client.return_value = mock_blob_client
 
-        from services.blob_service import BlobStorageService
         service = BlobStorageService()
         await service.initialize()
 
@@ -60,7 +62,6 @@ async def test_initialize_with_default_credential():
         mock_blob_client.get_container_client.return_value = mock_container
         mock_client.return_value = mock_blob_client
 
-        from services.blob_service import BlobStorageService
         service = BlobStorageService()
         await service.initialize()
 
@@ -84,7 +85,6 @@ async def test_initialize_idempotent():
         mock_client.return_value = mock_blob_client
         mock_cred.return_value = AsyncMock()
 
-        from services.blob_service import BlobStorageService
         service = BlobStorageService()
         await service.initialize()
         await service.initialize()  # Second call should be no-op
@@ -110,7 +110,6 @@ async def test_close_client():
         mock_client.return_value = mock_blob_client
         mock_cred.return_value = AsyncMock()
 
-        from services.blob_service import BlobStorageService
         service = BlobStorageService()
         await service.initialize()
         await service.close()
@@ -147,7 +146,6 @@ def mock_blob_service_with_containers():
         mock_client.return_value = mock_blob_client
         mock_cred.return_value = AsyncMock()
 
-        from services.blob_service import BlobStorageService
         service = BlobStorageService()
         service._mock_product_images_container = mock_product_images_container
         service._mock_generated_images_container = mock_generated_images_container
@@ -212,7 +210,7 @@ async def test_get_product_image_url_found(mock_blob_service_with_containers):
     mock_blob2 = MagicMock()
     mock_blob2.name = "SKU123/20240102000000.jpeg"
 
-    async def mock_list_blobs(*args, **kwargs):
+    async def mock_list_blobs(*_args, **_kwargs):
         yield mock_blob1
         yield mock_blob2
 
@@ -232,9 +230,9 @@ async def test_get_product_image_url_found(mock_blob_service_with_containers):
 @pytest.mark.asyncio
 async def test_get_product_image_url_not_found(mock_blob_service_with_containers):
     """Test getting product image URL when no images exist."""
-    async def mock_list_blobs(*args, **kwargs):
-        return
-        yield
+    async def mock_list_blobs(*_args, **_kwargs):
+        if False:
+            yield
 
     mock_blob_service_with_containers._mock_product_images_container.list_blobs = mock_list_blobs
 
@@ -298,7 +296,7 @@ async def test_get_generated_images_multiple(mock_blob_service_with_containers):
     mock_blob2 = MagicMock()
     mock_blob2.name = "conv-123/20240102000000.png"
 
-    async def mock_list_blobs(*args, **kwargs):
+    async def mock_list_blobs(*_args, **_kwargs):
         yield mock_blob1
         yield mock_blob2
 
@@ -317,9 +315,9 @@ async def test_get_generated_images_multiple(mock_blob_service_with_containers):
 @pytest.mark.asyncio
 async def test_get_generated_images_empty(mock_blob_service_with_containers):
     """Test getting generated images when none exist."""
-    async def mock_list_blobs(*args, **kwargs):
-        return
-        yield
+    async def mock_list_blobs(*_args, **_kwargs):
+        if False:
+            yield
 
     mock_blob_service_with_containers._mock_generated_images_container.list_blobs = mock_list_blobs
 
@@ -351,7 +349,6 @@ def mock_blob_service_basic():
         mock_client.return_value = mock_blob_client
         mock_cred.return_value = AsyncMock()
 
-        from services.blob_service import BlobStorageService
         service = BlobStorageService()
 
         yield service
@@ -439,10 +436,7 @@ async def test_get_blob_service_creates_singleton():
         mock_client.return_value = mock_blob_client
         mock_cred.return_value = AsyncMock()
 
-        from services.blob_service import get_blob_service
-
         service1 = await get_blob_service()
-        from services import blob_service
         blob_service._blob_service = service1
 
         service2 = await get_blob_service()

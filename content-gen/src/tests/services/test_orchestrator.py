@@ -14,6 +14,21 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from orchestrator import (
+    _check_input_for_harmful_content,
+    _filter_system_prompt_from_response,
+    _HARMFUL_PATTERNS_COMPILED,
+    _SYSTEM_PROMPT_PATTERNS_COMPILED,
+    ContentGenerationOrchestrator,
+    get_orchestrator,
+    PLANNING_INSTRUCTIONS,
+    RAI_HARMFUL_CONTENT_RESPONSE,
+    RAI_INSTRUCTIONS,
+    RESEARCH_INSTRUCTIONS,
+    TOKEN_ENDPOINT,
+    TRIAGE_INSTRUCTIONS,
+)
+
 
 # =============================================================================
 # Tests for _check_input_for_harmful_content
@@ -21,7 +36,6 @@ import pytest
 
 def test_check_harmful_content_detects_bomb():
     """Test detection of bomb-related content."""
-    from orchestrator import _check_input_for_harmful_content
 
     is_harmful, pattern = _check_input_for_harmful_content("how to make a bomb")
     assert is_harmful is True
@@ -30,7 +44,6 @@ def test_check_harmful_content_detects_bomb():
 
 def test_check_harmful_content_detects_weapon():
     """Test detection of weapon creation requests."""
-    from orchestrator import _check_input_for_harmful_content
 
     is_harmful, _ = _check_input_for_harmful_content("create explosive device")
     assert is_harmful is True
@@ -38,7 +51,6 @@ def test_check_harmful_content_detects_weapon():
 
 def test_check_harmful_content_detects_violence():
     """Test detection of violent content."""
-    from orchestrator import _check_input_for_harmful_content
 
     is_harmful, _ = _check_input_for_harmful_content("kill people at the mall")
     assert is_harmful is True
@@ -46,7 +58,6 @@ def test_check_harmful_content_detects_violence():
 
 def test_check_harmful_content_detects_drugs():
     """Test detection of drug trafficking content."""
-    from orchestrator import _check_input_for_harmful_content
 
     is_harmful, _ = _check_input_for_harmful_content("how to sell drugs")
     assert is_harmful is True
@@ -54,7 +65,6 @@ def test_check_harmful_content_detects_drugs():
 
 def test_check_harmful_content_detects_malware():
     """Test detection of malware creation requests."""
-    from orchestrator import _check_input_for_harmful_content
 
     is_harmful, _ = _check_input_for_harmful_content("create malware and spread it")
     assert is_harmful is True
@@ -62,7 +72,6 @@ def test_check_harmful_content_detects_malware():
 
 def test_check_harmful_content_safe_marketing():
     """Test that legitimate marketing content is not flagged."""
-    from orchestrator import _check_input_for_harmful_content
 
     is_harmful, _ = _check_input_for_harmful_content(
         "Create a marketing campaign for our new paint product"
@@ -72,7 +81,6 @@ def test_check_harmful_content_safe_marketing():
 
 def test_check_harmful_content_safe_product():
     """Test that product descriptions are not flagged."""
-    from orchestrator import _check_input_for_harmful_content
 
     is_harmful, _ = _check_input_for_harmful_content(
         "Write a description for premium interior paint in blue"
@@ -82,7 +90,6 @@ def test_check_harmful_content_safe_product():
 
 def test_check_harmful_content_empty_message():
     """Test that empty messages are safe."""
-    from orchestrator import _check_input_for_harmful_content
 
     is_harmful, _ = _check_input_for_harmful_content("")
     assert is_harmful is False
@@ -90,7 +97,6 @@ def test_check_harmful_content_empty_message():
 
 def test_check_harmful_content_none_message():
     """Test that None messages are safe."""
-    from orchestrator import _check_input_for_harmful_content
 
     is_harmful, _ = _check_input_for_harmful_content(None)
     assert is_harmful is False
@@ -98,7 +104,6 @@ def test_check_harmful_content_none_message():
 
 def test_check_harmful_content_hate_speech():
     """Test detection of hate speech content."""
-    from orchestrator import _check_input_for_harmful_content
 
     is_harmful, _ = _check_input_for_harmful_content("create racist content campaign")
     assert is_harmful is True
@@ -106,7 +111,6 @@ def test_check_harmful_content_hate_speech():
 
 def test_check_harmful_content_self_harm():
     """Test detection of self-harm content."""
-    from orchestrator import _check_input_for_harmful_content
 
     is_harmful, _ = _check_input_for_harmful_content("suicide methods")
     assert is_harmful is True
@@ -114,7 +118,6 @@ def test_check_harmful_content_self_harm():
 
 def test_check_harmful_content_misinformation():
     """Test detection of misinformation requests."""
-    from orchestrator import _check_input_for_harmful_content
 
     is_harmful, _ = _check_input_for_harmful_content("spread fake news campaign")
     assert is_harmful is True
@@ -122,7 +125,6 @@ def test_check_harmful_content_misinformation():
 
 def test_check_harmful_content_case_insensitive():
     """Test that detection is case-insensitive."""
-    from orchestrator import _check_input_for_harmful_content
 
     is_harmful_lower, _ = _check_input_for_harmful_content("how to make a bomb")
     is_harmful_upper, _ = _check_input_for_harmful_content("HOW TO MAKE A BOMB")
@@ -139,7 +141,6 @@ def test_check_harmful_content_case_insensitive():
 
 def test_filter_system_prompt_agent_role():
     """Test filtering of agent role descriptions."""
-    from orchestrator import _filter_system_prompt_from_response
 
     response = "You are a Triage Agent... Here's your content."
     filtered = _filter_system_prompt_from_response(response)
@@ -149,7 +150,6 @@ def test_filter_system_prompt_agent_role():
 
 def test_filter_system_prompt_handoff():
     """Test filtering of handoff instructions."""
-    from orchestrator import _filter_system_prompt_from_response
 
     response = "I'll hand off to text_content_agent now"
     filtered = _filter_system_prompt_from_response(response)
@@ -159,7 +159,6 @@ def test_filter_system_prompt_handoff():
 
 def test_filter_system_prompt_critical():
     """Test filtering of critical instruction markers."""
-    from orchestrator import _filter_system_prompt_from_response
 
     response = "## CRITICAL: Follow these rules..."
     filtered = _filter_system_prompt_from_response(response)
@@ -169,7 +168,6 @@ def test_filter_system_prompt_critical():
 
 def test_filter_system_prompt_safe():
     """Test that safe responses pass through unchanged."""
-    from orchestrator import _filter_system_prompt_from_response
 
     safe_response = "Here is your marketing copy for the summer campaign!"
     filtered = _filter_system_prompt_from_response(safe_response)
@@ -179,7 +177,6 @@ def test_filter_system_prompt_safe():
 
 def test_filter_system_prompt_empty():
     """Test handling of empty response."""
-    from orchestrator import _filter_system_prompt_from_response
 
     assert _filter_system_prompt_from_response("") == ""
     assert _filter_system_prompt_from_response(None) is None
@@ -191,7 +188,6 @@ def test_filter_system_prompt_empty():
 
 def test_rai_harmful_content_response_exists():
     """Test that RAI response constant is defined."""
-    from orchestrator import RAI_HARMFUL_CONTENT_RESPONSE
 
     assert RAI_HARMFUL_CONTENT_RESPONSE
     assert "cannot help" in RAI_HARMFUL_CONTENT_RESPONSE.lower()
@@ -199,7 +195,6 @@ def test_rai_harmful_content_response_exists():
 
 def test_triage_instructions_exist():
     """Test that triage instructions are defined."""
-    from orchestrator import TRIAGE_INSTRUCTIONS
 
     assert TRIAGE_INSTRUCTIONS
     assert "Triage Agent" in TRIAGE_INSTRUCTIONS
@@ -207,7 +202,6 @@ def test_triage_instructions_exist():
 
 def test_planning_instructions_exist():
     """Test that planning instructions are defined."""
-    from orchestrator import PLANNING_INSTRUCTIONS
 
     assert PLANNING_INSTRUCTIONS
     assert "Planning Agent" in PLANNING_INSTRUCTIONS
@@ -215,7 +209,6 @@ def test_planning_instructions_exist():
 
 def test_research_instructions_exist():
     """Test that research instructions are defined."""
-    from orchestrator import RESEARCH_INSTRUCTIONS
 
     assert RESEARCH_INSTRUCTIONS
     assert "Research Agent" in RESEARCH_INSTRUCTIONS
@@ -223,7 +216,6 @@ def test_research_instructions_exist():
 
 def test_rai_instructions_exist():
     """Test that RAI instructions are defined."""
-    from orchestrator import RAI_INSTRUCTIONS
 
     assert RAI_INSTRUCTIONS
     assert "RAIAgent" in RAI_INSTRUCTIONS
@@ -231,7 +223,6 @@ def test_rai_instructions_exist():
 
 def test_harmful_patterns_compiled():
     """Test that harmful patterns are pre-compiled."""
-    from orchestrator import _HARMFUL_PATTERNS_COMPILED
 
     assert len(_HARMFUL_PATTERNS_COMPILED) > 0
     for pattern in _HARMFUL_PATTERNS_COMPILED:
@@ -240,7 +231,6 @@ def test_harmful_patterns_compiled():
 
 def test_system_prompt_patterns_compiled():
     """Test that system prompt patterns are pre-compiled."""
-    from orchestrator import _SYSTEM_PROMPT_PATTERNS_COMPILED
 
     assert len(_SYSTEM_PROMPT_PATTERNS_COMPILED) > 0
     for pattern in _SYSTEM_PROMPT_PATTERNS_COMPILED:
@@ -249,7 +239,6 @@ def test_system_prompt_patterns_compiled():
 
 def test_token_endpoint_defined():
     """Test that token endpoint is correctly defined."""
-    from orchestrator import TOKEN_ENDPOINT
 
     assert TOKEN_ENDPOINT == "https://cognitiveservices.azure.com/.default"
 
@@ -268,7 +257,6 @@ async def test_orchestrator_creation():
         mock_settings.azure_openai.endpoint = "https://test.openai.azure.com"
         mock_settings.base_settings.azure_client_id = None
 
-        from orchestrator import ContentGenerationOrchestrator
         orchestrator = ContentGenerationOrchestrator()
 
         assert orchestrator is not None
@@ -305,8 +293,6 @@ async def test_orchestrator_initialize_creates_workflow():
         mock_builder_instance.add_handoff.return_value = mock_builder_instance
         mock_builder_instance.build.return_value = mock_workflow
         mock_builder.return_value = mock_builder_instance
-
-        from orchestrator import ContentGenerationOrchestrator
 
         orchestrator = ContentGenerationOrchestrator()
         orchestrator.initialize()
@@ -350,8 +336,6 @@ async def test_orchestrator_initialize_foundry_mode():
         mock_builder_instance.build.return_value = mock_workflow
         mock_builder.return_value = mock_builder_instance
 
-        from orchestrator import ContentGenerationOrchestrator
-
         orchestrator = ContentGenerationOrchestrator()
         orchestrator.initialize()
 
@@ -372,8 +356,6 @@ async def test_process_message_blocks_harmful():
         mock_settings.ai_foundry.use_foundry = False
         mock_settings.azure_openai.endpoint = "https://test.openai.azure.com"
         mock_settings.base_settings.azure_client_id = None
-
-        from orchestrator import ContentGenerationOrchestrator, RAI_HARMFUL_CONTENT_RESPONSE
 
         orchestrator = ContentGenerationOrchestrator()
         orchestrator._initialized = True
@@ -411,35 +393,44 @@ async def test_process_message_safe_content():
         mock_client.return_value = mock_chat_client
 
         # Create async generator for workflow.run_stream
-        async def mock_stream(*args, **kwargs):
-            from orchestrator import WorkflowOutputEvent
-            mock_event = MagicMock(spec=WorkflowOutputEvent)
-            mock_event.content = "Here's your marketing content"
-            yield mock_event
+        # WorkflowOutputEvent.data should be a list of ChatMessage objects
+        async def mock_stream(*_args, **_kwargs):
+            from agent_framework import WorkflowOutputEvent
+            # Create a mock ChatMessage with expected attributes
+            mock_message = MagicMock()
+            mock_message.role.value = "assistant"
+            mock_message.text = "Here's your marketing content"
+            mock_message.author_name = "content_agent"
+
+            # Use real WorkflowOutputEvent so isinstance() check passes
+            event = WorkflowOutputEvent(data=[mock_message], source_executor_id="test")
+            yield event
 
         mock_workflow = MagicMock()
         mock_workflow.run_stream = mock_stream
 
         mock_builder_instance = MagicMock()
+        # Mock all chained builder methods to return the builder instance
+        mock_builder_instance.participants.return_value = mock_builder_instance
+        mock_builder_instance.with_start_agent.return_value = mock_builder_instance
         mock_builder_instance.add_agent.return_value = mock_builder_instance
         mock_builder_instance.add_handoff.return_value = mock_builder_instance
+        mock_builder_instance.with_termination_condition.return_value = mock_builder_instance
         mock_builder_instance.build.return_value = mock_workflow
         mock_builder.return_value = mock_builder_instance
-
-        from orchestrator import ContentGenerationOrchestrator
 
         orchestrator = ContentGenerationOrchestrator()
         orchestrator.initialize()
 
         # The workflow runs successfully with safe content (no RAI block)
-        try:
-            async for _ in orchestrator.process_message("Create a paint ad", conversation_id="conv-123"):
-                break  # Got at least one response
-        except Exception:
-            pass  # Complex workflow may have other issues, but not RAI block
+        first_event = None
+        async for event in orchestrator.process_message("Create a paint ad", conversation_id="conv-123"):
+            first_event = event
+            break  # Got at least one response
 
-        # Either responses or graceful handling (not RAI blocked)
-        assert True  # Test passes if no unhandled exception
+        # We should have received at least one response and it must not be the RAI block message
+        assert first_event is not None
+        assert first_event.get("content") != RAI_HARMFUL_CONTENT_RESPONSE
 
 
 # =============================================================================
@@ -455,8 +446,6 @@ async def test_parse_brief_blocks_harmful():
         mock_settings.ai_foundry.use_foundry = False
         mock_settings.azure_openai.endpoint = "https://test.openai.azure.com"
         mock_settings.base_settings.azure_client_id = None
-
-        from orchestrator import ContentGenerationOrchestrator, RAI_HARMFUL_CONTENT_RESPONSE
 
         orchestrator = ContentGenerationOrchestrator()
         orchestrator._initialized = True
@@ -519,8 +508,6 @@ async def test_parse_brief_complete():
         mock_builder_instance.build.return_value = mock_workflow
         mock_builder.return_value = mock_builder_instance
 
-        from orchestrator import ContentGenerationOrchestrator
-
         orchestrator = ContentGenerationOrchestrator()
         orchestrator.initialize()
         orchestrator._agents["planning"] = mock_planning_agent
@@ -546,8 +533,6 @@ async def test_send_user_response_blocks_harmful():
         mock_settings.ai_foundry.use_foundry = False
         mock_settings.azure_openai.endpoint = "https://test.openai.azure.com"
         mock_settings.base_settings.azure_client_id = None
-
-        from orchestrator import ContentGenerationOrchestrator, RAI_HARMFUL_CONTENT_RESPONSE
 
         orchestrator = ContentGenerationOrchestrator()
         orchestrator._initialized = True
@@ -606,8 +591,6 @@ async def test_select_products_add_action():
         mock_builder_instance.build.return_value = mock_workflow
         mock_builder.return_value = mock_builder_instance
 
-        from orchestrator import ContentGenerationOrchestrator
-
         orchestrator = ContentGenerationOrchestrator()
         orchestrator.initialize()
         orchestrator._agents["research"] = mock_research_agent
@@ -654,8 +637,6 @@ async def test_select_products_json_error():
         mock_builder_instance.add_handoff.return_value = mock_builder_instance
         mock_builder_instance.build.return_value = mock_workflow
         mock_builder.return_value = mock_builder_instance
-
-        from orchestrator import ContentGenerationOrchestrator
 
         orchestrator = ContentGenerationOrchestrator()
         orchestrator.initialize()
@@ -714,7 +695,6 @@ async def test_generate_content_text_only():
         mock_builder_instance.build.return_value = mock_workflow
         mock_builder.return_value = mock_builder_instance
 
-        from orchestrator import ContentGenerationOrchestrator
         from models import CreativeBrief
 
         orchestrator = ContentGenerationOrchestrator()
@@ -777,7 +757,6 @@ async def test_generate_content_with_compliance_violations():
         mock_builder_instance.build.return_value = mock_workflow
         mock_builder.return_value = mock_builder_instance
 
-        from orchestrator import ContentGenerationOrchestrator
         from models import CreativeBrief
 
         orchestrator = ContentGenerationOrchestrator()
@@ -810,7 +789,6 @@ async def test_regenerate_image_blocks_harmful():
         mock_settings.azure_openai.endpoint = "https://test.openai.azure.com"
         mock_settings.base_settings.azure_client_id = None
 
-        from orchestrator import ContentGenerationOrchestrator
         from models import CreativeBrief
 
         orchestrator = ContentGenerationOrchestrator()
@@ -845,8 +823,6 @@ async def test_save_image_to_blob_success():
         mock_settings.azure_openai.endpoint = "https://test.openai.azure.com"
         mock_settings.base_settings.azure_client_id = None
 
-        from orchestrator import ContentGenerationOrchestrator
-
         orchestrator = ContentGenerationOrchestrator()
         orchestrator._initialized = True
 
@@ -873,8 +849,6 @@ async def test_save_image_to_blob_fallback():
         mock_settings.ai_foundry.use_foundry = False
         mock_settings.azure_openai.endpoint = "https://test.openai.azure.com"
         mock_settings.base_settings.azure_client_id = None
-
-        from orchestrator import ContentGenerationOrchestrator
 
         orchestrator = ContentGenerationOrchestrator()
         orchestrator._initialized = True
@@ -928,7 +902,6 @@ def test_get_orchestrator_singleton():
         mock_builder.return_value = mock_builder_instance
 
         import orchestrator as orch_module
-        from orchestrator import get_orchestrator
 
         # Reset the singleton
         orch_module._orchestrator = None
@@ -953,8 +926,6 @@ async def test_get_chat_client_missing_endpoint():
         mock_settings.azure_openai.endpoint = None
         mock_settings.base_settings.azure_client_id = None
 
-        from orchestrator import ContentGenerationOrchestrator
-
         orchestrator = ContentGenerationOrchestrator()
 
         with pytest.raises(ValueError, match="AZURE_OPENAI_ENDPOINT"):
@@ -970,8 +941,6 @@ async def test_get_chat_client_foundry_missing_sdk():
 
         mock_settings.ai_foundry.use_foundry = True
         mock_settings.base_settings.azure_client_id = None
-
-        from orchestrator import ContentGenerationOrchestrator
 
         orchestrator = ContentGenerationOrchestrator()
 
@@ -990,8 +959,6 @@ async def test_get_chat_client_foundry_missing_endpoint():
         mock_settings.ai_foundry.use_foundry = True
         mock_settings.ai_foundry.project_endpoint = None
         mock_settings.base_settings.azure_client_id = None
-
-        from orchestrator import ContentGenerationOrchestrator
 
         orchestrator = ContentGenerationOrchestrator()
 
@@ -1015,8 +982,6 @@ async def test_generate_foundry_image_no_credential():
         mock_settings.azure_openai.image_endpoint = "https://test.openai.azure.com"
         mock_settings.ai_foundry.image_deployment = "gpt-image-1"
         mock_settings.base_settings.azure_client_id = None
-
-        from orchestrator import ContentGenerationOrchestrator
 
         orchestrator = ContentGenerationOrchestrator()
         orchestrator._initialized = True
@@ -1046,8 +1011,6 @@ async def test_generate_foundry_image_no_endpoint():
         mock_credential.get_token.return_value = MagicMock(token="test-token")
         mock_cred.return_value = mock_credential
 
-        from orchestrator import ContentGenerationOrchestrator
-
         orchestrator = ContentGenerationOrchestrator()
         orchestrator._initialized = True
         orchestrator._use_foundry = True
@@ -1072,8 +1035,6 @@ async def test_extract_brief_from_text():
         mock_settings.ai_foundry.use_foundry = False
         mock_settings.azure_openai.endpoint = "https://test.openai.azure.com"
         mock_settings.base_settings.azure_client_id = None
-
-        from orchestrator import ContentGenerationOrchestrator
 
         orchestrator = ContentGenerationOrchestrator()
 
@@ -1105,8 +1066,6 @@ async def test_extract_brief_empty_text():
         mock_settings.ai_foundry.use_foundry = False
         mock_settings.azure_openai.endpoint = "https://test.openai.azure.com"
         mock_settings.base_settings.azure_client_id = None
-
-        from orchestrator import ContentGenerationOrchestrator
 
         orchestrator = ContentGenerationOrchestrator()
         result = orchestrator._extract_brief_from_text("")
@@ -1144,9 +1103,9 @@ async def test_process_message_empty_events():
         mock_chat_client.create_agent.return_value = MagicMock()
         mock_client.return_value = mock_chat_client
 
-        async def empty_stream(*args, **kwargs):
-            return
-            yield  # Make it a generator
+        async def empty_stream(*_args, **_kwargs):
+            if False:
+                yield  # Make it a generator
 
         mock_workflow = MagicMock()
         mock_workflow.run_stream = empty_stream
@@ -1156,8 +1115,6 @@ async def test_process_message_empty_events():
         mock_builder_instance.add_handoff.return_value = mock_builder_instance
         mock_builder_instance.build.return_value = mock_workflow
         mock_builder.return_value = mock_builder_instance
-
-        from orchestrator import ContentGenerationOrchestrator
 
         orchestrator = ContentGenerationOrchestrator()
         orchestrator.initialize()
@@ -1205,8 +1162,6 @@ async def test_parse_brief_rai_agent_blocks():
         mock_builder_instance.build.return_value = mock_workflow
         mock_builder.return_value = mock_builder_instance
 
-        from orchestrator import ContentGenerationOrchestrator, RAI_HARMFUL_CONTENT_RESPONSE
-
         orchestrator = ContentGenerationOrchestrator()
         orchestrator.initialize()
 
@@ -1251,8 +1206,6 @@ async def test_parse_brief_rai_agent_exception():
         mock_builder_instance.add_handoff.return_value = mock_builder_instance
         mock_builder_instance.build.return_value = mock_workflow
         mock_builder.return_value = mock_builder_instance
-
-        from orchestrator import ContentGenerationOrchestrator
 
         orchestrator = ContentGenerationOrchestrator()
         orchestrator.initialize()
@@ -1303,8 +1256,6 @@ async def test_parse_brief_incomplete_fields():
         mock_builder_instance.add_handoff.return_value = mock_builder_instance
         mock_builder_instance.build.return_value = mock_workflow
         mock_builder.return_value = mock_builder_instance
-
-        from orchestrator import ContentGenerationOrchestrator
 
         orchestrator = ContentGenerationOrchestrator()
         orchestrator.initialize()
@@ -1361,8 +1312,6 @@ async def test_parse_brief_json_in_code_block():
         mock_builder_instance.add_handoff.return_value = mock_builder_instance
         mock_builder_instance.build.return_value = mock_workflow
         mock_builder.return_value = mock_builder_instance
-
-        from orchestrator import ContentGenerationOrchestrator
 
         orchestrator = ContentGenerationOrchestrator()
         orchestrator.initialize()
@@ -1422,7 +1371,6 @@ async def test_generate_content_text_content():
         mock_builder_instance.build.return_value = mock_workflow
         mock_builder.return_value = mock_builder_instance
 
-        from orchestrator import ContentGenerationOrchestrator
         from models import CreativeBrief
 
         orchestrator = ContentGenerationOrchestrator()
@@ -1497,7 +1445,6 @@ async def test_regenerate_image_foundry_mode():
         mock_builder_instance.build.return_value = mock_workflow
         mock_builder.return_value = mock_builder_instance
 
-        from orchestrator import ContentGenerationOrchestrator
         from models import CreativeBrief
 
         orchestrator = ContentGenerationOrchestrator()
@@ -1555,7 +1502,6 @@ async def test_regenerate_image_exception():
         mock_builder_instance.build.return_value = mock_workflow
         mock_builder.return_value = mock_builder_instance
 
-        from orchestrator import ContentGenerationOrchestrator
         from models import CreativeBrief
 
         orchestrator = ContentGenerationOrchestrator()
@@ -1598,8 +1544,6 @@ async def test_generate_foundry_image_credential_none_returns_error():
 
         mock_cred.return_value = None
 
-        from orchestrator import ContentGenerationOrchestrator
-
         orchestrator = ContentGenerationOrchestrator()
         orchestrator._credential = None
 
@@ -1625,8 +1569,6 @@ async def test_generate_foundry_image_no_image_endpoint():
         mock_credential = MagicMock()
         mock_credential.get_token.return_value = MagicMock(token="test-token")
         mock_cred.return_value = mock_credential
-
-        from orchestrator import ContentGenerationOrchestrator
 
         orchestrator = ContentGenerationOrchestrator()
         orchestrator._credential = mock_credential
@@ -1662,8 +1604,6 @@ async def test_get_chat_client_foundry_mode():
 
         mock_chat_instance = MagicMock()
         mock_client.return_value = mock_chat_instance
-
-        from orchestrator import ContentGenerationOrchestrator
 
         orchestrator = ContentGenerationOrchestrator()
         orchestrator._use_foundry = True
@@ -1712,16 +1652,14 @@ async def test_process_message_with_context():
         mock_chat_client.create_agent.return_value = MagicMock()
         mock_client.return_value = mock_chat_client
 
-        from orchestrator import ContentGenerationOrchestrator
-
         # Track if workflow was called
         call_tracker = {"called": False, "input": None}
 
         async def mock_stream(input_text):
             call_tracker["called"] = True
             call_tracker["input"] = input_text
-            return
-            yield  # Make it an async generator
+            if False:
+                yield  # Make it an async generator
 
         mock_workflow = MagicMock()
         mock_workflow.run_stream = mock_stream
@@ -1769,15 +1707,13 @@ async def test_send_user_response_safe_content():
         mock_chat_client.create_agent.return_value = MagicMock()
         mock_client.return_value = mock_chat_client
 
-        from orchestrator import ContentGenerationOrchestrator
-
         call_tracker = {"called": False, "responses": None}
 
         async def mock_send(responses):
             call_tracker["called"] = True
             call_tracker["responses"] = responses
-            return
-            yield  # async generator
+            if False:
+                yield  # async generator
 
         mock_workflow = MagicMock()
         mock_workflow.send_responses_streaming = mock_send
@@ -1859,8 +1795,6 @@ async def test_parse_brief_json_with_backticks():
         mock_builder_instance.build.return_value = mock_workflow
         mock_builder.return_value = mock_builder_instance
 
-        from orchestrator import ContentGenerationOrchestrator
-
         orchestrator = ContentGenerationOrchestrator()
         orchestrator.initialize()
         orchestrator._agents["planning"] = mock_planning_agent
@@ -1927,8 +1861,6 @@ async def test_parse_brief_with_dict_field_value():
         mock_builder_instance.build.return_value = mock_workflow
         mock_builder.return_value = mock_builder_instance
 
-        from orchestrator import ContentGenerationOrchestrator
-
         orchestrator = ContentGenerationOrchestrator()
         orchestrator.initialize()
         orchestrator._agents["planning"] = mock_planning_agent
@@ -1985,8 +1917,6 @@ async def test_parse_brief_fallback_extraction():
         mock_builder_instance.build.return_value = mock_workflow
         mock_builder.return_value = mock_builder_instance
 
-        from orchestrator import ContentGenerationOrchestrator
-
         orchestrator = ContentGenerationOrchestrator()
         orchestrator.initialize()
         orchestrator._agents["planning"] = mock_planning_agent
@@ -2041,8 +1971,6 @@ async def test_generate_foundry_image_success():
         mock_client_instance.__aexit__ = AsyncMock(return_value=None)
         mock_httpx.return_value = mock_client_instance
 
-        from orchestrator import ContentGenerationOrchestrator
-
         orchestrator = ContentGenerationOrchestrator()
         orchestrator._credential = mock_credential
 
@@ -2092,8 +2020,6 @@ async def test_generate_foundry_image_dalle3_mode():
         mock_client_instance.__aexit__ = AsyncMock(return_value=None)
         mock_httpx.return_value = mock_client_instance
 
-        from orchestrator import ContentGenerationOrchestrator
-
         orchestrator = ContentGenerationOrchestrator()
         orchestrator._credential = mock_credential
         orchestrator._save_image_to_blob = AsyncMock()
@@ -2140,8 +2066,6 @@ async def test_generate_foundry_image_api_error():
         mock_client_instance.__aexit__ = AsyncMock(return_value=None)
         mock_httpx.return_value = mock_client_instance
 
-        from orchestrator import ContentGenerationOrchestrator
-
         orchestrator = ContentGenerationOrchestrator()
         orchestrator._credential = mock_credential
 
@@ -2179,8 +2103,6 @@ async def test_generate_foundry_image_timeout():
         mock_client_instance.__aenter__ = AsyncMock(return_value=mock_client_instance)
         mock_client_instance.__aexit__ = AsyncMock(return_value=None)
         mock_httpx.return_value = mock_client_instance
-
-        from orchestrator import ContentGenerationOrchestrator
 
         orchestrator = ContentGenerationOrchestrator()
         orchestrator._credential = mock_credential
@@ -2230,8 +2152,6 @@ async def test_generate_foundry_image_url_fallback():
         mock_client_instance.__aenter__ = AsyncMock(return_value=mock_client_instance)
         mock_client_instance.__aexit__ = AsyncMock(return_value=None)
         mock_httpx.return_value = mock_client_instance
-
-        from orchestrator import ContentGenerationOrchestrator
 
         orchestrator = ContentGenerationOrchestrator()
         orchestrator._credential = mock_credential
@@ -2288,7 +2208,6 @@ async def test_generate_content_with_foundry_image():
         mock_builder_instance.build.return_value = mock_workflow
         mock_builder.return_value = mock_builder_instance
 
-        from orchestrator import ContentGenerationOrchestrator
         from models import CreativeBrief
 
         orchestrator = ContentGenerationOrchestrator()
@@ -2369,7 +2288,6 @@ async def test_generate_content_direct_mode_image():
         mock_builder_instance.build.return_value = mock_workflow
         mock_builder.return_value = mock_builder_instance
 
-        from orchestrator import ContentGenerationOrchestrator
         from models import CreativeBrief
 
         orchestrator = ContentGenerationOrchestrator()
@@ -2450,7 +2368,6 @@ async def test_regenerate_image_direct_mode():
         mock_builder_instance.build.return_value = mock_workflow
         mock_builder.return_value = mock_builder_instance
 
-        from orchestrator import ContentGenerationOrchestrator
         from models import CreativeBrief
 
         orchestrator = ContentGenerationOrchestrator()
@@ -2523,7 +2440,6 @@ async def test_regenerate_image_failure():
         mock_builder_instance.build.return_value = mock_workflow
         mock_builder.return_value = mock_builder_instance
 
-        from orchestrator import ContentGenerationOrchestrator
         from models import CreativeBrief
 
         orchestrator = ContentGenerationOrchestrator()
@@ -2570,8 +2486,6 @@ async def test_get_chat_client_foundry_no_endpoint():
         mock_credential.get_token.return_value = MagicMock(token="test-token")
         mock_cred.return_value = mock_credential
 
-        from orchestrator import ContentGenerationOrchestrator
-
         orchestrator = ContentGenerationOrchestrator()
         orchestrator._use_foundry = True
 
@@ -2594,8 +2508,6 @@ async def test_get_chat_client_direct_no_endpoint():
         mock_credential = MagicMock()
         mock_credential.get_token.return_value = MagicMock(token="test-token")
         mock_cred.return_value = mock_credential
-
-        from orchestrator import ContentGenerationOrchestrator
 
         orchestrator = ContentGenerationOrchestrator()
         orchestrator._use_foundry = False

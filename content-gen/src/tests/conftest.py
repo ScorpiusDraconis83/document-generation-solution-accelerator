@@ -8,6 +8,7 @@ This module provides reusable fixtures for testing:
 """
 
 import asyncio
+import gc
 import os
 import sys
 from datetime import datetime, timezone
@@ -16,68 +17,96 @@ from typing import AsyncGenerator
 import pytest
 from quart import Quart
 
-# Set environment variables BEFORE any backend imports
-# This prevents settings.py from failing during import
-os.environ.update({
-    # Base settings
-    "AZURE_OPENAI_ENDPOINT": "https://test-openai.openai.azure.com/",
-    "AZURE_OPENAI_API_VERSION": "2024-08-01-preview",
-    "AZURE_OPENAI_CHAT_DEPLOYMENT": "gpt-4o",
-    "AZURE_OPENAI_EMBEDDING_DEPLOYMENT": "text-embedding-3-large",
-    "AZURE_OPENAI_DALLE_DEPLOYMENT": "dall-e-3",
-    "AZURE_CLIENT_ID": "test-client-id",
 
-    # Cosmos DB
-    "AZURE_COSMOSDB_ENDPOINT": "https://test-cosmos.documents.azure.com:443/",
-    "AZURE_COSMOSDB_DATABASE_NAME": "test-db",
-    "AZURE_COSMOSDB_PRODUCTS_CONTAINER": "products",
-    "AZURE_COSMOSDB_CONVERSATIONS_CONTAINER": "conversations",
+def pytest_configure(config):
+    """Set minimal env vars required for backend imports before test collection.
 
-    # Blob Storage
-    "AZURE_STORAGE_ACCOUNT_NAME": "teststorage",
-    "AZURE_STORAGE_CONTAINER": "test-container",
-    "AZURE_STORAGE_ACCOUNT_URL": "https://teststorage.blob.core.windows.net",
-    "AZURE_BLOB_PRODUCT_IMAGES_CONTAINER": "product-images",
-    "AZURE_BLOB_GENERATED_IMAGES_CONTAINER": "generated-images",
+    Only sets variables absolutely required to import settings.py without errors.
+    All other test environment configuration is handled by the mock_environment fixture.
+    """
+    # AZURE_OPENAI_ENDPOINT is required by _AzureOpenAISettings validator
+    os.environ.setdefault("AZURE_OPENAI_ENDPOINT", "https://test.openai.azure.com/")
 
-    # Content Safety
-    "AZURE_CONTENT_SAFETY_ENDPOINT": "https://test-safety.cognitiveservices.azure.com/",
-    "AZURE_CONTENT_SAFETY_API_VERSION": "2024-09-01",
+    # Add the backend directory to the Python path
+    tests_dir = os.path.dirname(os.path.abspath(__file__))
+    backend_dir = os.path.join(os.path.dirname(tests_dir), 'backend')
+    if backend_dir not in sys.path:
+        sys.path.insert(0, backend_dir)
 
-    # Search Service
-    "AZURE_SEARCH_ENDPOINT": "https://test-search.search.windows.net",
-    "AZURE_SEARCH_INDEX_NAME": "products-index",
+    # Set Windows event loop policy (fixes pytest-asyncio auto mode compatibility)
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
-    # Foundry (optional)
-    "USE_FOUNDRY": "false",
-    "AZURE_AI_PROJECT_CONNECTION_STRING": "",
 
-    # Admin - Empty for development mode (no authentication required)
-    "ADMIN_API_KEY": "",
+def pytest_sessionfinish(session, exitstatus):  # noqa: ARG001
+    """Clean up any remaining async resources after test session.
 
-    # App Configuration
-    "ALLOWED_ORIGIN": "http://localhost:3000",
-    "LOG_LEVEL": "DEBUG",
-})
+    This helps prevent 'Unclosed client session' warnings from aiohttp
+    that can occur when Azure SDK or other async clients aren't fully closed.
 
-# Add the backend directory to the Python path so we can import backend modules
-tests_dir = os.path.dirname(os.path.abspath(__file__))
-backend_dir = os.path.join(os.path.dirname(tests_dir), 'backend')
-if backend_dir not in sys.path:
-    sys.path.insert(0, backend_dir)
+    Args:
+        session: pytest Session object (required by hook signature)
+        exitstatus: exit status code (required by hook signature)
+    """
+    del session, exitstatus  # Unused but required by pytest hook signature
+    # Force garbage collection to trigger cleanup of any unclosed sessions
+    gc.collect()
 
-# Set Windows event loop policy at module level (fixes pytest-asyncio auto mode compatibility)
-if sys.platform == "win32":
-    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+    # Close any remaining event loops
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            loop.stop()
+        if not loop.is_closed():
+            loop.close()
+    except Exception:
+        pass
 
 
 # ==================== Environment Configuration ====================
 
 @pytest.fixture(scope="function", autouse=True)
-def mock_environment():
-    """Ensure environment variables are set for each test."""
-    # Environment variables are already set at module level
-    # This fixture exists for potential test-specific overrides
+def mock_environment(monkeypatch):
+    """Set test environment variables with correct names matching settings.py.
+
+    Uses monkeypatch for proper test isolation - each test starts with a clean
+    environment and changes are automatically reverted after the test.
+    """
+    env_vars = {
+        # Azure OpenAI (required - _AzureOpenAISettings)
+        "AZURE_OPENAI_ENDPOINT": "https://test-openai.openai.azure.com/",
+        "AZURE_OPENAI_API_VERSION": "2024-08-01-preview",
+
+        # Azure Cosmos DB (_CosmosSettings uses AZURE_COSMOS_ prefix)
+        "AZURE_COSMOS_ENDPOINT": "https://test-cosmos.documents.azure.com:443/",
+        "AZURE_COSMOS_DATABASE_NAME": "test-db",
+
+        # Chat History (_ChatHistorySettings uses AZURE_COSMOSDB_ prefix)
+        "AZURE_COSMOSDB_DATABASE": "test-db",
+        "AZURE_COSMOSDB_ACCOUNT": "test-cosmos",
+        "AZURE_COSMOSDB_CONVERSATIONS_CONTAINER": "conversations",
+        "AZURE_COSMOSDB_PRODUCTS_CONTAINER": "products",
+
+        # Azure Blob Storage (_StorageSettings uses AZURE_BLOB_ prefix)
+        "AZURE_BLOB_ACCOUNT_NAME": "teststorage",
+        "AZURE_BLOB_PRODUCT_IMAGES_CONTAINER": "product-images",
+        "AZURE_BLOB_GENERATED_IMAGES_CONTAINER": "generated-images",
+
+        # Azure AI Search (_SearchSettings uses AZURE_AI_SEARCH_ prefix)
+        "AZURE_AI_SEARCH_ENDPOINT": "https://test-search.search.windows.net",
+        "AZURE_AI_SEARCH_PRODUCTS_INDEX": "products",
+        "AZURE_AI_SEARCH_IMAGE_INDEX": "product-images",
+
+        # AI Foundry (disabled for tests)
+        "USE_FOUNDRY": "false",
+
+        # Admin API (empty = development mode, no auth required)
+        "ADMIN_API_KEY": "",
+    }
+
+    for key, value in env_vars.items():
+        monkeypatch.setenv(key, value)
+
     yield
 
 

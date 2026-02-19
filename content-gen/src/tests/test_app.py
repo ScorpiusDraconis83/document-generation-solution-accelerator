@@ -9,7 +9,8 @@ import json
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from models import Product
+from app import get_authenticated_user, _generation_tasks, startup, shutdown
+from models import CreativeBrief, Product
 
 
 # ==================== Authentication Tests ====================
@@ -17,8 +18,6 @@ from models import Product
 @pytest.mark.asyncio
 async def test_get_authenticated_user_with_headers(app):
     """Test authentication with EasyAuth headers."""
-    from app import get_authenticated_user
-
     headers = {
         "X-MS-CLIENT-PRINCIPAL-ID": "test-user-123",
         "X-MS-CLIENT-PRINCIPAL-NAME": "test@example.com",
@@ -37,8 +36,6 @@ async def test_get_authenticated_user_with_headers(app):
 @pytest.mark.asyncio
 async def test_get_authenticated_user_anonymous(app):
     """Test authentication without headers (anonymous)."""
-    from app import get_authenticated_user
-
     async with app.test_request_context("/"):
         user = get_authenticated_user()
 
@@ -99,7 +96,7 @@ async def test_chat_with_message(client):
     """Test chat endpoint with valid message."""
     mock_orchestrator = AsyncMock()
 
-    async def mock_process_message(*args, **kwargs):
+    async def mock_process_message(*_args, **_kwargs):
         yield {
             "type": "message",
             "content": "Hello! How can I help?",
@@ -134,7 +131,7 @@ async def test_chat_cosmos_failure(client):
     """Test chat when CosmosDB is unavailable."""
     mock_orchestrator = AsyncMock()
 
-    async def mock_process_message(*args, **kwargs):
+    async def mock_process_message(*_args, **_kwargs):
         yield {
             "type": "message",
             "content": "Response",
@@ -393,7 +390,7 @@ async def test_generate_content_stream(client, sample_creative_brief_dict):
     """Test streaming content generation."""
     mock_orchestrator = AsyncMock()
 
-    async def mock_generate_content_stream(*args, **kwargs):
+    async def mock_generate_content_stream(*_args, **_kwargs):
         yield {
             "type": "progress",
             "message": "Generating text content...",
@@ -976,7 +973,7 @@ async def test_rate_limit_handling(client):
 
     from openai import RateLimitError
 
-    async def mock_process_message(*args, **kwargs):
+    async def mock_process_message(*_args, **_kwargs):
         raise RateLimitError("Rate limit exceeded", response=MagicMock(status_code=429), body={})
 
     mock_orchestrator.process_message = mock_process_message
@@ -1004,7 +1001,7 @@ async def test_request_timeout_handling(client):
 
     import asyncio  # noqa: F811
 
-    async def mock_process_message(*args, **kwargs):
+    async def mock_process_message(*_args, **_kwargs):
         raise asyncio.TimeoutError("Request timed out")
 
     mock_orchestrator.process_message = mock_process_message
@@ -1047,7 +1044,6 @@ async def test_run_generation_task_success():
 
         mock_blob.return_value = AsyncMock()
 
-        from models import CreativeBrief
         brief = CreativeBrief(
             overview="Test campaign",
             objectives="Increase sales",
@@ -1103,7 +1099,6 @@ async def test_run_generation_task_with_image_blob_url():
     with patch("app.get_orchestrator", return_value=mock_orchestrator), \
          patch("app.get_cosmos_service", return_value=mock_cosmos_service):
 
-        from models import CreativeBrief
         brief = CreativeBrief(
             overview="Test",
             objectives="Goals",
@@ -1166,7 +1161,6 @@ async def test_run_generation_task_with_base64_fallback():
          patch("app.get_cosmos_service", return_value=mock_cosmos_service), \
          patch("app.get_blob_service", return_value=mock_blob_service):
 
-        from models import CreativeBrief
         brief = CreativeBrief(
             overview="Test",
             objectives="Goals",
@@ -1215,7 +1209,6 @@ async def test_run_generation_task_failure():
     )
 
     with patch("app.get_orchestrator", return_value=mock_orchestrator):
-        from models import CreativeBrief
         brief = CreativeBrief(
             overview="Test",
             objectives="Goals",
@@ -1509,7 +1502,7 @@ async def test_chat_sse_format(client):
     """Test chat endpoint returns proper SSE format."""
     mock_orchestrator = AsyncMock()
 
-    async def mock_process_message(*args, **kwargs):
+    async def mock_process_message(*_args, **_kwargs):
         yield {"type": "message", "content": "Hello!", "is_final": True}
 
     mock_orchestrator.process_message = mock_process_message
@@ -1590,8 +1583,6 @@ async def test_product_image_url_conversion(client, sample_product):
 @pytest.mark.asyncio
 async def test_authenticated_user_partial_headers(app):
     """Test authentication with partial headers."""
-    from app import get_authenticated_user
-
     partial_headers = {
         "X-MS-CLIENT-PRINCIPAL-ID": "partial-user",
         # Missing name and provider
@@ -1611,7 +1602,7 @@ async def test_chat_multiple_responses(client):
     """Test chat with multiple responses in stream."""
     mock_orchestrator = AsyncMock()
 
-    async def mock_process_message(*args, **kwargs):
+    async def mock_process_message(*_args, **_kwargs):
         yield {"type": "thinking", "content": "Processing...", "is_final": False}
         yield {"type": "message", "content": "Here's my response", "is_final": False}
         yield {"type": "message", "content": "And more details", "is_final": True}
@@ -1969,7 +1960,6 @@ async def test_start_generation_success(client):
 async def test_get_generation_status(client):
     """Test getting generation status by task ID."""
     # Inject a test task
-    from app import _generation_tasks
     _generation_tasks["test_task_123"] = {
         "status": "completed",
         "result": {"text_content": "Test content"}
@@ -2915,9 +2905,6 @@ async def test_rename_conversation_cosmos_exception(client):
 @pytest.mark.asyncio
 async def test_startup_cosmos_error(client):
     """Test startup handles CosmosDB initialization failure gracefully."""
-    # Import the startup function directly
-    from app import startup
-
     with patch("app.get_orchestrator") as mock_orch:
         mock_orch.return_value = MagicMock()
 
@@ -2937,8 +2924,6 @@ async def test_startup_cosmos_error(client):
 @pytest.mark.asyncio
 async def test_startup_blob_error(client):
     """Test startup handles Blob storage initialization failure gracefully."""
-    from app import startup
-
     with patch("app.get_orchestrator") as mock_orch:
         mock_orch.return_value = MagicMock()
 
@@ -2986,8 +2971,6 @@ async def test_product_image_etag_cache_hit(client):
 @pytest.mark.asyncio
 async def test_shutdown(client):
     """Test application shutdown closes services."""
-    from app import shutdown
-
     with patch("app.get_cosmos_service") as mock_cosmos:
         mock_cosmos_service = AsyncMock()
         mock_cosmos_service.close = AsyncMock()
@@ -3015,8 +2998,6 @@ async def test_error_handler_404(client):
 @pytest.mark.asyncio
 async def test_get_generation_status_completed_coverage(client):
     """Test getting status of completed generation task."""
-    from app import _generation_tasks
-
     task_id = "test-task-completed"
     _generation_tasks[task_id] = {
         "status": "completed",
@@ -3040,8 +3021,6 @@ async def test_get_generation_status_completed_coverage(client):
 @pytest.mark.asyncio
 async def test_get_generation_status_running(client):
     """Test getting status of running generation task."""
-    from app import _generation_tasks
-
     task_id = "test-task-running"
     _generation_tasks[task_id] = {
         "status": "running",
@@ -3064,8 +3043,6 @@ async def test_get_generation_status_running(client):
 @pytest.mark.asyncio
 async def test_get_generation_status_failed(client):
     """Test getting status of failed generation task."""
-    from app import _generation_tasks
-
     task_id = "test-task-failed"
     _generation_tasks[task_id] = {
         "status": "failed",
