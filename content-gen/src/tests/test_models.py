@@ -5,16 +5,8 @@ Only tests models that have computed properties or custom validators.
 Simple field-only models are tested implicitly through service/API tests.
 """
 
-from models import (
-    ComplianceSeverity,
-    ComplianceViolation,
-    ComplianceResult,
-    GeneratedTextContent,
-    ContentGenerationResponse,
-)
-
-
-# ==================== ComplianceResult Tests ====================
+from models import (ComplianceResult, ComplianceSeverity, ComplianceViolation,
+                    ContentGenerationResponse, GeneratedTextContent)
 
 class TestComplianceResult:
     """Tests for ComplianceResult model properties."""
@@ -116,9 +108,6 @@ class TestComplianceResult:
 
         assert result.has_errors is True
         assert result.has_warnings is True
-
-
-# ==================== ContentGenerationResponse Tests ====================
 
 class TestContentGenerationResponse:
     """Tests for ContentGenerationResponse requires_modification property."""

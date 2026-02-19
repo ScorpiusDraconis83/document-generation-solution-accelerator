@@ -17,7 +17,6 @@ from typing import AsyncGenerator
 import pytest
 from quart import Quart
 
-
 def pytest_configure(config):
     """Set minimal env vars required for backend imports before test collection.
 
@@ -36,7 +35,6 @@ def pytest_configure(config):
     # Set Windows event loop policy (fixes pytest-asyncio auto mode compatibility)
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
-
 
 def pytest_sessionfinish(session, exitstatus):  # noqa: ARG001
     """Clean up any remaining async resources after test session.
@@ -61,9 +59,6 @@ def pytest_sessionfinish(session, exitstatus):  # noqa: ARG001
             loop.close()
     except Exception:
         pass
-
-
-# ==================== Environment Configuration ====================
 
 @pytest.fixture(scope="function", autouse=True)
 def mock_environment(monkeypatch):
@@ -109,9 +104,6 @@ def mock_environment(monkeypatch):
 
     yield
 
-
-# ==================== App Fixtures ====================
-
 @pytest.fixture
 async def app() -> AsyncGenerator[Quart, None]:
     """Create a test Quart app instance."""
@@ -122,14 +114,10 @@ async def app() -> AsyncGenerator[Quart, None]:
 
     yield quart_app
 
-
 @pytest.fixture
 async def client(app: Quart):
     """Create a test client for the Quart app."""
     return app.test_client()
-
-
-# ==================== Sample Test Data ====================
 
 @pytest.fixture
 def sample_product_dict():
@@ -147,13 +135,11 @@ def sample_product_dict():
         "updated_at": datetime.now(timezone.utc).isoformat()
     }
 
-
 @pytest.fixture
 def sample_product(sample_product_dict):
     """Sample product as Pydantic model."""
     from models import Product
     return Product(**sample_product_dict)
-
 
 @pytest.fixture
 def sample_creative_brief_dict():
@@ -170,13 +156,11 @@ def sample_creative_brief_dict():
         "cta": "Shop Now - Free Shipping"
     }
 
-
 @pytest.fixture
 def sample_creative_brief(sample_creative_brief_dict):
     """Sample creative brief as Pydantic model."""
     from models import CreativeBrief
     return CreativeBrief(**sample_creative_brief_dict)
-
 
 @pytest.fixture
 def authenticated_headers():
@@ -186,7 +170,6 @@ def authenticated_headers():
         "X-Ms-Client-Principal-Name": "test@example.com",
         "X-Ms-Client-Principal-Idp": "aad"
     }
-
 
 @pytest.fixture
 def admin_headers():

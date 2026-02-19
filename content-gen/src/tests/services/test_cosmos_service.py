@@ -1,17 +1,8 @@
-"""
-Unit tests for CosmosDB Service.
-
-These tests mock only the Azure SDK clients (CosmosClient, ContainerProxy)
-while allowing the actual CosmosDBService code to execute for coverage.
-"""
-
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
 from services.cosmos_service import CosmosDBService
-
-
-# ==================== Shared Fixtures ====================
 
 @pytest.fixture
 def mock_cosmos_service():
@@ -43,9 +34,6 @@ def mock_cosmos_service():
 
         yield service
 
-
-# ==================== Initialization Tests ====================
-
 @pytest.mark.asyncio
 async def test_initialize_with_managed_identity():
     """Test initialization with managed identity credential."""
@@ -76,7 +64,6 @@ async def test_initialize_with_managed_identity():
         mock_cred.assert_called_once_with(client_id="test-client-id")
         mock_client.assert_called_once()
 
-
 @pytest.mark.asyncio
 async def test_initialize_with_default_credential():
     """Test initialization with default Azure credential."""
@@ -105,7 +92,6 @@ async def test_initialize_with_default_credential():
 
         mock_cred.assert_called_once()
 
-
 @pytest.mark.asyncio
 async def test_close_client():
     """Test closing the CosmosDB client."""
@@ -132,9 +118,6 @@ async def test_close_client():
 
         mock_cosmos_client.close.assert_called_once()
         assert service._client is None
-
-
-# ==================== Product Operations Tests ====================
 
 @pytest.mark.asyncio
 async def test_get_product_by_sku_found(mock_cosmos_service):
@@ -165,7 +148,6 @@ async def test_get_product_by_sku_found(mock_cosmos_service):
     assert product.sku == "TEST-SKU-123"
     assert product.product_name == "Test Product"
 
-
 @pytest.mark.asyncio
 async def test_get_product_by_sku_not_found(mock_cosmos_service):
     """Test retrieving a product by SKU when it doesn't exist."""
@@ -179,7 +161,6 @@ async def test_get_product_by_sku_not_found(mock_cosmos_service):
     product = await mock_cosmos_service.get_product_by_sku("NONEXISTENT")
 
     assert product is None
-
 
 @pytest.mark.asyncio
 async def test_get_products_by_category(mock_cosmos_service):
@@ -212,7 +193,6 @@ async def test_get_products_by_category(mock_cosmos_service):
     assert len(products) == 1
     assert products[0].category == "Interior"
 
-
 @pytest.mark.asyncio
 async def test_get_products_by_category_with_subcategory(mock_cosmos_service):
     """Test retrieving products by category and sub-category."""
@@ -243,7 +223,6 @@ async def test_get_products_by_category_with_subcategory(mock_cosmos_service):
 
     assert len(products) == 1
     assert products[0].sub_category == "Paint"
-
 
 @pytest.mark.asyncio
 async def test_search_products(mock_cosmos_service):
@@ -276,7 +255,6 @@ async def test_search_products(mock_cosmos_service):
     assert len(products) == 1
     assert "Premium" in products[0].product_name
 
-
 @pytest.mark.asyncio
 async def test_upsert_product(mock_cosmos_service):
     """Test creating/updating a product."""
@@ -307,7 +285,6 @@ async def test_upsert_product(mock_cosmos_service):
     assert result.sku == "NEW-SKU-123"
     mock_cosmos_service._mock_products_container.upsert_item.assert_called_once()
 
-
 @pytest.mark.asyncio
 async def test_delete_product_success(mock_cosmos_service):
     """Test deleting a product successfully."""
@@ -318,7 +295,6 @@ async def test_delete_product_success(mock_cosmos_service):
 
     assert result is True
     mock_cosmos_service._mock_products_container.delete_item.assert_called_once()
-
 
 @pytest.mark.asyncio
 async def test_delete_product_failure(mock_cosmos_service):
@@ -331,7 +307,6 @@ async def test_delete_product_failure(mock_cosmos_service):
     result = await mock_cosmos_service.delete_product("NONEXISTENT")
 
     assert result is False
-
 
 @pytest.mark.asyncio
 async def test_delete_all_products(mock_cosmos_service):
@@ -350,7 +325,6 @@ async def test_delete_all_products(mock_cosmos_service):
 
     assert count == 2
     assert mock_cosmos_service._mock_products_container.delete_item.call_count == 2
-
 
 @pytest.mark.asyncio
 async def test_delete_all_products_with_failures(mock_cosmos_service):
@@ -377,7 +351,6 @@ async def test_delete_all_products_with_failures(mock_cosmos_service):
 
     # Should return 2 deleted (first and third succeeded, second failed)
     assert count == 2
-
 
 @pytest.mark.asyncio
 async def test_get_all_products(mock_cosmos_service):
@@ -410,9 +383,6 @@ async def test_get_all_products(mock_cosmos_service):
 
     assert len(products) == 3
 
-
-# ==================== Conversation Operations Tests ====================
-
 @pytest.mark.asyncio
 async def test_get_conversation_found(mock_cosmos_service):
     """Test getting a conversation that exists."""
@@ -433,7 +403,6 @@ async def test_get_conversation_found(mock_cosmos_service):
     assert result is not None
     assert result["id"] == "conv-123"
 
-
 @pytest.mark.asyncio
 async def test_get_conversation_not_found(mock_cosmos_service):
     """Test getting a conversation that doesn't exist."""
@@ -451,7 +420,6 @@ async def test_get_conversation_not_found(mock_cosmos_service):
     result = await mock_cosmos_service.get_conversation("nonexistent", "user-123")
 
     assert result is None
-
 
 @pytest.mark.asyncio
 async def test_get_user_conversations(mock_cosmos_service):
@@ -472,7 +440,6 @@ async def test_get_user_conversations(mock_cosmos_service):
 
     assert len(result) == 2
 
-
 @pytest.mark.asyncio
 async def test_delete_conversation(mock_cosmos_service):
     """Test deleting a conversation."""
@@ -489,7 +456,6 @@ async def test_delete_conversation(mock_cosmos_service):
 
         assert result is True
         mock_cosmos_service._mock_conversations_container.delete_item.assert_called_once()
-
 
 @pytest.mark.asyncio
 async def test_rename_conversation_success(mock_cosmos_service):
@@ -520,7 +486,6 @@ async def test_rename_conversation_success(mock_cosmos_service):
         assert result is not None
         assert result.get("metadata", {}).get("custom_title") == "New Title"
 
-
 @pytest.mark.asyncio
 async def test_rename_conversation_not_found(mock_cosmos_service):
     """Test renaming a conversation that doesn't exist."""
@@ -529,7 +494,6 @@ async def test_rename_conversation_not_found(mock_cosmos_service):
         result = await mock_cosmos_service.rename_conversation("nonexistent", "user-123", "New Title")
 
         assert result is None
-
 
 @pytest.mark.asyncio
 async def test_add_message_to_conversation_new(mock_cosmos_service):
@@ -551,7 +515,6 @@ async def test_add_message_to_conversation_new(mock_cosmos_service):
     await mock_cosmos_service.add_message_to_conversation("conv-123", "user-123", message)
 
     mock_cosmos_service._mock_conversations_container.upsert_item.assert_called_once()
-
 
 @pytest.mark.asyncio
 async def test_add_message_to_existing_conversation(mock_cosmos_service):
@@ -583,9 +546,6 @@ async def test_add_message_to_existing_conversation(mock_cosmos_service):
     upserted_doc = call_args[0][0]
     assert len(upserted_doc["messages"]) == 2
 
-
-# ==================== Save Generated Content Tests ====================
-
 @pytest.mark.asyncio
 async def test_save_generated_content_existing_conversation(mock_cosmos_service):
     """Test saving generated content to an existing conversation."""
@@ -612,7 +572,6 @@ async def test_save_generated_content_existing_conversation(mock_cosmos_service)
         assert result is not None
         mock_cosmos_service._mock_conversations_container.upsert_item.assert_called_once()
 
-
 @pytest.mark.asyncio
 async def test_save_generated_content_new_conversation(mock_cosmos_service):
     """Test saving generated content creates new conversation if not exists."""
@@ -630,7 +589,6 @@ async def test_save_generated_content_new_conversation(mock_cosmos_service):
 
         assert result is not None
         mock_cosmos_service._mock_conversations_container.upsert_item.assert_called_once()
-
 
 @pytest.mark.asyncio
 async def test_save_generated_content_migrates_userid(mock_cosmos_service):
@@ -660,9 +618,6 @@ async def test_save_generated_content_migrates_userid(mock_cosmos_service):
         upserted_doc = call_args[0][0]
         assert upserted_doc.get("userId") == "user-123"
 
-
-# ==================== Anonymous User Queries Tests ====================
-
 @pytest.mark.asyncio
 async def test_get_user_conversations_anonymous(mock_cosmos_service):
     """Test getting conversations for anonymous user includes legacy data."""
@@ -689,7 +644,6 @@ async def test_get_user_conversations_anonymous(mock_cosmos_service):
     # Title should come from brief overview
     assert "Test campaign" in result[0]["title"]
 
-
 @pytest.mark.asyncio
 async def test_get_user_conversations_with_custom_title(mock_cosmos_service):
     """Test conversation title from custom metadata."""
@@ -713,7 +667,6 @@ async def test_get_user_conversations_with_custom_title(mock_cosmos_service):
     result = await mock_cosmos_service.get_user_conversations("user-123", limit=10)
 
     assert result[0]["title"] == "My Custom Title"
-
 
 @pytest.mark.asyncio
 async def test_get_user_conversations_no_title_fallback(mock_cosmos_service):
@@ -739,7 +692,6 @@ async def test_get_user_conversations_no_title_fallback(mock_cosmos_service):
     result = await mock_cosmos_service.get_user_conversations("user-123", limit=10)
 
     assert result[0]["title"] == "Untitled Conversation"
-
 
 @pytest.mark.asyncio
 async def test_get_user_conversations_title_from_first_user_message(mock_cosmos_service):
@@ -769,7 +721,6 @@ async def test_get_user_conversations_title_from_first_user_message(mock_cosmos_
 
     # Title should be from first user message, truncated to 50 chars
     assert result[0]["title"] == "Create a marketing campaign for summer"
-
 
 @pytest.mark.asyncio
 async def test_get_user_conversations_title_from_user_message_skips_assistant(mock_cosmos_service):
@@ -801,9 +752,6 @@ async def test_get_user_conversations_title_from_user_message_skips_assistant(mo
     # Should get the USER message, not assistant
     assert result[0]["title"] == "Help with product launch"
 
-
-# ==================== Cross-Partition Query Tests ====================
-
 @pytest.mark.asyncio
 async def test_get_conversation_cross_partition_exception_logs_warning(mock_cosmos_service):
     """Test that cross-partition query failure logs a warning and returns None."""
@@ -831,9 +779,6 @@ async def test_get_conversation_cross_partition_exception_logs_warning(mock_cosm
         call_args = mock_logger.warning.call_args[0]
         assert "Cross-partition" in call_args[0]
 
-
-# ==================== Delete Conversation Exception Tests ====================
-
 @pytest.mark.asyncio
 async def test_delete_conversation_raises_exception_on_failure(mock_cosmos_service):
     """Test that delete_conversation raises exception when delete fails."""
@@ -857,9 +802,6 @@ async def test_delete_conversation_raises_exception_on_failure(mock_cosmos_servi
             await mock_cosmos_service.delete_conversation("conv-123", "user-123")
 
         assert "Permission denied" in str(exc_info.value)
-
-
-# ==================== Singleton Tests ====================
 
 @pytest.mark.asyncio
 async def test_get_cosmos_service_creates_singleton():
@@ -896,7 +838,6 @@ async def test_get_cosmos_service_creates_singleton():
 
     # Reset singleton after test
     cosmos_module._cosmos_service = None
-
 
 @pytest.mark.asyncio
 async def test_get_cosmos_service_initializes_on_first_call():

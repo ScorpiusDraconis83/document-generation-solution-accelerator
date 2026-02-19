@@ -1,19 +1,10 @@
-"""
-Unit tests for main application endpoints.
-
-Function-based tests for Quart app module.
-"""
-
-import pytest
 import json
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from app import get_authenticated_user, _generation_tasks, startup, shutdown
+import pytest
+from app import _generation_tasks, get_authenticated_user, shutdown, startup
 from models import CreativeBrief, Product
-
-
-# ==================== Authentication Tests ====================
 
 @pytest.mark.asyncio
 async def test_get_authenticated_user_with_headers(app):
@@ -32,7 +23,6 @@ async def test_get_authenticated_user_with_headers(app):
         assert user["auth_provider"] == "aad"
         assert user["is_authenticated"] is True
 
-
 @pytest.mark.asyncio
 async def test_get_authenticated_user_anonymous(app):
     """Test authentication without headers (anonymous)."""
@@ -43,9 +33,6 @@ async def test_get_authenticated_user_anonymous(app):
         assert user["user_name"] == ""
         assert user["auth_provider"] == ""
         assert user["is_authenticated"] is False
-
-
-# ==================== Health Check Tests ====================
 
 @pytest.mark.asyncio
 async def test_health_check_root(client):
@@ -59,7 +46,6 @@ async def test_health_check_root(client):
     assert "timestamp" in data
     assert "version" in data
 
-
 @pytest.mark.asyncio
 async def test_health_check_api(client):
     """Test health check at /api/health."""
@@ -69,9 +55,6 @@ async def test_health_check_api(client):
 
     data = await response.get_json()
     assert data["status"] == "healthy"
-
-
-# ==================== Chat Endpoint Tests ====================
 
 @pytest.mark.asyncio
 async def test_chat_missing_message(client):
@@ -89,7 +72,6 @@ async def test_chat_missing_message(client):
         assert response.status_code == 400
         data = await response.get_json()
         assert "error" in data
-
 
 @pytest.mark.asyncio
 async def test_chat_with_message(client):
@@ -125,7 +107,6 @@ async def test_chat_with_message(client):
         assert response.status_code == 200
         assert response.mimetype == "text/event-stream"
 
-
 @pytest.mark.asyncio
 async def test_chat_cosmos_failure(client):
     """Test chat when CosmosDB is unavailable."""
@@ -153,9 +134,6 @@ async def test_chat_cosmos_failure(client):
         # Should still work even if Cosmos fails
         assert response.status_code == 200
 
-
-# ==================== Brief Parsing Tests ====================
-
 @pytest.mark.asyncio
 async def test_parse_brief_missing_text(client):
     """Test parse brief with missing brief_text."""
@@ -172,7 +150,6 @@ async def test_parse_brief_missing_text(client):
         assert response.status_code == 400
         data = await response.get_json()
         assert "error" in data
-
 
 @pytest.mark.asyncio
 async def test_parse_brief_success(client, sample_creative_brief):
@@ -202,7 +179,6 @@ async def test_parse_brief_success(client, sample_creative_brief):
         assert "brief" in data
         assert data["requires_clarification"] is False
         assert data["requires_confirmation"] is True
-
 
 @pytest.mark.asyncio
 async def test_parse_brief_needs_clarification(client, sample_creative_brief):
@@ -237,7 +213,6 @@ async def test_parse_brief_needs_clarification(client, sample_creative_brief):
         assert data["requires_confirmation"] is False
         assert "clarifying_questions" in data
 
-
 @pytest.mark.asyncio
 async def test_parse_brief_rai_blocked(client):
     """Test brief parsing blocked by content safety."""
@@ -270,9 +245,6 @@ async def test_parse_brief_rai_blocked(client):
         assert data["rai_blocked"] is True
         assert "message" in data
 
-
-# ==================== Brief Confirmation Tests ====================
-
 @pytest.mark.asyncio
 async def test_confirm_brief_success(client, sample_creative_brief_dict):
     """Test successful brief confirmation."""
@@ -296,7 +268,6 @@ async def test_confirm_brief_success(client, sample_creative_brief_dict):
         assert data["status"] == "confirmed"
         assert "brief" in data
 
-
 @pytest.mark.asyncio
 async def test_confirm_brief_invalid_format(client):
     """Test brief confirmation with invalid brief data."""
@@ -315,9 +286,6 @@ async def test_confirm_brief_invalid_format(client):
         data = await response.get_json()
         assert "error" in data
 
-
-# ==================== Product Selection Tests ====================
-
 @pytest.mark.asyncio
 async def test_select_products_missing_request(client):
     """Test product selection with missing request text."""
@@ -334,7 +302,6 @@ async def test_select_products_missing_request(client):
         assert response.status_code == 400
         data = await response.get_json()
         assert "error" in data
-
 
 @pytest.mark.asyncio
 async def test_select_products_success(client, sample_product):
@@ -368,9 +335,6 @@ async def test_select_products_success(client, sample_product):
         assert "products" in data
         assert len(data["products"]) > 0
 
-
-# ==================== Content Generation Tests ====================
-
 @pytest.mark.asyncio
 async def test_generate_content_missing_brief(client):
     """Test generation with missing brief."""
@@ -383,7 +347,6 @@ async def test_generate_content_missing_brief(client):
         assert response.status_code == 400
         data = await response.get_json()
         assert "error" in data
-
 
 @pytest.mark.asyncio
 async def test_generate_content_stream(client, sample_creative_brief_dict):
@@ -427,9 +390,6 @@ async def test_generate_content_stream(client, sample_creative_brief_dict):
         assert response.status_code == 200
         assert response.mimetype == "text/event-stream"
 
-
-# ==================== Product Management Tests ====================
-
 @pytest.mark.asyncio
 async def test_list_products(client, sample_product):
     """Test listing products."""
@@ -447,7 +407,6 @@ async def test_list_products(client, sample_product):
         assert "products" in data
         assert len(data["products"]) > 0
 
-
 @pytest.mark.asyncio
 async def test_get_product_by_sku(client, sample_product):
     """Test getting a specific product by SKU."""
@@ -464,7 +423,6 @@ async def test_get_product_by_sku(client, sample_product):
         data = await response.get_json()
         assert data["sku"] == sample_product.sku
 
-
 @pytest.mark.asyncio
 async def test_get_product_not_found(client):
     """Test getting a non-existent product."""
@@ -476,7 +434,6 @@ async def test_get_product_not_found(client):
         response = await client.get("/api/products/NONEXISTENT")
 
         assert response.status_code == 404
-
 
 @pytest.mark.asyncio
 async def test_create_product(client, sample_product_dict):
@@ -496,7 +453,6 @@ async def test_create_product(client, sample_product_dict):
         data = await response.get_json()
         assert data["sku"] == sample_product_dict["sku"]
 
-
 @pytest.mark.asyncio
 async def test_create_product_invalid_data(client):
     """Test creating a product with invalid data."""
@@ -509,9 +465,6 @@ async def test_create_product_invalid_data(client):
         )
 
         assert response.status_code == 400
-
-
-# ==================== Conversation Management Tests ====================
 
 @pytest.mark.asyncio
 async def test_list_conversations(client, authenticated_headers):
@@ -537,7 +490,6 @@ async def test_list_conversations(client, authenticated_headers):
         assert "conversations" in data
         assert len(data["conversations"]) == 1
 
-
 @pytest.mark.asyncio
 async def test_list_conversations_anonymous(client):
     """Test listing conversations as anonymous user."""
@@ -551,9 +503,6 @@ async def test_list_conversations_anonymous(client):
         assert response.status_code == 200
         data = await response.get_json()
         assert "conversations" in data
-
-
-# ==================== Image Proxy Tests ====================
 
 @pytest.mark.asyncio
 async def test_proxy_generated_image(client):
@@ -581,7 +530,6 @@ async def test_proxy_generated_image(client):
         data = await response.get_data()
         assert data == mock_blob_data
 
-
 @pytest.mark.asyncio
 async def test_proxy_product_image(client):
     """Test proxying a product image."""
@@ -605,9 +553,6 @@ async def test_proxy_product_image(client):
         response = await client.get("/api/product-images/product.jpg")
 
         assert response.status_code == 200
-
-
-# ==================== Async Generation Tests ====================
 
 @pytest.mark.asyncio
 async def test_start_generation(client, sample_creative_brief_dict):
@@ -637,7 +582,6 @@ async def test_start_generation(client, sample_creative_brief_dict):
         assert "task_id" in data
         assert data["status"] == "pending"
 
-
 @pytest.mark.asyncio
 async def test_start_generation_invalid_brief_format(client):
     """Test starting generation with invalid brief format."""
@@ -654,7 +598,6 @@ async def test_start_generation_invalid_brief_format(client):
     data = await response.get_json()
     assert "error" in data
 
-
 @pytest.mark.asyncio
 async def test_get_generation_status_not_found(client):
     """Test getting status for non-existent task."""
@@ -663,7 +606,6 @@ async def test_get_generation_status_not_found(client):
     assert response.status_code == 404
     data = await response.get_json()
     assert "error" in data
-
 
 @pytest.mark.asyncio
 async def test_get_generation_status_found(client):
@@ -688,7 +630,6 @@ async def test_get_generation_status_found(client):
     # Cleanup
     del app._generation_tasks["test-task-id"]
 
-
 @pytest.mark.asyncio
 async def test_get_generation_status_completed(client):
     """Test getting status for completed task."""
@@ -711,9 +652,6 @@ async def test_get_generation_status_completed(client):
 
     # Cleanup
     del app._generation_tasks["completed-task"]
-
-
-# ==================== Regenerate Content Tests ====================
 
 @pytest.mark.asyncio
 async def test_regenerate_content_success(client, sample_creative_brief_dict):
@@ -744,7 +682,6 @@ async def test_regenerate_content_success(client, sample_creative_brief_dict):
         # It's a streaming response
         assert response.mimetype == "text/event-stream"
 
-
 @pytest.mark.asyncio
 async def test_regenerate_content_missing_modification_request(client, sample_creative_brief_dict):
     """Test regeneration without modification_request fails."""
@@ -761,9 +698,6 @@ async def test_regenerate_content_missing_modification_request(client, sample_cr
     data = await response.get_json()
     assert "error" in data
 
-
-# ==================== Product Image Upload Tests ====================
-
 @pytest.mark.asyncio
 async def test_upload_product_image_product_not_found(client):
     """Test uploading image for non-existent product returns 404."""
@@ -775,9 +709,6 @@ async def test_upload_product_image_product_not_found(client):
         response = await client.post("/api/products/NONEXISTENT/image")
 
         assert response.status_code == 404
-
-
-# ==================== Get Conversation Tests ====================
 
 @pytest.mark.asyncio
 async def test_get_conversation_success(client, authenticated_headers):
@@ -803,7 +734,6 @@ async def test_get_conversation_success(client, authenticated_headers):
         data = await response.get_json()
         assert data["id"] == "conv-123"
 
-
 @pytest.mark.asyncio
 async def test_get_conversation_not_found(client, authenticated_headers):
     """Test getting a non-existent conversation."""
@@ -816,9 +746,6 @@ async def test_get_conversation_not_found(client, authenticated_headers):
 
         assert response.status_code == 404
 
-
-# ==================== Delete Conversation Tests ====================
-
 @pytest.mark.asyncio
 async def test_delete_conversation_success(client, authenticated_headers):
     """Test deleting a conversation."""
@@ -830,7 +757,6 @@ async def test_delete_conversation_success(client, authenticated_headers):
         response = await client.delete("/api/conversations/conv-123", headers=authenticated_headers)
 
         assert response.status_code == 200
-
 
 @pytest.mark.asyncio
 async def test_delete_conversation_not_found(client, authenticated_headers):
@@ -845,9 +771,6 @@ async def test_delete_conversation_not_found(client, authenticated_headers):
         # May return 404 or 200 depending on implementation
         assert response.status_code in [200, 404]
 
-
-# ==================== Product Search and Categories Tests ====================
-
 @pytest.mark.asyncio
 async def test_product_search_endpoint_exists(client):
     """Test that product search functionality is available."""
@@ -861,9 +784,6 @@ async def test_product_search_endpoint_exists(client):
 
         # Either search is supported via query param or as separate endpoint
         assert response.status_code in [200, 404]
-
-
-# ==================== Product Update Tests ====================
 
 @pytest.mark.asyncio
 async def test_update_product_via_post(client, sample_product, sample_product_dict):
@@ -885,9 +805,6 @@ async def test_update_product_via_post(client, sample_product, sample_product_di
         # POST to /api/products creates/updates product
         assert response.status_code in [200, 201]
 
-
-# ==================== Product Delete Tests ====================
-
 @pytest.mark.asyncio
 async def test_delete_product_endpoint(client, sample_product):
     """Test deleting a product if endpoint exists."""
@@ -901,9 +818,6 @@ async def test_delete_product_endpoint(client, sample_product):
         # May return 200, 204 on success or 404/405 if endpoint doesn't exist
         assert response.status_code in [200, 204, 404, 405]
 
-
-# ==================== Error Handling Tests ====================
-
 @pytest.mark.asyncio
 async def test_invalid_json_request(client):
     """Test handling of invalid JSON in request body."""
@@ -915,16 +829,12 @@ async def test_invalid_json_request(client):
 
     assert response.status_code == 400
 
-
 @pytest.mark.asyncio
 async def test_method_not_allowed(client):
     """Test method not allowed error."""
     response = await client.patch("/api/health")
 
     assert response.status_code == 405
-
-
-# ==================== CORS Tests ====================
 
 @pytest.mark.asyncio
 async def test_cors_headers(client):
@@ -939,9 +849,6 @@ async def test_cors_headers(client):
 
     assert response.status_code in [200, 204]
 
-
-# ==================== Version Endpoint Tests ====================
-
 @pytest.mark.asyncio
 async def test_version_info_in_health(client):
     """Test version info is available in health response."""
@@ -952,9 +859,6 @@ async def test_version_info_in_health(client):
     # Version may be in health endpoint
     assert "status" in data
 
-
-# ==================== Static Files Tests ====================
-
 @pytest.mark.asyncio
 async def test_index_returns_html(client):
     """Test that root path returns HTML."""
@@ -962,9 +866,6 @@ async def test_index_returns_html(client):
 
     # Should return frontend index.html or redirect
     assert response.status_code in [200, 302, 404]
-
-
-# ==================== Rate Limiting Tests ====================
 
 @pytest.mark.asyncio
 async def test_rate_limit_handling(client):
@@ -991,9 +892,6 @@ async def test_rate_limit_handling(client):
         # Should handle rate limit gracefully
         assert response.status_code in [200, 429, 500, 503]
 
-
-# ==================== Timeout Tests ====================
-
 @pytest.mark.asyncio
 async def test_request_timeout_handling(client):
     """Test timeout handling in requests."""
@@ -1018,9 +916,6 @@ async def test_request_timeout_handling(client):
 
         # Should handle timeout gracefully
         assert response.status_code in [200, 500, 504]
-
-
-# ==================== Background Generation Task Tests ====================
 
 @pytest.mark.asyncio
 async def test_run_generation_task_success():
@@ -1079,7 +974,6 @@ async def test_run_generation_task_success():
 
         del app._generation_tasks[task_id]
 
-
 @pytest.mark.asyncio
 async def test_run_generation_task_with_image_blob_url():
     """Test generation task with image blob URL from orchestrator."""
@@ -1134,7 +1028,6 @@ async def test_run_generation_task_with_image_blob_url():
         assert "/api/images/" in result["image_url"]
 
         del app._generation_tasks[task_id]
-
 
 @pytest.mark.asyncio
 async def test_run_generation_task_with_base64_fallback():
@@ -1197,7 +1090,6 @@ async def test_run_generation_task_with_base64_fallback():
 
         del app._generation_tasks[task_id]
 
-
 @pytest.mark.asyncio
 async def test_run_generation_task_failure():
     """Test generation task handles failures gracefully."""
@@ -1244,9 +1136,6 @@ async def test_run_generation_task_failure():
 
         del app._generation_tasks[task_id]
 
-
-# ==================== Product Listing with Filters Tests ====================
-
 @pytest.mark.asyncio
 async def test_list_products_with_category_filter(client, sample_product):
     """Test listing products filtered by category."""
@@ -1263,7 +1152,6 @@ async def test_list_products_with_category_filter(client, sample_product):
         data = await response.get_json()
         assert "products" in data
 
-
 @pytest.mark.asyncio
 async def test_list_products_with_search_filter(client, sample_product):
     """Test listing products with search filter."""
@@ -1278,7 +1166,6 @@ async def test_list_products_with_search_filter(client, sample_product):
         data = await response.get_json()
         assert "products" in data
 
-
 @pytest.mark.asyncio
 async def test_list_products_with_limit(client, sample_product):
     """Test listing products with limit parameter."""
@@ -1292,9 +1179,6 @@ async def test_list_products_with_limit(client, sample_product):
         assert response.status_code == 200
         data = await response.get_json()
         assert "products" in data
-
-
-# ==================== Product Image Tests ====================
 
 @pytest.mark.asyncio
 async def test_upload_product_image_success(client, sample_product):
@@ -1327,7 +1211,6 @@ async def test_upload_product_image_success(client, sample_product):
         # May fail due to multipart handling, but verify endpoint exists
         assert response.status_code in [200, 400, 415]
 
-
 @pytest.mark.asyncio
 async def test_upload_product_image_no_file(client, sample_product):
     """Test product image upload without file."""
@@ -1339,9 +1222,6 @@ async def test_upload_product_image_no_file(client, sample_product):
         response = await client.post(f"/api/products/{sample_product.sku}/image")
 
         assert response.status_code == 400
-
-
-# ==================== Conversation Detail Tests ====================
 
 @pytest.mark.asyncio
 async def test_get_conversation_detail(client, authenticated_headers):
@@ -1368,9 +1248,6 @@ async def test_get_conversation_detail(client, authenticated_headers):
         data = await response.get_json()
         assert data["id"] == "conv-detail-123"
 
-
-# ==================== Image Proxy Error Tests ====================
-
 @pytest.mark.asyncio
 async def test_proxy_image_not_found(client):
     """Test image proxy when image doesn't exist."""
@@ -1391,7 +1268,6 @@ async def test_proxy_image_not_found(client):
         response = await client.get("/api/images/conv-404/missing.jpg")
 
         assert response.status_code == 404
-
 
 @pytest.mark.asyncio
 async def test_proxy_product_image_with_cache(client):
@@ -1425,9 +1301,6 @@ async def test_proxy_product_image_with_cache(client):
         # Check for cache headers (case-insensitive)
         headers_dict = {k.lower(): v for k, v in dict(response.headers).items()}
         assert "cache-control" in headers_dict
-
-
-# ==================== Streaming Generation Tests ====================
 
 @pytest.mark.asyncio
 async def test_generate_content_stream_with_products(client, sample_creative_brief_dict, sample_product):
@@ -1463,9 +1336,6 @@ async def test_generate_content_stream_with_products(client, sample_creative_bri
         assert response.status_code == 200
         assert response.mimetype == "text/event-stream"
 
-
-# ==================== Regenerate Endpoint Tests ====================
-
 @pytest.mark.asyncio
 async def test_regenerate_content_stream(client, sample_creative_brief_dict):
     """Test content regeneration streaming."""
@@ -1494,9 +1364,6 @@ async def test_regenerate_content_stream(client, sample_creative_brief_dict):
         assert response.status_code == 200
         assert response.mimetype == "text/event-stream"
 
-
-# ==================== SSE Format Tests ====================
-
 @pytest.mark.asyncio
 async def test_chat_sse_format(client):
     """Test chat endpoint returns proper SSE format."""
@@ -1521,9 +1388,6 @@ async def test_chat_sse_format(client):
         assert response.mimetype == "text/event-stream"
         assert "text/event-stream" in response.content_type
 
-
-# ==================== Brief Update Tests ====================
-
 @pytest.mark.asyncio
 async def test_update_brief(client, sample_creative_brief_dict):
     """Test updating a brief."""
@@ -1547,9 +1411,6 @@ async def test_update_brief(client, sample_creative_brief_dict):
         assert response.status_code == 200
         data = await response.get_json()
         assert data["status"] == "confirmed"
-
-
-# ==================== Product URL Conversion Tests ====================
 
 @pytest.mark.asyncio
 async def test_product_image_url_conversion(client, sample_product):
@@ -1577,9 +1438,6 @@ async def test_product_image_url_conversion(client, sample_product):
         if data["products"] and data["products"][0].get("image_url"):
             assert "/api/product-images/" in data["products"][0]["image_url"]
 
-
-# ==================== Get Authenticated User Tests ====================
-
 @pytest.mark.asyncio
 async def test_authenticated_user_partial_headers(app):
     """Test authentication with partial headers."""
@@ -1593,9 +1451,6 @@ async def test_authenticated_user_partial_headers(app):
 
         assert user["user_principal_id"] == "partial-user"
         assert user["is_authenticated"] is True
-
-
-# ==================== Multiple Response Tests ====================
 
 @pytest.mark.asyncio
 async def test_chat_multiple_responses(client):
@@ -1622,9 +1477,6 @@ async def test_chat_multiple_responses(client):
         )
 
         assert response.status_code == 200
-
-
-# ==================== Exception Handling Tests ====================
 
 @pytest.mark.asyncio
 async def test_parse_brief_cosmos_save_exception(client):
@@ -1657,7 +1509,6 @@ async def test_parse_brief_cosmos_save_exception(client):
         # Should still succeed despite cosmos error
         assert response.status_code in [200, 500]
 
-
 @pytest.mark.asyncio
 async def test_parse_brief_with_rai_blocked(client):
     """Test parse_brief when RAI blocks the content."""
@@ -1687,7 +1538,6 @@ async def test_parse_brief_with_rai_blocked(client):
         assert response.status_code == 200
         data = json.loads(await response.get_data())
         assert data.get("rai_blocked") is True
-
 
 @pytest.mark.asyncio
 async def test_parse_brief_with_clarifying_questions(client):
@@ -1721,7 +1571,6 @@ async def test_parse_brief_with_clarifying_questions(client):
         data = json.loads(await response.get_data())
         assert data.get("requires_clarification") is True
 
-
 @pytest.mark.asyncio
 async def test_select_products_cosmos_save_exception(client, sample_product_dict):
     """Test select_products handles cosmos error gracefully."""
@@ -1742,7 +1591,6 @@ async def test_select_products_cosmos_save_exception(client, sample_product_dict
 
         # Should return 200 or handle error
         assert response.status_code in [200, 400, 500]
-
 
 @pytest.mark.asyncio
 async def test_regenerate_image_error_handling(client, sample_creative_brief_dict):
@@ -1765,7 +1613,6 @@ async def test_regenerate_image_error_handling(client, sample_creative_brief_dic
         # Should return error status or handle gracefully
         assert response.status_code in [500, 200, 400]
 
-
 @pytest.mark.asyncio
 async def test_get_image_proxy_not_found(client):
     """Test image proxy returns 404 for non-existent image."""
@@ -1787,7 +1634,6 @@ async def test_get_image_proxy_not_found(client):
 
         assert response.status_code in [404, 500]
 
-
 @pytest.mark.asyncio
 async def test_conversation_detail_not_found(client):
     """Test conversation detail returns 404 when not found."""
@@ -1799,9 +1645,6 @@ async def test_conversation_detail_not_found(client):
         response = await client.get("/api/conversations/nonexistent_conv?user_id=user1")
 
         assert response.status_code == 404
-
-
-# ==================== Additional Coverage Tests ====================
 
 @pytest.mark.asyncio
 async def test_get_conversation_detail_additional(client):
@@ -1822,7 +1665,6 @@ async def test_get_conversation_detail_additional(client):
         data = await response.get_json()
         assert data["id"] == "conv123"
 
-
 @pytest.mark.asyncio
 async def test_delete_conversation(client):
     """Test deleting a conversation."""
@@ -1839,7 +1681,6 @@ async def test_delete_conversation(client):
         response = await client.delete("/api/conversations/conv123?user_id=user1")
 
         assert response.status_code == 200
-
 
 @pytest.mark.asyncio
 async def test_generate_content_missing_brief_from_conversation(client):
@@ -1864,14 +1705,12 @@ async def test_generate_content_missing_brief_from_conversation(client):
 
         assert response.status_code in [400, 404, 500]
 
-
 @pytest.mark.asyncio
 async def test_health_check_endpoint(client):
     """Test health check endpoint."""
     response = await client.get("/health")
 
     assert response.status_code == 200
-
 
 @pytest.mark.asyncio
 async def test_regenerate_without_conversation(client):
@@ -1891,7 +1730,6 @@ async def test_regenerate_without_conversation(client):
 
         assert response.status_code in [400, 404, 500]
 
-
 @pytest.mark.asyncio
 async def test_select_products_validation_error(client):
     """Test select_products returns error with missing brief."""
@@ -1905,17 +1743,12 @@ async def test_select_products_validation_error(client):
 
     assert response.status_code in [400, 500]
 
-
 # Removed test_upload_product_image_error - Quart test client doesn't support content_type param
-
 
 # Removed tests that reference non-existent endpoints:
 # - test_search_products_error (no /api/products/search endpoint)
 # - test_get_products_by_category_error (no /api/products?category endpoint)
 # - test_health_check_readiness (no get_search_service)
-
-
-# ==================== Generation API Tests ====================
 
 @pytest.mark.asyncio
 async def test_start_generation_success(client):
@@ -1955,7 +1788,6 @@ async def test_start_generation_success(client):
 
         assert response.status_code in [200, 400]
 
-
 @pytest.mark.asyncio
 async def test_get_generation_status(client):
     """Test getting generation status by task ID."""
@@ -1974,14 +1806,12 @@ async def test_get_generation_status(client):
     # Cleanup
     del _generation_tasks["test_task_123"]
 
-
 @pytest.mark.asyncio
 async def test_get_generation_status_not_found_coverage(client):
     """Test generation status returns 404 for unknown task."""
     response = await client.get("/api/generate/status/nonexistent_task")
 
     assert response.status_code == 404
-
 
 @pytest.mark.asyncio
 async def test_product_select_missing_fields(client):
@@ -1992,7 +1822,6 @@ async def test_product_select_missing_fields(client):
     )
 
     assert response.status_code == 400
-
 
 @pytest.mark.asyncio
 async def test_product_select_with_current_products(client):
@@ -2025,7 +1854,6 @@ async def test_product_select_with_current_products(client):
 
         assert response.status_code == 200
 
-
 @pytest.mark.asyncio
 async def test_save_brief_endpoint(client):
     """Test saving brief to conversation."""
@@ -2054,7 +1882,6 @@ async def test_save_brief_endpoint(client):
 
         assert response.status_code in [200, 404]
 
-
 @pytest.mark.asyncio
 async def test_get_generated_content(client):
     """Test getting generated content for conversation."""
@@ -2069,7 +1896,6 @@ async def test_get_generated_content(client):
         response = await client.get("/api/content/conv123?user_id=user1")
 
         assert response.status_code in [200, 404]
-
 
 @pytest.mark.asyncio
 async def test_conversation_update_brief(client):
@@ -2101,7 +1927,6 @@ async def test_conversation_update_brief(client):
 
         assert response.status_code in [200, 404, 405]
 
-
 @pytest.mark.asyncio
 async def test_product_image_proxy(client):
     """Test product image proxy endpoint."""
@@ -2123,7 +1948,6 @@ async def test_product_image_proxy(client):
         # Should return image or 404
         assert response.status_code in [200, 404, 500]
 
-
 @pytest.mark.asyncio
 async def test_regenerate_stream_no_conversation(client):
     """Test regenerate stream without conversation."""
@@ -2141,9 +1965,6 @@ async def test_regenerate_stream_no_conversation(client):
         )
 
         assert response.status_code in [400, 404, 500]
-
-
-# ==================== Additional Exception Path Tests ====================
 
 @pytest.mark.asyncio
 async def test_parse_brief_rai_cosmos_exception(client):
@@ -2182,7 +2003,6 @@ async def test_parse_brief_rai_cosmos_exception(client):
         data = json.loads(await response.get_data())
         assert data.get("rai_blocked") is True
 
-
 @pytest.mark.asyncio
 async def test_parse_brief_clarification_cosmos_exception(client):
     """Test parse_brief handles cosmos failure during clarification save."""
@@ -2219,7 +2039,6 @@ async def test_parse_brief_clarification_cosmos_exception(client):
         data = json.loads(await response.get_data())
         assert data.get("requires_clarification") is True
 
-
 @pytest.mark.asyncio
 async def test_select_products_invalid_action(client, sample_product_dict):
     """Test select_products with invalid action."""
@@ -2238,7 +2057,6 @@ async def test_select_products_invalid_action(client, sample_product_dict):
 
         # Should handle invalid action
         assert response.status_code in [200, 400, 500]
-
 
 @pytest.mark.asyncio
 async def test_chat_orchestrator_exception(client):
@@ -2266,7 +2084,6 @@ async def test_chat_orchestrator_exception(client):
 
         # Should return error response
         assert response.status_code in [200, 500]
-
 
 @pytest.mark.asyncio
 async def test_confirm_brief_cosmos_exception(client):
@@ -2300,7 +2117,6 @@ async def test_confirm_brief_cosmos_exception(client):
         # Should handle cosmos exception
         assert response.status_code in [200, 500]
 
-
 @pytest.mark.asyncio
 async def test_generate_stream_no_brief(client):
     """Test generate stream without brief in conversation."""
@@ -2324,7 +2140,6 @@ async def test_generate_stream_no_brief(client):
         # Should handle missing brief - any non-5xx is acceptable
         assert response.status_code in [200, 400, 404]
 
-
 @pytest.mark.asyncio
 async def test_generate_status_not_found(client):
     """Test generate status for nonexistent conversation."""
@@ -2338,7 +2153,6 @@ async def test_generate_status_not_found(client):
         # Should return 404 or error
         assert response.status_code in [200, 404, 500]
 
-
 @pytest.mark.asyncio
 async def test_get_conversation_not_found_coverage(client):
     """Test get conversation when not found."""
@@ -2350,7 +2164,6 @@ async def test_get_conversation_not_found_coverage(client):
         response = await client.get("/api/conversations/nonexistent")
 
         assert response.status_code in [200, 404, 500]
-
 
 @pytest.mark.asyncio
 async def test_update_content_cosmos_exception(client):
@@ -2372,7 +2185,6 @@ async def test_update_content_cosmos_exception(client):
 
         assert response.status_code in [200, 404, 500]
 
-
 @pytest.mark.asyncio
 async def test_product_image_blob_exception(client):
     """Test product image proxy handles blob exception."""
@@ -2393,7 +2205,6 @@ async def test_product_image_blob_exception(client):
         # Should handle blob exception
         assert response.status_code in [404, 500]
 
-
 @pytest.mark.asyncio
 async def test_delete_conversation_success_coverage(client):
     """Test delete conversation endpoint."""
@@ -2405,7 +2216,6 @@ async def test_delete_conversation_success_coverage(client):
         response = await client.delete("/api/conversations/test_conv")
 
         assert response.status_code in [200, 204, 404, 405, 500]
-
 
 @pytest.mark.asyncio
 async def test_create_conversation_cosmos_exception(client):
@@ -2427,7 +2237,6 @@ async def test_create_conversation_cosmos_exception(client):
         # Should handle exception - could be 500 or endpoint might not exist
         assert response.status_code in [200, 201, 400, 404, 405, 500]
 
-
 @pytest.mark.asyncio
 async def test_update_conversation_cosmos_exception(client):
     """Test update conversation handles cosmos exception."""
@@ -2444,9 +2253,6 @@ async def test_update_conversation_cosmos_exception(client):
         )
 
         assert response.status_code in [200, 404, 500]
-
-
-# ==================== Additional SSE and Regeneration Tests ====================
 
 @pytest.mark.asyncio
 async def test_regenerate_stream_with_blob_url(client, sample_creative_brief_dict):
@@ -2484,7 +2290,6 @@ async def test_regenerate_stream_with_blob_url(client, sample_creative_brief_dic
 
         assert response.status_code == 200
 
-
 @pytest.mark.asyncio
 async def test_regenerate_rai_blocked(client, sample_creative_brief_dict):
     """Test regenerate stream when RAI blocks the content."""
@@ -2519,7 +2324,6 @@ async def test_regenerate_rai_blocked(client, sample_creative_brief_dict):
         )
 
         assert response.status_code == 200
-
 
 @pytest.mark.asyncio
 async def test_regenerate_blob_save_fallback(client, sample_creative_brief_dict):
@@ -2564,7 +2368,6 @@ async def test_regenerate_blob_save_fallback(client, sample_creative_brief_dict)
 
         assert response.status_code == 200
 
-
 @pytest.mark.asyncio
 async def test_generate_with_blob_url(client, sample_creative_brief_dict):
     """Test generate stream when orchestrator returns blob URL."""
@@ -2601,7 +2404,6 @@ async def test_generate_with_blob_url(client, sample_creative_brief_dict):
         )
 
         assert response.status_code == 200
-
 
 @pytest.mark.asyncio
 async def test_generate_blob_save_error(client, sample_creative_brief_dict):
@@ -2648,7 +2450,6 @@ async def test_generate_blob_save_error(client, sample_creative_brief_dict):
         # Should still return 200 with base64 fallback
         assert response.status_code == 200
 
-
 @pytest.mark.asyncio
 async def test_regenerate_blob_save_error(client, sample_creative_brief_dict):
     """Test regenerate handles blob save exception with fallback."""
@@ -2693,9 +2494,6 @@ async def test_regenerate_blob_save_error(client, sample_creative_brief_dict):
         # Should handle gracefully
         assert response.status_code == 200
 
-
-# ==================== Products Select Exception Tests ====================
-
 @pytest.mark.asyncio
 async def test_products_select_cosmos_save_error(client, sample_creative_brief_dict):
     """Test products select handles cosmos save errors gracefully."""
@@ -2727,7 +2525,6 @@ async def test_products_select_cosmos_save_error(client, sample_creative_brief_d
 
         # Should handle the exception path - may return 400 or 200 depending on which exception hit
         assert response.status_code in [200, 400]
-
 
 @pytest.mark.asyncio
 async def test_products_select_cosmos_get_products_error(client):
@@ -2761,7 +2558,6 @@ async def test_products_select_cosmos_get_products_error(client):
         # Should handle exception path - may return 400 or 200
         assert response.status_code in [200, 400]
 
-
 @pytest.mark.asyncio
 async def test_proxy_product_image_not_found(client):
     """Test product image proxy returns 404 for missing image."""
@@ -2780,7 +2576,6 @@ async def test_proxy_product_image_not_found(client):
         response = await client.get("/api/product-images/nonexistent.png")
 
         assert response.status_code == 404
-
 
 @pytest.mark.asyncio
 async def test_proxy_generated_image_not_found(client):
@@ -2802,7 +2597,6 @@ async def test_proxy_generated_image_not_found(client):
         # Should return 404 or 200 depending on how async mock behaves
         assert response.status_code in [200, 404]
 
-
 @pytest.mark.asyncio
 async def test_delete_conversation_cosmos_exception(client):
     """Test delete conversation returns 500 when CosmosDB throws exception."""
@@ -2822,7 +2616,6 @@ async def test_delete_conversation_cosmos_exception(client):
             assert response.status_code == 500
             data = await response.get_json()
             assert "error" in data
-
 
 @pytest.mark.asyncio
 async def test_rename_conversation_success(client):
@@ -2845,7 +2638,6 @@ async def test_rename_conversation_success(client):
             data = await response.get_json()
             assert data["success"] is True
 
-
 @pytest.mark.asyncio
 async def test_rename_conversation_not_found(client):
     """Test rename conversation returns 404 when conversation not found."""
@@ -2865,7 +2657,6 @@ async def test_rename_conversation_not_found(client):
 
             assert response.status_code == 404
 
-
 @pytest.mark.asyncio
 async def test_rename_conversation_empty_title(client):
     """Test rename conversation returns 400 when title is empty."""
@@ -2878,7 +2669,6 @@ async def test_rename_conversation_empty_title(client):
         )
 
         assert response.status_code == 400
-
 
 @pytest.mark.asyncio
 async def test_rename_conversation_cosmos_exception(client):
@@ -2901,7 +2691,6 @@ async def test_rename_conversation_cosmos_exception(client):
 
             assert response.status_code == 500
 
-
 @pytest.mark.asyncio
 async def test_startup_cosmos_error(client):
     """Test startup handles CosmosDB initialization failure gracefully."""
@@ -2920,7 +2709,6 @@ async def test_startup_cosmos_error(client):
                 except Exception:
                     pass  # Expected since cosmos failed
 
-
 @pytest.mark.asyncio
 async def test_startup_blob_error(client):
     """Test startup handles Blob storage initialization failure gracefully."""
@@ -2938,7 +2726,6 @@ async def test_startup_blob_error(client):
                     await startup()
                 except Exception:
                     pass  # Expected since blob failed
-
 
 @pytest.mark.asyncio
 async def test_product_image_etag_cache_hit(client):
@@ -2967,7 +2754,6 @@ async def test_product_image_etag_cache_hit(client):
 
         assert response.status_code == 304
 
-
 @pytest.mark.asyncio
 async def test_shutdown(client):
     """Test application shutdown closes services."""
@@ -2986,14 +2772,12 @@ async def test_shutdown(client):
             mock_cosmos_service.close.assert_called_once()
             mock_blob_service.close.assert_called_once()
 
-
 @pytest.mark.asyncio
 async def test_error_handler_404(client):
     """Test 404 error handler."""
     response = await client.get("/api/nonexistent-endpoint")
 
     assert response.status_code == 404
-
 
 @pytest.mark.asyncio
 async def test_get_generation_status_completed_coverage(client):
@@ -3017,7 +2801,6 @@ async def test_get_generation_status_completed_coverage(client):
     finally:
         del _generation_tasks[task_id]
 
-
 @pytest.mark.asyncio
 async def test_get_generation_status_running(client):
     """Test getting status of running generation task."""
@@ -3038,7 +2821,6 @@ async def test_get_generation_status_running(client):
         assert "message" in data
     finally:
         del _generation_tasks[task_id]
-
 
 @pytest.mark.asyncio
 async def test_get_generation_status_failed(client):

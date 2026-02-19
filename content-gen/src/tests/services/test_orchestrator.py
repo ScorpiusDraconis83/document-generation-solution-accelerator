@@ -1,38 +1,17 @@
-"""
-Unit tests for Content Orchestrator - Function-based tests.
-
-Tests for orchestrator.py covering:
-- Harmful content detection
-- System prompt filtering
-- ContentGenerationOrchestrator class methods
-- Singleton pattern
-"""
-
 import base64
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
-from orchestrator import (
-    _check_input_for_harmful_content,
-    _filter_system_prompt_from_response,
-    _HARMFUL_PATTERNS_COMPILED,
-    _SYSTEM_PROMPT_PATTERNS_COMPILED,
-    ContentGenerationOrchestrator,
-    get_orchestrator,
-    PLANNING_INSTRUCTIONS,
-    RAI_HARMFUL_CONTENT_RESPONSE,
-    RAI_INSTRUCTIONS,
-    RESEARCH_INSTRUCTIONS,
-    TOKEN_ENDPOINT,
-    TRIAGE_INSTRUCTIONS,
-)
-
-
-# =============================================================================
-# Tests for _check_input_for_harmful_content
-# =============================================================================
+from orchestrator import (_HARMFUL_PATTERNS_COMPILED,
+                          _SYSTEM_PROMPT_PATTERNS_COMPILED,
+                          PLANNING_INSTRUCTIONS, RAI_HARMFUL_CONTENT_RESPONSE,
+                          RAI_INSTRUCTIONS, RESEARCH_INSTRUCTIONS,
+                          TOKEN_ENDPOINT, TRIAGE_INSTRUCTIONS,
+                          ContentGenerationOrchestrator,
+                          _check_input_for_harmful_content,
+                          _filter_system_prompt_from_response,
+                          get_orchestrator)
 
 def test_check_harmful_content_detects_bomb():
     """Test detection of bomb-related content."""
@@ -41,13 +20,11 @@ def test_check_harmful_content_detects_bomb():
     assert is_harmful is True
     assert pattern
 
-
 def test_check_harmful_content_detects_weapon():
     """Test detection of weapon creation requests."""
 
     is_harmful, _ = _check_input_for_harmful_content("create explosive device")
     assert is_harmful is True
-
 
 def test_check_harmful_content_detects_violence():
     """Test detection of violent content."""
@@ -55,20 +32,17 @@ def test_check_harmful_content_detects_violence():
     is_harmful, _ = _check_input_for_harmful_content("kill people at the mall")
     assert is_harmful is True
 
-
 def test_check_harmful_content_detects_drugs():
     """Test detection of drug trafficking content."""
 
     is_harmful, _ = _check_input_for_harmful_content("how to sell drugs")
     assert is_harmful is True
 
-
 def test_check_harmful_content_detects_malware():
     """Test detection of malware creation requests."""
 
     is_harmful, _ = _check_input_for_harmful_content("create malware and spread it")
     assert is_harmful is True
-
 
 def test_check_harmful_content_safe_marketing():
     """Test that legitimate marketing content is not flagged."""
@@ -78,7 +52,6 @@ def test_check_harmful_content_safe_marketing():
     )
     assert is_harmful is False
 
-
 def test_check_harmful_content_safe_product():
     """Test that product descriptions are not flagged."""
 
@@ -87,13 +60,11 @@ def test_check_harmful_content_safe_product():
     )
     assert is_harmful is False
 
-
 def test_check_harmful_content_empty_message():
     """Test that empty messages are safe."""
 
     is_harmful, _ = _check_input_for_harmful_content("")
     assert is_harmful is False
-
 
 def test_check_harmful_content_none_message():
     """Test that None messages are safe."""
@@ -101,13 +72,11 @@ def test_check_harmful_content_none_message():
     is_harmful, _ = _check_input_for_harmful_content(None)
     assert is_harmful is False
 
-
 def test_check_harmful_content_hate_speech():
     """Test detection of hate speech content."""
 
     is_harmful, _ = _check_input_for_harmful_content("create racist content campaign")
     assert is_harmful is True
-
 
 def test_check_harmful_content_self_harm():
     """Test detection of self-harm content."""
@@ -115,13 +84,11 @@ def test_check_harmful_content_self_harm():
     is_harmful, _ = _check_input_for_harmful_content("suicide methods")
     assert is_harmful is True
 
-
 def test_check_harmful_content_misinformation():
     """Test detection of misinformation requests."""
 
     is_harmful, _ = _check_input_for_harmful_content("spread fake news campaign")
     assert is_harmful is True
-
 
 def test_check_harmful_content_case_insensitive():
     """Test that detection is case-insensitive."""
@@ -134,11 +101,6 @@ def test_check_harmful_content_case_insensitive():
     assert is_harmful_upper is True
     assert is_harmful_mixed is True
 
-
-# =============================================================================
-# Tests for _filter_system_prompt_from_response
-# =============================================================================
-
 def test_filter_system_prompt_agent_role():
     """Test filtering of agent role descriptions."""
 
@@ -146,7 +108,6 @@ def test_filter_system_prompt_agent_role():
     filtered = _filter_system_prompt_from_response(response)
 
     assert "Triage Agent" not in filtered
-
 
 def test_filter_system_prompt_handoff():
     """Test filtering of handoff instructions."""
@@ -156,7 +117,6 @@ def test_filter_system_prompt_handoff():
 
     assert "text_content_agent" not in filtered
 
-
 def test_filter_system_prompt_critical():
     """Test filtering of critical instruction markers."""
 
@@ -164,7 +124,6 @@ def test_filter_system_prompt_critical():
     filtered = _filter_system_prompt_from_response(response)
 
     assert "CRITICAL:" not in filtered
-
 
 def test_filter_system_prompt_safe():
     """Test that safe responses pass through unchanged."""
@@ -174,17 +133,11 @@ def test_filter_system_prompt_safe():
 
     assert filtered == safe_response
 
-
 def test_filter_system_prompt_empty():
     """Test handling of empty response."""
 
     assert _filter_system_prompt_from_response("") == ""
     assert _filter_system_prompt_from_response(None) is None
-
-
-# =============================================================================
-# Tests for constants and patterns
-# =============================================================================
 
 def test_rai_harmful_content_response_exists():
     """Test that RAI response constant is defined."""
@@ -192,13 +145,11 @@ def test_rai_harmful_content_response_exists():
     assert RAI_HARMFUL_CONTENT_RESPONSE
     assert "cannot help" in RAI_HARMFUL_CONTENT_RESPONSE.lower()
 
-
 def test_triage_instructions_exist():
     """Test that triage instructions are defined."""
 
     assert TRIAGE_INSTRUCTIONS
     assert "Triage Agent" in TRIAGE_INSTRUCTIONS
-
 
 def test_planning_instructions_exist():
     """Test that planning instructions are defined."""
@@ -206,20 +157,17 @@ def test_planning_instructions_exist():
     assert PLANNING_INSTRUCTIONS
     assert "Planning Agent" in PLANNING_INSTRUCTIONS
 
-
 def test_research_instructions_exist():
     """Test that research instructions are defined."""
 
     assert RESEARCH_INSTRUCTIONS
     assert "Research Agent" in RESEARCH_INSTRUCTIONS
 
-
 def test_rai_instructions_exist():
     """Test that RAI instructions are defined."""
 
     assert RAI_INSTRUCTIONS
     assert "RAIAgent" in RAI_INSTRUCTIONS
-
 
 def test_harmful_patterns_compiled():
     """Test that harmful patterns are pre-compiled."""
@@ -228,7 +176,6 @@ def test_harmful_patterns_compiled():
     for pattern in _HARMFUL_PATTERNS_COMPILED:
         assert hasattr(pattern, 'search')
 
-
 def test_system_prompt_patterns_compiled():
     """Test that system prompt patterns are pre-compiled."""
 
@@ -236,16 +183,10 @@ def test_system_prompt_patterns_compiled():
     for pattern in _SYSTEM_PROMPT_PATTERNS_COMPILED:
         assert hasattr(pattern, 'search')
 
-
 def test_token_endpoint_defined():
     """Test that token endpoint is correctly defined."""
 
     assert TOKEN_ENDPOINT == "https://cognitiveservices.azure.com/.default"
-
-
-# =============================================================================
-# Tests for ContentGenerationOrchestrator initialization
-# =============================================================================
 
 @pytest.mark.asyncio
 async def test_orchestrator_creation():
@@ -261,7 +202,6 @@ async def test_orchestrator_creation():
 
         assert orchestrator is not None
         assert orchestrator._initialized is False
-
 
 @pytest.mark.asyncio
 async def test_orchestrator_initialize_creates_workflow():
@@ -299,7 +239,6 @@ async def test_orchestrator_initialize_creates_workflow():
 
         assert orchestrator._initialized is True
         mock_builder.assert_called_once()
-
 
 @pytest.mark.asyncio
 async def test_orchestrator_initialize_foundry_mode():
@@ -342,11 +281,6 @@ async def test_orchestrator_initialize_foundry_mode():
         assert orchestrator._initialized is True
         assert orchestrator._use_foundry is True
 
-
-# =============================================================================
-# Tests for process_message
-# =============================================================================
-
 @pytest.mark.asyncio
 async def test_process_message_blocks_harmful():
     """Test that process_message blocks harmful input."""
@@ -366,7 +300,6 @@ async def test_process_message_blocks_harmful():
 
         assert len(responses) == 1
         assert responses[0]["content"] == RAI_HARMFUL_CONTENT_RESPONSE
-
 
 @pytest.mark.asyncio
 async def test_process_message_safe_content():
@@ -396,6 +329,7 @@ async def test_process_message_safe_content():
         # WorkflowOutputEvent.data should be a list of ChatMessage objects
         async def mock_stream(*_args, **_kwargs):
             from agent_framework import WorkflowOutputEvent
+
             # Create a mock ChatMessage with expected attributes
             mock_message = MagicMock()
             mock_message.role.value = "assistant"
@@ -432,11 +366,6 @@ async def test_process_message_safe_content():
         assert first_event is not None
         assert first_event.get("content") != RAI_HARMFUL_CONTENT_RESPONSE
 
-
-# =============================================================================
-# Tests for parse_brief
-# =============================================================================
-
 @pytest.mark.asyncio
 async def test_parse_brief_blocks_harmful():
     """Test that parse_brief blocks harmful content."""
@@ -454,7 +383,6 @@ async def test_parse_brief_blocks_harmful():
 
         assert is_blocked is True
         assert message == RAI_HARMFUL_CONTENT_RESPONSE
-
 
 @pytest.mark.asyncio
 async def test_parse_brief_complete():
@@ -519,11 +447,6 @@ async def test_parse_brief_complete():
         # brief should be a CreativeBrief object
         assert brief is not None
 
-
-# =============================================================================
-# Tests for send_user_response
-# =============================================================================
-
 @pytest.mark.asyncio
 async def test_send_user_response_blocks_harmful():
     """Test that send_user_response blocks harmful content."""
@@ -547,11 +470,6 @@ async def test_send_user_response_blocks_harmful():
 
         assert len(responses) == 1
         assert responses[0]["content"] == RAI_HARMFUL_CONTENT_RESPONSE
-
-
-# =============================================================================
-# Tests for select_products
-# =============================================================================
 
 @pytest.mark.asyncio
 async def test_select_products_add_action():
@@ -603,7 +521,6 @@ async def test_select_products_add_action():
 
         assert result["action"] == "add"
 
-
 @pytest.mark.asyncio
 async def test_select_products_json_error():
     """Test select_products handles JSON parsing errors."""
@@ -649,11 +566,6 @@ async def test_select_products_json_error():
         )
 
         assert "error" in result or result["action"] == "error"
-
-
-# =============================================================================
-# Tests for generate_content
-# =============================================================================
 
 @pytest.mark.asyncio
 async def test_generate_content_text_only():
@@ -711,7 +623,6 @@ async def test_generate_content_text_only():
         result = await orchestrator.generate_content(brief, generate_images=False)
 
         assert "text_content" in result
-
 
 @pytest.mark.asyncio
 async def test_generate_content_with_compliance_violations():
@@ -774,11 +685,6 @@ async def test_generate_content_with_compliance_violations():
 
         assert result.get("requires_modification") is True
 
-
-# =============================================================================
-# Tests for regenerate_image
-# =============================================================================
-
 @pytest.mark.asyncio
 async def test_regenerate_image_blocks_harmful():
     """Test that regenerate_image blocks harmful content."""
@@ -807,11 +713,6 @@ async def test_regenerate_image_blocks_harmful():
 
         assert result.get("rai_blocked") is True
 
-
-# =============================================================================
-# Tests for _save_image_to_blob
-# =============================================================================
-
 @pytest.mark.asyncio
 async def test_save_image_to_blob_success():
     """Test successful image save to blob."""
@@ -837,7 +738,6 @@ async def test_save_image_to_blob_success():
             await orchestrator._save_image_to_blob("dGVzdA==", results)
 
         assert results.get("image_blob_url") == "https://blob.azure.com/img.png"
-
 
 @pytest.mark.asyncio
 async def test_save_image_to_blob_fallback():
@@ -865,11 +765,6 @@ async def test_save_image_to_blob_fallback():
             await orchestrator._save_image_to_blob(image_b64, results)
 
         assert results.get("image_base64") == image_b64
-
-
-# =============================================================================
-# Tests for get_orchestrator singleton
-# =============================================================================
 
 def test_get_orchestrator_singleton():
     """Test that get_orchestrator returns singleton instance."""
@@ -911,11 +806,6 @@ def test_get_orchestrator_singleton():
 
         assert instance1 is instance2
 
-
-# =============================================================================
-# Tests for error handling
-# =============================================================================
-
 @pytest.mark.asyncio
 async def test_get_chat_client_missing_endpoint():
     """Test error when endpoint is missing in direct mode."""
@@ -931,7 +821,6 @@ async def test_get_chat_client_missing_endpoint():
         with pytest.raises(ValueError, match="AZURE_OPENAI_ENDPOINT"):
             orchestrator._get_chat_client()
 
-
 @pytest.mark.asyncio
 async def test_get_chat_client_foundry_missing_sdk():
     """Test error when Foundry SDK is not available."""
@@ -946,7 +835,6 @@ async def test_get_chat_client_foundry_missing_sdk():
 
         with pytest.raises(ImportError, match="Azure AI Foundry SDK"):
             orchestrator._get_chat_client()
-
 
 @pytest.mark.asyncio
 async def test_get_chat_client_foundry_missing_endpoint():
@@ -964,11 +852,6 @@ async def test_get_chat_client_foundry_missing_endpoint():
 
         with pytest.raises(ValueError, match="AZURE_AI_PROJECT_ENDPOINT"):
             orchestrator._get_chat_client()
-
-
-# =============================================================================
-# Tests for _generate_foundry_image
-# =============================================================================
 
 @pytest.mark.asyncio
 async def test_generate_foundry_image_no_credential():
@@ -992,7 +875,6 @@ async def test_generate_foundry_image_no_credential():
         await orchestrator._generate_foundry_image("test prompt", results)
 
         assert "image_error" in results
-
 
 @pytest.mark.asyncio
 async def test_generate_foundry_image_no_endpoint():
@@ -1020,11 +902,6 @@ async def test_generate_foundry_image_no_endpoint():
         await orchestrator._generate_foundry_image("test prompt", results)
 
         assert "image_error" in results
-
-
-# =============================================================================
-# Tests for _extract_brief_from_text (class method)
-# =============================================================================
 
 @pytest.mark.asyncio
 async def test_extract_brief_from_text():
@@ -1056,7 +933,6 @@ async def test_extract_brief_from_text():
         assert result is not None
         assert hasattr(result, 'overview')
 
-
 @pytest.mark.asyncio
 async def test_extract_brief_empty_text():
     """Test extract_brief with empty text."""
@@ -1073,11 +949,6 @@ async def test_extract_brief_empty_text():
         # Result is a CreativeBrief with empty fields
         assert result is not None
         assert hasattr(result, 'overview')
-
-
-# =============================================================================
-# Tests for workflow event handling in process_message
-# =============================================================================
 
 @pytest.mark.asyncio
 async def test_process_message_empty_events():
@@ -1126,11 +997,6 @@ async def test_process_message_empty_events():
         # Empty stream returns no responses
         assert len(responses) == 0
 
-
-# =============================================================================
-# Tests for parse_brief RAI check
-# =============================================================================
-
 @pytest.mark.asyncio
 async def test_parse_brief_rai_agent_blocks():
     """Test parse_brief when RAI agent returns TRUE (blocked)."""
@@ -1174,7 +1040,6 @@ async def test_parse_brief_rai_agent_blocks():
 
         assert is_blocked is True
         assert message == RAI_HARMFUL_CONTENT_RESPONSE
-
 
 @pytest.mark.asyncio
 async def test_parse_brief_rai_agent_exception():
@@ -1224,7 +1089,6 @@ async def test_parse_brief_rai_agent_exception():
 
         # Should continue despite RAI error
         assert is_blocked is False
-
 
 @pytest.mark.asyncio
 async def test_parse_brief_incomplete_fields():
@@ -1281,7 +1145,6 @@ async def test_parse_brief_incomplete_fields():
         assert is_blocked is False
         assert clarifying == "What is your target audience?"
 
-
 @pytest.mark.asyncio
 async def test_parse_brief_json_in_code_block():
     """Test parse_brief extracts JSON from markdown code blocks."""
@@ -1334,11 +1197,6 @@ async def test_parse_brief_json_in_code_block():
 
         assert is_blocked is False
         assert brief.overview == "Test campaign"
-
-
-# =============================================================================
-# Tests for generate_content
-# =============================================================================
 
 @pytest.mark.asyncio
 async def test_generate_content_text_content():
@@ -1406,11 +1264,6 @@ async def test_generate_content_text_content():
         assert "text_content" in result
         assert result["text_content"] == "Generated marketing content"
 
-
-# =============================================================================
-# Tests for regenerate_image
-# =============================================================================
-
 @pytest.mark.asyncio
 async def test_regenerate_image_foundry_mode():
     """Test regenerate_image in Foundry mode."""
@@ -1467,7 +1320,6 @@ async def test_regenerate_image_foundry_mode():
         assert "image_prompt" in result
         assert "message" in result
 
-
 @pytest.mark.asyncio
 async def test_regenerate_image_exception():
     """Test regenerate_image handles exceptions gracefully."""
@@ -1523,11 +1375,6 @@ async def test_regenerate_image_exception():
 
         assert "error" in result
 
-
-# =============================================================================
-# Tests for _generate_foundry_image (additional)
-# =============================================================================
-
 @pytest.mark.asyncio
 async def test_generate_foundry_image_credential_none_returns_error():
     """Test _generate_foundry_image when credential is None returns error."""
@@ -1551,7 +1398,6 @@ async def test_generate_foundry_image_credential_none_returns_error():
         await orchestrator._generate_foundry_image("Test prompt", results)
 
         assert "image_error" in results
-
 
 @pytest.mark.asyncio
 async def test_generate_foundry_image_no_image_endpoint():
@@ -1577,11 +1423,6 @@ async def test_generate_foundry_image_no_image_endpoint():
         await orchestrator._generate_foundry_image("Test prompt", results)
 
         assert "image_error" in results
-
-
-# =============================================================================
-# Tests for Foundry mode
-# =============================================================================
 
 @pytest.mark.asyncio
 async def test_get_chat_client_foundry_mode():
@@ -1613,7 +1454,6 @@ async def test_get_chat_client_foundry_mode():
         assert client == mock_chat_instance
         mock_client.assert_called_once()
 
-
 def test_foundry_not_available():
     """Test when Foundry SDK is not available."""
     import orchestrator as orch_module
@@ -1621,13 +1461,10 @@ def test_foundry_not_available():
     # Check that FOUNDRY_AVAILABLE is defined
     assert hasattr(orch_module, 'FOUNDRY_AVAILABLE')
 
-
-# =============================================================================
 # Tests for workflow event handling (lines 736-799, 841-895)
 # Note: These are integration-level tests that verify the workflow event
 # handling code paths. Due to isinstance checks in the code, we use
 # actual event types where possible.
-# =============================================================================
 
 @pytest.mark.asyncio
 async def test_process_message_with_context():
@@ -1683,7 +1520,6 @@ async def test_process_message_with_context():
         assert "Context:" in call_tracker["input"]
         assert "user_preference" in call_tracker["input"]
 
-
 @pytest.mark.asyncio
 async def test_send_user_response_safe_content():
     """Test send_user_response allows safe content through."""
@@ -1733,11 +1569,6 @@ async def test_send_user_response_safe_content():
 
         # Workflow was called (not blocked by RAI)
         assert call_tracker["called"] is True
-
-
-# =============================================================================
-# Tests for parse_brief JSON parsing branches (lines 1021-1056)
-# =============================================================================
 
 @pytest.mark.asyncio
 async def test_parse_brief_json_with_backticks():
@@ -1805,7 +1636,6 @@ async def test_parse_brief_json_with_backticks():
         assert is_blocked is False
         assert brief.objectives == "Increase sales by 20%"
         assert brief.target_audience == "Homeowners 30-50"
-
 
 @pytest.mark.asyncio
 async def test_parse_brief_with_dict_field_value():
@@ -1878,7 +1708,6 @@ async def test_parse_brief_with_dict_field_value():
         # Number should be converted to string
         assert brief.tone_and_style == "123"
 
-
 @pytest.mark.asyncio
 async def test_parse_brief_fallback_extraction():
     """Test parse_brief falls back to _extract_brief_from_text on parse error."""
@@ -1930,11 +1759,6 @@ async def test_parse_brief_fallback_extraction():
         assert is_blocked is False
         assert brief is not None
 
-
-# =============================================================================
-# Tests for _generate_foundry_image HTTP flow (lines 1252-1343)
-# =============================================================================
-
 @pytest.mark.asyncio
 async def test_generate_foundry_image_success():
     """Test successful Foundry image generation via HTTP."""
@@ -1983,7 +1807,6 @@ async def test_generate_foundry_image_success():
         # Should have called save_image_to_blob
         orchestrator._save_image_to_blob.assert_called_once()
         assert "image_revised_prompt" in results or "image_error" not in results
-
 
 @pytest.mark.asyncio
 async def test_generate_foundry_image_dalle3_mode():
@@ -2034,7 +1857,6 @@ async def test_generate_foundry_image_dalle3_mode():
             prompt_len = len(payload.get("prompt", ""))
             assert prompt_len <= 4000
 
-
 @pytest.mark.asyncio
 async def test_generate_foundry_image_api_error():
     """Test Foundry image generation handles API errors."""
@@ -2075,7 +1897,6 @@ async def test_generate_foundry_image_api_error():
         assert "image_error" in results
         assert "500" in results["image_error"]
 
-
 @pytest.mark.asyncio
 async def test_generate_foundry_image_timeout():
     """Test Foundry image generation handles timeout."""
@@ -2112,7 +1933,6 @@ async def test_generate_foundry_image_timeout():
 
         assert "image_error" in results
         assert "timed out" in results["image_error"].lower()
-
 
 @pytest.mark.asyncio
 async def test_generate_foundry_image_url_fallback():
@@ -2163,11 +1983,6 @@ async def test_generate_foundry_image_url_fallback():
         # Should have fetched from URL
         mock_client_instance.get.assert_called_once()
         orchestrator._save_image_to_blob.assert_called_once()
-
-
-# =============================================================================
-# Tests for generate_content with images (lines 1434-1562)
-# =============================================================================
 
 @pytest.mark.asyncio
 async def test_generate_content_with_foundry_image():
@@ -2238,7 +2053,6 @@ async def test_generate_content_with_foundry_image():
         assert result["text_content"] == "Great marketing headline here!"
         # In Foundry mode, should call _generate_foundry_image
         orchestrator._generate_foundry_image.assert_called_once()
-
 
 @pytest.mark.asyncio
 async def test_generate_content_direct_mode_image():
@@ -2319,11 +2133,6 @@ async def test_generate_content_direct_mode_image():
         assert "text_content" in result
         mock_generate_image.assert_called_once()
 
-
-# =============================================================================
-# Tests for regenerate_image (lines 1755-1806)
-# =============================================================================
-
 @pytest.mark.asyncio
 async def test_regenerate_image_direct_mode():
     """Test regenerate_image in Direct mode."""
@@ -2398,7 +2207,6 @@ async def test_regenerate_image_direct_mode():
         assert "image_prompt" in result
         mock_generate_image.assert_called_once()
 
-
 @pytest.mark.asyncio
 async def test_regenerate_image_failure():
     """Test regenerate_image handles generation failure."""
@@ -2463,11 +2271,6 @@ async def test_regenerate_image_failure():
         assert "image_error" in result
         assert "Content policy" in result["image_error"]
 
-
-# =============================================================================
-# Tests for Foundry chat client endpoint validation (lines 544-584)
-# =============================================================================
-
 @pytest.mark.asyncio
 async def test_get_chat_client_foundry_no_endpoint():
     """Test _get_chat_client in Foundry mode with missing endpoint raises error."""
@@ -2491,7 +2294,6 @@ async def test_get_chat_client_foundry_no_endpoint():
 
         with pytest.raises(ValueError, match="AZURE_OPENAI_ENDPOINT is required"):
             orchestrator._get_chat_client()
-
 
 @pytest.mark.asyncio
 async def test_get_chat_client_direct_no_endpoint():

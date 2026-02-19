@@ -5,60 +5,44 @@ Only tests settings that have computed properties, validators, or methods.
 Simple field defaults are tested implicitly through integration tests.
 """
 
-import pytest
-from unittest.mock import patch
 import os
+from unittest.mock import patch
 
-
-# ==================== parse_comma_separated Tests ====================
+import pytest
+from settings import parse_comma_separated
 
 class TestParseCommaSeparated:
     """Tests for comma-separated string parsing utility."""
 
     def test_parse_simple_list(self):
         """Test parsing a simple comma-separated list."""
-        from settings import parse_comma_separated
-
         result = parse_comma_separated("a, b, c")
         assert result == ["a", "b", "c"]
 
     def test_parse_with_spaces(self):
         """Test parsing with extra spaces."""
-        from settings import parse_comma_separated
-
         result = parse_comma_separated("  item1  ,  item2  ,  item3  ")
         assert result == ["item1", "item2", "item3"]
 
     def test_parse_empty_string(self):
         """Test parsing empty string."""
-        from settings import parse_comma_separated
-
         result = parse_comma_separated("")
         assert result == []
 
     def test_parse_single_item(self):
         """Test parsing single item."""
-        from settings import parse_comma_separated
-
         result = parse_comma_separated("single")
         assert result == ["single"]
 
     def test_parse_non_string(self):
         """Test that non-string returns empty list."""
-        from settings import parse_comma_separated
-
         result = parse_comma_separated(123)
         assert result == []
 
     def test_parse_with_empty_items(self):
         """Test parsing with empty items between commas."""
-        from settings import parse_comma_separated
-
         result = parse_comma_separated("a,,b,  ,c")
         assert result == ["a", "b", "c"]
-
-
-# ==================== AzureOpenAI Property Tests ====================
 
 class TestAzureOpenAIImageProperties:
     """Tests for Azure OpenAI image-related properties."""
@@ -94,9 +78,6 @@ class TestAzureOpenAIImageProperties:
         }, clear=False):
             settings = _AzureOpenAISettings()
             assert settings.effective_image_model == "gpt-image-1.5"
-
-
-# ==================== image_generation_enabled Tests ====================
 
 class TestImageGenerationEnabled:
     """Tests for image_generation_enabled property logic."""
@@ -134,9 +115,6 @@ class TestImageGenerationEnabled:
             settings = _AzureOpenAISettings()
             assert settings.image_generation_enabled is True
 
-
-# ==================== Endpoint Validator Tests ====================
-
 class TestAzureOpenAIEndpointValidator:
     """Tests for AzureOpenAI ensure_endpoint validator."""
 
@@ -160,9 +138,6 @@ class TestAzureOpenAIEndpointValidator:
         }, clear=True):
             settings = _AzureOpenAISettings()
             assert settings.endpoint == "https://my-openai-resource.openai.azure.com"
-
-
-# ==================== AppSettings Validator Exception Handling ====================
 
 class TestAppSettingsValidatorExceptionHandling:
     """Tests for AppSettings validator exception handling."""
@@ -199,9 +174,6 @@ class TestAppSettingsValidatorExceptionHandling:
             settings = _AppSettings()
             assert settings.chat_history is None
 
-
-# ==================== BrandGuidelines Property and Method Tests ====================
-
 class TestBrandGuidelinesProperties:
     """Tests for brand guidelines computed properties."""
 
@@ -231,7 +203,6 @@ class TestBrandGuidelinesProperties:
         }, clear=False):
             guidelines = _BrandGuidelinesSettings()
             assert guidelines.required_disclosures == ["Terms apply", "See store for details"]
-
 
 class TestBrandGuidelinesPromptMethods:
     """Tests for brand guidelines prompt generation methods."""

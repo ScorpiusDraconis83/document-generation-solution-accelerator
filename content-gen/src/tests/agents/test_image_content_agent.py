@@ -1,19 +1,7 @@
-"""
-Unit tests for Image Content Agent.
-
-Tests cover:
-- Prompt truncation for image generation limits
-- Image generation via DALL-E 3
-- Image generation via gpt-image-1
-- Error handling and fallbacks
-"""
+import base64
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-import base64
-
-
-# ==================== Truncate For Image Tests ====================
 
 def test_truncate_short_description_unchanged():
     """Test that short descriptions are returned unchanged."""
@@ -23,7 +11,6 @@ def test_truncate_short_description_unchanged():
     result = _truncate_for_image(short_desc, max_chars=1500)
 
     assert result == short_desc
-
 
 def test_truncate_empty_description():
     """Test handling of empty description."""
@@ -35,7 +22,6 @@ def test_truncate_empty_description():
     result = _truncate_for_image(None, max_chars=1500)
     assert result is None
 
-
 def test_truncate_long_description_truncated():
     """Test that very long descriptions are truncated."""
     from agents.image_content_agent import _truncate_for_image
@@ -45,7 +31,6 @@ def test_truncate_long_description_truncated():
 
     assert len(result) <= 1500
     assert "[Additional details truncated for image generation]" in result or len(result) <= 1500
-
 
 def test_truncate_preserves_hex_codes():
     """Test that hex color codes are preserved in truncation."""
@@ -64,7 +49,6 @@ More filler text that makes this very long.
 
     assert "### Product A" in result or "#FF5733" in result or len(result) <= 500
 
-
 def test_truncate_preserves_product_headers():
     """Test that product headers (### ...) are preserved."""
     from agents.image_content_agent import _truncate_for_image
@@ -82,7 +66,6 @@ Hex code: #CCCCCC
 
     assert len(result) <= 300
 
-
 def test_truncate_preserves_finish_descriptions():
     """Test that finish descriptions (matte, eggshell) are considered."""
     from agents.image_content_agent import _truncate_for_image
@@ -96,9 +79,6 @@ Hex: #123456
     result = _truncate_for_image(desc, max_chars=400)
 
     assert len(result) <= 400
-
-
-# ==================== Generate DALL-E Image Tests ====================
 
 @pytest.mark.asyncio
 async def test_generate_dalle_image_success():
@@ -147,7 +127,6 @@ async def test_generate_dalle_image_success():
         assert "image_base64" in result
         assert result["model"] == "dall-e-3"
 
-
 @pytest.mark.asyncio
 async def test_generate_dalle_image_with_managed_identity():
     """Test DALL-E generation with managed identity credential."""
@@ -189,7 +168,6 @@ async def test_generate_dalle_image_with_managed_identity():
         assert result["success"] is True
         mock_cred.assert_called_once_with(client_id="test-client-id")
 
-
 @pytest.mark.asyncio
 async def test_generate_dalle_image_error_handling():
     """Test DALL-E generation error handling."""
@@ -217,9 +195,6 @@ async def test_generate_dalle_image_error_handling():
         assert result["success"] is False
         assert "error" in result
         assert "Authentication failed" in result["error"]
-
-
-# ==================== Generate GPT Image Tests ====================
 
 @pytest.mark.asyncio
 async def test_generate_gpt_image_success():
@@ -267,7 +242,6 @@ async def test_generate_gpt_image_success():
         assert "image_base64" in result
         assert result["model"] == "gpt-image-1"
 
-
 @pytest.mark.asyncio
 async def test_generate_gpt_image_quality_passthrough():
     """Test that gpt-image passes quality setting through unchanged."""
@@ -308,7 +282,6 @@ async def test_generate_gpt_image_quality_passthrough():
 
         call_kwargs = mock_openai.images.generate.call_args.kwargs
         assert call_kwargs["quality"] == "medium"
-
 
 @pytest.mark.asyncio
 async def test_generate_gpt_image_no_b64_falls_back_to_url():
@@ -363,7 +336,6 @@ async def test_generate_gpt_image_no_b64_falls_back_to_url():
 
         assert result["success"] is True
 
-
 @pytest.mark.asyncio
 async def test_generate_gpt_image_error_handling():
     """Test gpt-image error handling."""
@@ -391,9 +363,6 @@ async def test_generate_gpt_image_error_handling():
         assert result["success"] is False
         assert "error" in result
 
-
-# ==================== Model Routing Tests ====================
-
 @pytest.mark.asyncio
 async def test_routes_to_dalle_for_dalle_model():
     """Test that dall-e-3 model routes to DALL-E generator."""
@@ -412,7 +381,6 @@ async def test_routes_to_dalle_for_dalle_model():
         mock_dalle.assert_called_once()
         mock_gpt.assert_not_called()
         assert result["model"] == "dall-e-3"
-
 
 @pytest.mark.asyncio
 async def test_routes_to_gpt_image_for_gpt_model():
@@ -433,7 +401,6 @@ async def test_routes_to_gpt_image_for_gpt_model():
         mock_dalle.assert_not_called()
         assert result["model"] == "gpt-image-1"
 
-
 @pytest.mark.asyncio
 async def test_routes_to_gpt_image_for_gpt_image_1_5():
     """Test that gpt-image-1.5 model routes to gpt-image generator."""
@@ -452,9 +419,6 @@ async def test_routes_to_gpt_image_for_gpt_image_1_5():
         mock_gpt.assert_called_once()
         mock_dalle.assert_not_called()
 
-
-# ==================== Truncation Edge Case Tests ====================
-
 def test_truncate_preserves_hex_in_middle_of_line():
     """Test hex code in middle of line is preserved."""
     from agents.image_content_agent import _truncate_for_image
@@ -469,7 +433,6 @@ More content here with another # reference.
     # Should contain some hex reference
     assert len(result) <= 400
 
-
 def test_truncate_preserves_description_quotes():
     """Test quoted descriptions with 'appears as' are preserved."""
     from agents.image_content_agent import _truncate_for_image
@@ -481,7 +444,6 @@ More details here.
 
     result = _truncate_for_image(desc, max_chars=500)
     assert len(result) <= 500
-
 
 def test_truncate_with_eggshell_finish():
     """Test that eggshell finish descriptions are considered."""
@@ -495,9 +457,6 @@ Hex: #AABBCC
 
     result = _truncate_for_image(desc, max_chars=400)
     assert len(result) <= 400
-
-
-# ==================== Long Prompt Tests ====================
 
 @pytest.mark.asyncio
 async def test_generate_image_truncates_very_long_prompt():

@@ -1,19 +1,8 @@
-"""
-Unit tests for Azure AI Search Service.
-
-These tests mock the Azure Search SDK while allowing
-the actual SearchService code to execute for coverage.
-"""
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from unittest.mock import MagicMock, patch, AsyncMock
 
 from services.search_service import SearchService, get_search_service
-
-
-# =============================================================================
-# Shared Fixtures
-# =============================================================================
 
 @pytest.fixture
 def mock_search_service():
@@ -38,11 +27,6 @@ def mock_search_service():
 
         yield service
 
-
-# =============================================================================
-# Credentials Tests
-# =============================================================================
-
 def test_get_credential_rbac_success():
     """Test getting credential via RBAC."""
     with patch("services.search_service.app_settings") as mock_settings, \
@@ -59,7 +43,6 @@ def test_get_credential_rbac_success():
 
         assert cred is not None
         mock_cred.assert_called_once()
-
 
 def test_get_credential_api_key_fallback():
     """Test fallback to API key when RBAC fails."""
@@ -82,7 +65,6 @@ def test_get_credential_api_key_fallback():
         assert cred is not None
         mock_key_cred.assert_called_once_with("test-api-key")
 
-
 def test_get_credential_cached():
     """Test that credential is cached after first retrieval."""
     with patch("services.search_service.app_settings") as mock_settings, \
@@ -100,11 +82,6 @@ def test_get_credential_cached():
 
         assert cred1 is cred2
         assert mock_cred.call_count == 1  # Only called once
-
-
-# =============================================================================
-# Client Creation Tests
-# =============================================================================
 
 def test_get_products_client_creates_once():
     """Test that products client is created only once."""
@@ -127,7 +104,6 @@ def test_get_products_client_creates_once():
         assert client1 is client2
         assert mock_search_client.call_count == 1
 
-
 def test_get_images_client_creates_once():
     """Test that images client is created only once."""
     with patch("services.search_service.app_settings") as mock_settings, \
@@ -149,7 +125,6 @@ def test_get_images_client_creates_once():
         assert client1 is client2
         assert mock_search_client.call_count == 1
 
-
 def test_get_products_client_raises_without_endpoint():
     """Test error when endpoint is not configured."""
     with patch("services.search_service.app_settings") as mock_settings:
@@ -160,7 +135,6 @@ def test_get_products_client_raises_without_endpoint():
         with pytest.raises(ValueError, match="endpoint not configured"):
             service._get_products_client()
 
-
 def test_get_images_client_raises_without_endpoint():
     """Test error when images client endpoint is not configured."""
     with patch("services.search_service.app_settings") as mock_settings:
@@ -170,7 +144,6 @@ def test_get_images_client_raises_without_endpoint():
 
         with pytest.raises(ValueError, match="endpoint not configured"):
             service._get_images_client()
-
 
 def test_get_credential_no_credentials():
     """Test error when no credentials are available."""
@@ -187,11 +160,6 @@ def test_get_credential_no_credentials():
 
         with pytest.raises(ValueError, match="No valid search credentials available"):
             service._get_credential()
-
-
-# =============================================================================
-# Product Search Tests
-# =============================================================================
 
 @pytest.mark.asyncio
 async def test_search_products_basic(mock_search_service):
@@ -219,7 +187,6 @@ async def test_search_products_basic(mock_search_service):
     assert results[0]["product_name"] == "Premium Paint"
     assert results[0]["search_score"] == 0.95
 
-
 @pytest.mark.asyncio
 async def test_search_products_with_category_filter(mock_search_service):
     """Test product search with category filter."""
@@ -231,7 +198,6 @@ async def test_search_products_with_category_filter(mock_search_service):
     # Verify filter was passed
     call_args = mock_search_service._mock_client.search.call_args
     assert "category eq 'Interior'" in str(call_args)
-
 
 @pytest.mark.asyncio
 async def test_search_products_with_subcategory_filter(mock_search_service):
@@ -245,7 +211,6 @@ async def test_search_products_with_subcategory_filter(mock_search_service):
     filter_str = call_args[1].get('filter', '')
     assert "sub_category eq 'Paint'" in filter_str
 
-
 @pytest.mark.asyncio
 async def test_search_products_error_returns_empty(mock_search_service):
     """Test that search errors return empty list."""
@@ -254,7 +219,6 @@ async def test_search_products_error_returns_empty(mock_search_service):
     results = await mock_search_service.search_products("paint")
 
     assert results == []
-
 
 @pytest.mark.asyncio
 async def test_search_products_custom_top(mock_search_service):
@@ -266,11 +230,6 @@ async def test_search_products_custom_top(mock_search_service):
 
     call_args = mock_search_service._mock_client.search.call_args
     assert call_args[1].get('top') == 10
-
-
-# =============================================================================
-# Image Search Tests
-# =============================================================================
 
 @pytest.mark.asyncio
 async def test_search_images_basic(mock_search_service):
@@ -301,7 +260,6 @@ async def test_search_images_basic(mock_search_service):
     assert results[0]["name"] == "Ocean Blue"
     assert results[0]["color_family"] == "Cool"
 
-
 @pytest.mark.asyncio
 async def test_search_images_with_color_family_filter(mock_search_service):
     """Test image search with color family filter."""
@@ -314,7 +272,6 @@ async def test_search_images_with_color_family_filter(mock_search_service):
     filter_str = call_args[1].get('filter', '')
     assert "color_family eq 'Cool'" in filter_str
 
-
 @pytest.mark.asyncio
 async def test_search_images_error_returns_empty(mock_search_service):
     """Test that search errors return empty list."""
@@ -323,11 +280,6 @@ async def test_search_images_error_returns_empty(mock_search_service):
     results = await mock_search_service.search_images("blue")
 
     assert results == []
-
-
-# =============================================================================
-# Grounding Context Tests
-# =============================================================================
 
 @pytest.mark.asyncio
 async def test_get_grounding_context_products_only(mock_search_service):
@@ -344,7 +296,6 @@ async def test_get_grounding_context_products_only(mock_search_service):
         assert context["product_count"] == 1
         assert context["image_count"] == 0
         assert len(context["products"]) == 1
-
 
 @pytest.mark.asyncio
 async def test_get_grounding_context_with_images(mock_search_service):
@@ -366,7 +317,6 @@ async def test_get_grounding_context_with_images(mock_search_service):
         assert context["image_count"] == 1
         assert "grounding_summary" in context
 
-
 @pytest.mark.asyncio
 async def test_get_grounding_context_with_filters(mock_search_service):
     """Test grounding context with category filter."""
@@ -381,11 +331,6 @@ async def test_get_grounding_context_with_filters(mock_search_service):
             category="Interior",
             top=5
         )
-
-
-# =============================================================================
-# Build Summary Tests
-# =============================================================================
 
 def test_build_summary_with_products():
     """Test building summary with product data."""
@@ -410,7 +355,6 @@ def test_build_summary_with_products():
         assert "PAINT-001" in summary
         assert "Interior" in summary
 
-
 def test_build_summary_with_images():
     """Test building summary with image data."""
     with patch("services.search_service.app_settings") as mock_settings:
@@ -434,7 +378,6 @@ def test_build_summary_with_images():
         assert "Calm" in summary
         assert "Modern" in summary
 
-
 def test_build_summary_empty_inputs():
     """Test building summary with empty inputs."""
     with patch("services.search_service.app_settings") as mock_settings:
@@ -444,11 +387,6 @@ def test_build_summary_empty_inputs():
         summary = service._build_grounding_summary([], [])
 
         assert summary == ""
-
-
-# =============================================================================
-# Singleton Tests
-# =============================================================================
 
 @pytest.mark.asyncio
 async def test_get_search_service_returns_singleton():
