@@ -247,6 +247,7 @@ var imageModelDeployment = imageModelChoice != 'none' ? [
 var aiFoundryAiServicesModelDeployment = concat(baseModelDeployments, imageModelDeployment)
 
 var aiFoundryAiProjectDescription = 'Content Generation AI Foundry Project'
+var existingTags = resourceGroup().tags ?? {}
 
 // ============== //
 // Resources      //
@@ -276,7 +277,7 @@ resource resourceGroupTags 'Microsoft.Resources/tags@2021-04-01' = {
   name: 'default'
   properties: {
     tags: union(
-      resourceGroup().tags ?? {},
+      existingTags,
       tags,
       {
         TemplateName: 'ContentGen'
