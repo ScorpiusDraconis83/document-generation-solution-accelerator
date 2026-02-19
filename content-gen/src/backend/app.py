@@ -986,14 +986,11 @@ async def regenerate_content():
                 new_image_url = response.get("image_url")
                 new_image_prompt = response.get("image_prompt")
                 new_image_revised_prompt = response.get("image_revised_prompt")
-                logger.info(f"Regeneration persistence - new image_url: {new_image_url}, "
-                            f"new image_prompt present: {bool(new_image_prompt)}, "
-                            f"products_data count: {len(products_data) if products_data else 0}")
 
                 existing_conversation = await cosmos_service.get_conversation(conversation_id, user_id)
-                existing_content = (existing_conversation or {}).get("generated_content", {})
+                raw_content = (existing_conversation or {}).get("generated_content")
+                existing_content = raw_content if isinstance(raw_content, dict) else {}
                 old_image_url = existing_content.get("image_url")
-                logger.info(f"Regeneration persistence - old image_url: {old_image_url}")
 
                 updated_content = {
                     **existing_content,
@@ -1002,14 +999,12 @@ async def regenerate_content():
                     "image_revised_prompt": new_image_revised_prompt if new_image_revised_prompt else existing_content.get("image_revised_prompt"),
                     "selected_products": products_data if products_data else existing_content.get("selected_products", []),
                 }
-                logger.info(f"Regeneration persistence - saving image_url: {updated_content.get('image_url')}")
 
                 await cosmos_service.save_generated_content(
                     conversation_id=conversation_id,
                     user_id=user_id,
                     generated_content=updated_content
                 )
-                logger.info(f"Regeneration persistence - save_generated_content completed successfully")
             except Exception as e:
                 logger.warning(f"Failed to save regeneration response to CosmosDB: {e}")
 
