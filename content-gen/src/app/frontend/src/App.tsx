@@ -118,6 +118,20 @@ function App() {
         setAwaitingClarification(false);
         setConfirmedBrief(data.brief || null);
         
+        // Restore availableProducts so product/color name detection works
+        // when regenerating images in a restored conversation
+        if (data.brief) {
+          try {
+            const productsResponse = await fetch('/api/products');
+            if (productsResponse.ok) {
+              const productsData = await productsResponse.json();
+              setAvailableProducts(productsData.products || []);
+            }
+          } catch (err) {
+            console.error('Error loading products for restored conversation:', err);
+          }
+        }
+        
         if (data.generated_content) {
           const gc = data.generated_content;
           let textContent = gc.text_content;
@@ -325,13 +339,20 @@ function App() {
           let responseData: GeneratedContent | null = null;
           let messageContent = '';
           
+          // Detect if the user's prompt mentions a different product/color name
+          // BEFORE the API call so the correct product is sent and persisted
+          const mentionedProduct = availableProducts.find(p =>
+            content.toLowerCase().includes(p.product_name.toLowerCase())
+          );
+          const productsForRequest = mentionedProduct ? [mentionedProduct] : selectedProducts;
+          
           // Get previous prompt from image_content if available
           const previousPrompt = generatedContent.image_content?.prompt_used;
           
           for await (const response of streamRegenerateImage(
             content,
             confirmedBrief,
-            selectedProducts,
+            productsForRequest,
             previousPrompt,
             conversationId,
             userId,
@@ -345,8 +366,21 @@ function App() {
                 
                 // Update generatedContent with new image
                 if (parsedContent.image_url || parsedContent.image_base64) {
+                  // Replace old color/product name in text_content when switching products
+                  const oldName = selectedProducts[0]?.product_name;
+                  const newName = mentionedProduct?.product_name;
+                  const nameRegex = oldName
+                    ? new RegExp(oldName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi')
+                    : undefined;
+                  const swapName = (s?: string) => {
+                    if (!s || !oldName || !newName || oldName === newName || !nameRegex) return s;
+                    return s.replace(nameRegex, () => newName);
+                  };
+                  const tc = generatedContent.text_content;
+
                   responseData = {
                     ...generatedContent,
+                    text_content: mentionedProduct ? { ...tc, headline: swapName(tc?.headline), body: swapName(tc?.body), tagline: swapName(tc?.tagline), cta_text: swapName(tc?.cta_text) } : tc,
                     image_content: {
                       ...generatedContent.image_content,
                       image_url: parsedContent.image_url || generatedContent.image_content?.image_url,
@@ -355,6 +389,11 @@ function App() {
                     },
                   };
                   setGeneratedContent(responseData);
+                  
+                  // Update the selected product/color name now that the new image is ready
+                  if (mentionedProduct) {
+                    setSelectedProducts([mentionedProduct]);
+                  }
                   
                   // Update the confirmed brief to include the modification
                   // This ensures subsequent "Regenerate" clicks use the updated visual guidelines
@@ -552,7 +591,7 @@ function App() {
       // Trigger refresh of chat history after message is sent
       setHistoryRefreshTrigger(prev => prev + 1);
     }
-  }, [conversationId, userId, confirmedBrief, pendingBrief, selectedProducts, generatedContent]);
+  }, [conversationId, userId, confirmedBrief, pendingBrief, selectedProducts, generatedContent, availableProducts]);
 
   const handleBriefConfirm = useCallback(async () => {
     if (!pendingBrief) return;

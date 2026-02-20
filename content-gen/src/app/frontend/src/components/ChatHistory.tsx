@@ -417,6 +417,20 @@ function ConversationItem({
   const handleRenameConfirm = async () => {
     const trimmedValue = renameValue.trim();
     
+    // Validate before API call
+    if (trimmedValue.length < 5) {
+      setRenameError('Conversation name must be at least 5 characters');
+      return;
+    }
+    if (trimmedValue.length > 50) {
+      setRenameError('Conversation name cannot exceed 50 characters');
+      return;
+    }
+    if (!/[a-zA-Z0-9]/.test(trimmedValue)) {
+      setRenameError('Conversation name must contain at least one letter or number');
+      return;
+    }
+    
     if (trimmedValue === conversation.title) {
       setIsRenameDialogOpen(false);
       setRenameError('');
@@ -536,11 +550,18 @@ function ConversationItem({
               <Input
                 ref={renameInputRef}
                 value={renameValue}
+                maxLength={50}
                 onChange={(e) => {
                   const newValue = e.target.value;
                   setRenameValue(newValue);
                   if (newValue.trim() === '') {
                     setRenameError('Conversation name cannot be empty or contain only spaces');
+                  } else if (newValue.trim().length < 5) {
+                    setRenameError('Conversation name must be at least 5 characters');
+                  } else if (!/[a-zA-Z0-9]/.test(newValue)) {
+                    setRenameError('Conversation name must contain at least one letter or number');
+                  } else if (newValue.length > 50) {
+                    setRenameError('Conversation name cannot exceed 50 characters');
                   } else {
                     setRenameError('');
                   }
@@ -555,6 +576,16 @@ function ConversationItem({
                 placeholder="Enter conversation name"
                 style={{ width: '100%' }}
               />
+              <Text 
+                size={200} 
+                style={{ 
+                  color: tokens.colorNeutralForeground3, 
+                  marginTop: '4px',
+                  display: 'block'
+                }}
+              >
+                Maximum 50 characters ({renameValue.length}/50)
+              </Text>
               {renameError && (
                 <Text 
                   size={200} 
@@ -579,7 +610,7 @@ function ConversationItem({
             <Button 
               appearance="primary" 
               onClick={handleRenameConfirm}
-              disabled={!renameValue.trim()}
+              disabled={renameValue.trim().length < 5 || !/[a-zA-Z0-9]/.test(renameValue) || renameValue.length > 50}
             >
               Rename
             </Button>
