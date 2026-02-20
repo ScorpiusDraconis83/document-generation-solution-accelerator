@@ -363,9 +363,12 @@ function App() {
                   // Replace old color/product name in text_content when switching products
                   const oldName = selectedProducts[0]?.product_name;
                   const newName = mentionedProduct?.product_name;
+                  const nameRegex = oldName
+                    ? new RegExp(oldName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi')
+                    : undefined;
                   const swapName = (s?: string) => {
-                    if (!s || !oldName || !newName || oldName === newName) return s;
-                    return s.replace(new RegExp(oldName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), newName);
+                    if (!s || !oldName || !newName || oldName === newName || !nameRegex) return s;
+                    return s.replace(nameRegex, () => newName);
                   };
                   const tc = generatedContent.text_content;
 
