@@ -699,7 +699,7 @@ async def test_get_user_conversations_with_custom_title(mock_cosmos_service):
 
 @pytest.mark.asyncio
 async def test_get_user_conversations_no_title_fallback(mock_cosmos_service):
-    """Test conversation title falls back to Untitled when no info available."""
+    """Test conversation title falls back to New Conversation when no info available."""
     conversations = [
         {
             "id": "conv-1",
@@ -720,7 +720,7 @@ async def test_get_user_conversations_no_title_fallback(mock_cosmos_service):
     await mock_cosmos_service.initialize()
     result = await mock_cosmos_service.get_user_conversations("user-123", limit=10)
 
-    assert result[0]["title"] == "Untitled Conversation"
+    assert result[0]["title"] == "New Conversation"
 
 
 @pytest.mark.asyncio
@@ -749,8 +749,8 @@ async def test_get_user_conversations_title_from_first_user_message(mock_cosmos_
     await mock_cosmos_service.initialize()
     result = await mock_cosmos_service.get_user_conversations("user-123", limit=10)
 
-    # Title should be from first user message, truncated to 50 chars
-    assert result[0]["title"] == "Create a marketing campaign for summer"
+    # Title should be from first user message, truncated to 4 words
+    assert result[0]["title"] == "Create a marketing campaign"
 
 
 @pytest.mark.asyncio
