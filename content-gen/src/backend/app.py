@@ -1001,9 +1001,12 @@ async def regenerate_content():
                 if existing_text and old_name and new_name and old_name != new_name:
                     pat = re.compile(re.escape(old_name), re.IGNORECASE)
                     if isinstance(existing_text, dict):
-                        existing_text = {k: pat.sub(new_name, v) if isinstance(v, str) else v for k, v in existing_text.items()}
+                        existing_text = {
+                            k: pat.sub(lambda _m: new_name, v) if isinstance(v, str) else v
+                            for k, v in existing_text.items()
+                        }
                     elif isinstance(existing_text, str):
-                        existing_text = pat.sub(new_name, existing_text)
+                        existing_text = pat.sub(lambda _m: new_name, existing_text)
 
                 updated_content = {
                     **existing_content,
