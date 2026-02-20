@@ -343,13 +343,27 @@ class CosmosDBService:
         """
         await self.initialize()
 
+        # Get existing conversation to preserve important metadata fields
+        existing = await self.get_conversation(conversation_id, user_id)
+        existing_metadata = existing.get("metadata", {}) if existing else {}
+
+        # Merge metadata - preserve generated_title and custom_title from existing
+        merged_metadata = {}
+        if existing_metadata.get("generated_title"):
+            merged_metadata["generated_title"] = existing_metadata["generated_title"]
+        if existing_metadata.get("custom_title"):
+            merged_metadata["custom_title"] = existing_metadata["custom_title"]
+        # Add new metadata on top
+        if metadata:
+            merged_metadata.update(metadata)
+
         item = {
             "id": conversation_id,
             "userId": user_id,            # Partition key field (matches container definition /userId)
             "user_id": user_id,           # Keep for backward compatibility
             "messages": messages,
             "brief": brief.model_dump() if brief else None,
-            "metadata": metadata or {},
+            "metadata": merged_metadata,
             "generated_content": generated_content,
             "updated_at": datetime.now(timezone.utc).isoformat()
         }
@@ -401,7 +415,8 @@ class CosmosDBService:
         self,
         conversation_id: str,
         user_id: str,
-        message: dict
+        message: dict,
+        generated_title: Optional[str] = None
     ) -> dict:
         """
         Add a message to an existing conversation.
@@ -422,6 +437,12 @@ class CosmosDBService:
             # Ensure userId is set (for partition key) - migrate old documents
             if not conversation.get("userId"):
                 conversation["userId"] = conversation.get("user_id") or user_id
+            conversation["metadata"] = conversation.get("metadata", {})
+            if generated_title:
+                has_custom_title = bool(conversation["metadata"].get("custom_title"))
+                has_generated_title = bool(conversation["metadata"].get("generated_title"))
+                if not has_custom_title and not has_generated_title:
+                    conversation["metadata"]["generated_title"] = generated_title
             conversation["messages"].append(message)
             conversation["updated_at"] = datetime.now(timezone.utc).isoformat()
         else:
@@ -430,6 +451,7 @@ class CosmosDBService:
                 "userId": user_id,            # Partition key field
                 "user_id": user_id,          # Keep for backward compatibility
                 "messages": [message],
+                "metadata": {"generated_title": generated_title} if generated_title else {},
                 "updated_at": datetime.now(timezone.utc).isoformat()
             }
 
@@ -494,16 +516,21 @@ class CosmosDBService:
             custom_title = metadata.get("custom_title") if metadata else None
             if custom_title:
                 title = custom_title
+            elif metadata and metadata.get("generated_title"):
+                title = metadata.get("generated_title")
             elif brief and brief.get("overview"):
-                title = brief["overview"][:50]
+                overview_words = brief["overview"].split()[:4]
+                title = " ".join(overview_words) if overview_words else "New Conversation"
             elif messages:
-                title = "Untitled Conversation"
+                title = "New Conversation"
                 for msg in messages:
                     if msg.get("role") == "user":
-                        title = msg.get("content", "")[:50]
+                        content = msg.get("content", "")
+                        words = content.split()[:4]
+                        title = " ".join(words) if words else "New Conversation"
                         break
             else:
-                title = "Untitled Conversation"
+                title = "New Conversation"
 
             # Get last message preview
             last_message = ""
@@ -597,18 +624,18 @@ class CosmosDBService:
     ) -> int:
         """
         Delete all conversations for a user.
-        
+
         Args:
             user_id: User ID to delete conversations for
-        
+
         Returns:
             Number of conversations deleted
         """
         await self.initialize()
-        
+
         # First get all conversations for the user
         conversations = await self.get_user_conversations(user_id, limit=1000)
-        
+
         deleted_count = 0
         for conv in conversations:
             try:
@@ -616,7 +643,7 @@ class CosmosDBService:
                 deleted_count += 1
             except Exception as e:
                 logger.warning(f"Failed to delete conversation {conv['id']}: {e}")
-        
+
         logger.info(f"Deleted {deleted_count} conversations for user {user_id}")
         return deleted_count
 

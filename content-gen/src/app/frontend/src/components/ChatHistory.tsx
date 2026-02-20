@@ -37,6 +37,7 @@ interface ConversationSummary {
 
 interface ChatHistoryProps {
   currentConversationId: string;
+  currentConversationTitle?: string | null;
   currentMessages?: { role: string; content: string }[]; // Current session messages
   onSelectConversation: (conversationId: string) => void;
   onNewConversation: () => void;
@@ -46,6 +47,7 @@ interface ChatHistoryProps {
 
 export function ChatHistory({ 
   currentConversationId, 
+  currentConversationTitle,
   currentMessages = [],
   onSelectConversation,
   onNewConversation,
@@ -152,13 +154,14 @@ export function ChatHistory({
   }, [refreshTrigger]);
 
   // Build the current session conversation summary if it has messages
-  const currentSessionConversation: ConversationSummary | null = currentMessages.length > 0 ? {
-    id: currentConversationId,
-    title: currentMessages.find(m => m.role === 'user')?.content?.substring(0, 50) || 'Current Conversation',
-    lastMessage: currentMessages[currentMessages.length - 1]?.content?.substring(0, 100) || '',
-    timestamp: new Date().toISOString(),
-    messageCount: currentMessages.length,
-  } : null;
+  const currentSessionConversation: ConversationSummary | null = 
+    currentMessages.length > 0 && currentConversationTitle ? {
+      id: currentConversationId,
+      title: currentConversationTitle,
+      lastMessage: currentMessages[currentMessages.length - 1]?.content?.substring(0, 100) || '',
+      timestamp: new Date().toISOString(),
+      messageCount: currentMessages.length,
+    } : null;
 
   // Merge current session with saved conversations, updating the current one with live data
   const displayConversations = (() => {
