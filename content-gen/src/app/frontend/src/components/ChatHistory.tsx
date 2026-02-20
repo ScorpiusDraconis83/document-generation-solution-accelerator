@@ -279,15 +279,15 @@ export function ChatHistory({
             </Link>
           )}
           <Link
-            onClick={isGenerating ? undefined : onNewConversation}
+            onClick={(isGenerating || currentMessages.length === 0) ? undefined : onNewConversation}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
               fontSize: '13px',
-              color: isGenerating ? tokens.colorNeutralForegroundDisabled : tokens.colorNeutralForeground1,
-              cursor: isGenerating ? 'not-allowed' : 'pointer',
-              pointerEvents: isGenerating ? 'none' : 'auto',
+              color: (isGenerating || currentMessages.length === 0) ? tokens.colorNeutralForegroundDisabled : tokens.colorNeutralForeground1,
+              cursor: (isGenerating || currentMessages.length === 0) ? 'not-allowed' : 'pointer',
+              pointerEvents: (isGenerating || currentMessages.length === 0) ? 'none' : 'auto',
             }}
           >
             <Compose20Regular />
