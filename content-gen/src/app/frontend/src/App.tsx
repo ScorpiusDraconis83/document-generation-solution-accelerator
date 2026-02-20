@@ -360,8 +360,18 @@ function App() {
                 
                 // Update generatedContent with new image
                 if (parsedContent.image_url || parsedContent.image_base64) {
+                  // Replace old color/product name in text_content when switching products
+                  const oldName = selectedProducts[0]?.product_name;
+                  const newName = mentionedProduct?.product_name;
+                  const swapName = (s?: string) => {
+                    if (!s || !oldName || !newName || oldName === newName) return s;
+                    return s.replace(new RegExp(oldName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), newName);
+                  };
+                  const tc = generatedContent.text_content;
+
                   responseData = {
                     ...generatedContent,
+                    text_content: mentionedProduct ? { ...tc, headline: swapName(tc?.headline), body: swapName(tc?.body), tagline: swapName(tc?.tagline), cta_text: swapName(tc?.cta_text) } : tc,
                     image_content: {
                       ...generatedContent.image_content,
                       image_url: parsedContent.image_url || generatedContent.image_content?.image_url,
