@@ -9,6 +9,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import uuid
 from datetime import datetime, timezone
 from typing import Dict, Any
@@ -21,6 +22,7 @@ from models import CreativeBrief, Product
 from orchestrator import get_orchestrator
 from services.cosmos_service import get_cosmos_service
 from services.blob_service import get_blob_service
+from services.title_service import get_title_service
 from api.admin import admin_bp
 
 # In-memory task storage for generation tasks
@@ -106,6 +108,16 @@ async def chat():
     # Try to save to CosmosDB but don't fail if it's unavailable
     try:
         cosmos_service = await get_cosmos_service()
+
+        generated_title = None
+        existing_conversation = await cosmos_service.get_conversation(conversation_id, user_id)
+        existing_metadata = existing_conversation.get("metadata", {}) if existing_conversation else {}
+        has_existing_title = bool(existing_metadata.get("custom_title") or existing_metadata.get("generated_title"))
+
+        if not has_existing_title:
+            title_service = get_title_service()
+            generated_title = await title_service.generate_title(message)
+
         await cosmos_service.add_message_to_conversation(
             conversation_id=conversation_id,
             user_id=user_id,
@@ -113,7 +125,8 @@ async def chat():
                 "role": "user",
                 "content": message,
                 "timestamp": datetime.now(timezone.utc).isoformat()
-            }
+            },
+            generated_title=generated_title
         )
     except Exception as e:
         logger.warning(f"Failed to save message to CosmosDB: {e}")
@@ -187,9 +200,22 @@ async def parse_brief():
     if not brief_text:
         return jsonify({"error": "Brief text is required"}), 400
 
+    orchestrator = get_orchestrator()
+    generated_title = None
+
     # Save the user's brief text as a message to CosmosDB
     try:
         cosmos_service = await get_cosmos_service()
+
+        # Generate title for new conversations
+        existing_conversation = await cosmos_service.get_conversation(conversation_id, user_id)
+        existing_metadata = existing_conversation.get("metadata", {}) if existing_conversation else {}
+        has_existing_title = bool(existing_metadata.get("custom_title") or existing_metadata.get("generated_title"))
+
+        if not has_existing_title:
+            title_service = get_title_service()
+            generated_title = await title_service.generate_title(brief_text)
+
         await cosmos_service.add_message_to_conversation(
             conversation_id=conversation_id,
             user_id=user_id,
@@ -197,12 +223,12 @@ async def parse_brief():
                 "role": "user",
                 "content": brief_text,
                 "timestamp": datetime.now(timezone.utc).isoformat()
-            }
+            },
+            generated_title=generated_title
         )
     except Exception as e:
         logger.warning(f"Failed to save brief message to CosmosDB: {e}")
 
-    orchestrator = get_orchestrator()
     parsed_brief, clarifying_questions, rai_blocked = await orchestrator.parse_brief(brief_text)
 
     # Check if request was blocked due to harmful content
@@ -228,6 +254,7 @@ async def parse_brief():
             "requires_clarification": False,
             "requires_confirmation": False,
             "conversation_id": conversation_id,
+            "generated_title": generated_title,
             "message": clarifying_questions
         })
 
@@ -255,6 +282,7 @@ async def parse_brief():
             "requires_confirmation": False,
             "clarifying_questions": clarifying_questions,
             "conversation_id": conversation_id,
+            "generated_title": generated_title,
             "message": clarifying_questions
         })
 
@@ -279,6 +307,7 @@ async def parse_brief():
         "requires_clarification": False,
         "requires_confirmation": True,
         "conversation_id": conversation_id,
+        "generated_title": generated_title,
         "message": "Please review and confirm the parsed creative brief"
     })
 
@@ -967,7 +996,7 @@ async def regenerate_content():
                 except Exception as e:
                     logger.warning(f"Failed to save regenerated image to blob: {e}")
 
-            # Save assistant response
+            # Save assistant response and update persisted generated_content
             try:
                 cosmos_service = await get_cosmos_service()
                 await cosmos_service.add_message_to_conversation(
@@ -979,6 +1008,47 @@ async def regenerate_content():
                         "agent": "ImageAgent",
                         "timestamp": datetime.now(timezone.utc).isoformat()
                     }
+                )
+
+                # Persist the regenerated image and updated products to generated_content
+                # so the latest image and color/product name are restored on conversation reload
+                new_image_url = response.get("image_url")
+                new_image_prompt = response.get("image_prompt")
+                new_image_revised_prompt = response.get("image_revised_prompt")
+
+                existing_conversation = await cosmos_service.get_conversation(conversation_id, user_id)
+                raw_content = (existing_conversation or {}).get("generated_content")
+                existing_content = raw_content if isinstance(raw_content, dict) else {}
+                old_image_url = existing_content.get("image_url")
+
+                # Replace old color/product name in text_content when product changes
+                old_products = existing_content.get("selected_products", [])
+                old_name = old_products[0].get("product_name", "") if old_products else ""
+                new_name = products_data[0].get("product_name", "") if products_data else ""
+                existing_text = existing_content.get("text_content")
+                if existing_text and old_name and new_name and old_name != new_name:
+                    pat = re.compile(re.escape(old_name), re.IGNORECASE)
+                    if isinstance(existing_text, dict):
+                        existing_text = {
+                            k: pat.sub(lambda _m: new_name, v) if isinstance(v, str) else v
+                            for k, v in existing_text.items()
+                        }
+                    elif isinstance(existing_text, str):
+                        existing_text = pat.sub(lambda _m: new_name, existing_text)
+
+                updated_content = {
+                    **existing_content,
+                    "image_url": new_image_url if new_image_url else old_image_url,
+                    "image_prompt": new_image_prompt if new_image_prompt else existing_content.get("image_prompt"),
+                    "image_revised_prompt": new_image_revised_prompt if new_image_revised_prompt else existing_content.get("image_revised_prompt"),
+                    "selected_products": products_data if products_data else existing_content.get("selected_products", []),
+                    **(({"text_content": existing_text} if existing_text is not None else {})),
+                }
+
+                await cosmos_service.save_generated_content(
+                    conversation_id=conversation_id,
+                    user_id=user_id,
+                    generated_content=updated_content
                 )
             except Exception as e:
                 logger.warning(f"Failed to save regeneration response to CosmosDB: {e}")
@@ -1317,6 +1387,29 @@ async def update_conversation(conversation_id: str):
     except Exception as e:
         logger.warning(f"Failed to rename conversation: {e}")
         return jsonify({"error": "Failed to rename conversation"}), 500
+
+
+@app.route("/api/conversations", methods=["DELETE"])
+async def delete_all_conversations():
+    """
+    Delete all conversations for the current user.
+
+    Uses authenticated user from EasyAuth headers.
+    """
+    auth_user = get_authenticated_user()
+    user_id = auth_user["user_principal_id"]
+
+    try:
+        cosmos_service = await get_cosmos_service()
+        deleted_count = await cosmos_service.delete_all_conversations(user_id)
+        return jsonify({
+            "success": True,
+            "message": f"Deleted {deleted_count} conversations",
+            "deleted_count": deleted_count
+        })
+    except Exception as e:
+        logger.warning(f"Failed to delete all conversations: {e}")
+        return jsonify({"error": "Failed to delete conversations"}), 500
 
 
 # ==================== Brand Guidelines Endpoints ====================
