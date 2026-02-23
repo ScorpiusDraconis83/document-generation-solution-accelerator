@@ -38,6 +38,20 @@ param secondaryLocation string = 'uksouth'
 
 // NOTE: Metadata must be compile-time constants. Update usageName manually if you change model parameters.
 // Format: 'OpenAI.<DeploymentType>.<ModelName>,<Capacity>'
+// Allowed regions: Union of GPT-5.1, gpt-image-1, and gpt-image-1.5 GlobalStandard availability
+@allowed([
+  'australiaeast'
+  'canadaeast'
+  'eastus2'
+  'japaneast'
+  'koreacentral'
+  'polandcentral'
+  'swedencentral'
+  'switzerlandnorth'
+  'uaenorth'
+  'uksouth'
+  'westus3'
+])
 @metadata({
   azd: {
     type: 'location'
