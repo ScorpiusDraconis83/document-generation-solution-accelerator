@@ -9,20 +9,13 @@ import type {
   ParsedBriefResponse,
   AppConfig,
 } from '../types';
-
-const API_BASE = '/api';
+import httpClient from './httpClient';
 
 /**
  * Get application configuration including feature flags
  */
 export async function getAppConfig(): Promise<AppConfig> {
-  const response = await fetch(`${API_BASE}/config`);
-
-  if (!response.ok) {
-    throw new Error(`Failed to get config: ${response.statusText}`);
-  }
-
-  return response.json();
+  return httpClient.get<AppConfig>('/config');
 }
 
 /**
@@ -34,22 +27,11 @@ export async function parseBrief(
   userId?: string,
   signal?: AbortSignal
 ): Promise<ParsedBriefResponse> {
-  const response = await fetch(`${API_BASE}/brief/parse`, {
-    signal,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      brief_text: briefText,
-      conversation_id: conversationId,
-      user_id: userId || 'anonymous',
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to parse brief: ${response.statusText}`);
-  }
-
-  return response.json();
+  return httpClient.post<ParsedBriefResponse>('/brief/parse', {
+    brief_text: briefText,
+    conversation_id: conversationId,
+    user_id: userId || 'anonymous',
+  }, { signal });
 }
 
 /**
@@ -60,21 +42,11 @@ export async function confirmBrief(
   conversationId?: string,
   userId?: string
 ): Promise<{ status: string; conversation_id: string; brief: CreativeBrief }> {
-  const response = await fetch(`${API_BASE}/brief/confirm`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      brief,
-      conversation_id: conversationId,
-      user_id: userId || 'anonymous',
-    }),
+  return httpClient.post('/brief/confirm', {
+    brief,
+    conversation_id: conversationId,
+    user_id: userId || 'anonymous',
   });
-
-  if (!response.ok) {
-    throw new Error(`Failed to confirm brief: ${response.statusText}`);
-  }
-
-  return response.json();
 }
 
 /**
@@ -87,23 +59,12 @@ export async function selectProducts(
   userId?: string,
   signal?: AbortSignal
 ): Promise<{ products: Product[]; action: string; message: string; conversation_id: string }> {
-  const response = await fetch(`${API_BASE}/products/select`, {
-    signal,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      request,
-      current_products: currentProducts,
-      conversation_id: conversationId,
-      user_id: userId || 'anonymous',
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to select products: ${response.statusText}`);
-  }
-
-  return response.json();
+  return httpClient.post('/products/select', {
+    request,
+    current_products: currentProducts,
+    conversation_id: conversationId,
+    user_id: userId || 'anonymous',
+  }, { signal });
 }
 
 /**
@@ -115,9 +76,9 @@ export async function* streamChat(
   userId?: string,
   signal?: AbortSignal
 ): AsyncGenerator<AgentResponse> {
-  const response = await fetch(`${API_BASE}/chat`, {
-    signal,
+  const response = await httpClient.raw('/chat', {
     method: 'POST',
+    signal,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       message,
@@ -174,27 +135,16 @@ export async function* streamGenerateContent(
   signal?: AbortSignal
 ): AsyncGenerator<AgentResponse> {
   // Use polling-based approach for reliability with long-running tasks
-  const startResponse = await fetch(`${API_BASE}/generate/start`, {
-    signal,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      brief,
-      products: products || [],
-      generate_images: generateImages,
-      conversation_id: conversationId,
-      user_id: userId || 'anonymous',
-    }),
-  });
-
-  if (!startResponse.ok) {
-    throw new Error(`Content generation failed to start: ${startResponse.statusText}`);
-  }
-
-  const startData = await startResponse.json();
+  const startData = await httpClient.post<{ task_id: string }>('/generate/start', {
+    brief,
+    products: products || [],
+    generate_images: generateImages,
+    conversation_id: conversationId,
+    user_id: userId || 'anonymous',
+  }, { signal });
   const taskId = startData.task_id;
   
-  console.log(`Generation started with task ID: ${taskId}`);
+  console.debug(`Generation started with task ID: ${taskId}`);
   
   // Yield initial status
   yield {
@@ -223,12 +173,10 @@ export async function* streamGenerateContent(
     }
     
     try {
-      const statusResponse = await fetch(`${API_BASE}/generate/status/${taskId}`, { signal });
-      if (!statusResponse.ok) {
-        throw new Error(`Failed to get task status: ${statusResponse.statusText}`);
-      }
-      
-      const statusData = await statusResponse.json();
+      const statusData = await httpClient.get<{ status: string; result?: unknown; error?: string }>(
+        `/generate/status/${taskId}`,
+        { signal },
+      );
       
       if (statusData.status === 'completed') {
         // Yield the final result
@@ -300,9 +248,9 @@ export async function* streamRegenerateImage(
   userId?: string,
   signal?: AbortSignal
 ): AsyncGenerator<AgentResponse> {
-  const response = await fetch(`${API_BASE}/regenerate`, {
-    signal,
+  const response = await httpClient.raw('/regenerate', {
     method: 'POST',
+    signal,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       modification_request: modificationRequest,

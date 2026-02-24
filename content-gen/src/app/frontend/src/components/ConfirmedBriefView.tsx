@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import {
   Text,
   Badge,
@@ -24,7 +25,7 @@ const briefFields: { key: keyof CreativeBrief; label: string }[] = [
   { key: 'cta', label: 'Call to Action' },
 ];
 
-export function ConfirmedBriefView({ brief }: ConfirmedBriefViewProps) {
+export const ConfirmedBriefView = memo(function ConfirmedBriefView({ brief }: ConfirmedBriefViewProps) {
   return (
     <div className="message assistant" style={{ 
       width: '100%',
@@ -88,4 +89,5 @@ export function ConfirmedBriefView({ brief }: ConfirmedBriefViewProps) {
       </div>
     </div>
   );
-}
+});
+ConfirmedBriefView.displayName = 'ConfirmedBriefView';

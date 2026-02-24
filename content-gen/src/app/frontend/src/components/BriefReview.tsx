@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react';
 import {
   Button,
   Text,
@@ -25,34 +26,38 @@ const fieldLabels: Record<keyof CreativeBrief, string> = {
   cta: 'Call to Action',
 };
 
-export function BriefReview({
+export const BriefReview = memo(function BriefReview({
   brief,
   onConfirm,
   onStartOver,
   isAwaitingResponse = false,
 }: BriefReviewProps) {
-  const allFields: (keyof CreativeBrief)[] = [
-    'overview', 'objectives', 'target_audience', 'key_message', 
-    'tone_and_style', 'deliverable', 'timelines', 'visual_guidelines', 'cta'
-  ];
-  const populatedFields = allFields.filter(key => brief[key]?.trim()).length;
-  const missingFields = allFields.filter(key => !brief[key]?.trim());
+  const { populatedFields, missingFields, populatedDisplayFields } = useMemo(() => {
+    const allFields: (keyof CreativeBrief)[] = [
+      'overview', 'objectives', 'target_audience', 'key_message', 
+      'tone_and_style', 'deliverable', 'timelines', 'visual_guidelines', 'cta'
+    ];
+    const populated = allFields.filter(key => brief[key]?.trim()).length;
+    const missing = allFields.filter(key => !brief[key]?.trim());
 
-  // Define the order and labels for display in the card
-  const displayOrder: { key: keyof CreativeBrief; label: string }[] = [
-    { key: 'overview', label: 'Campaign Objective' },
-    { key: 'objectives', label: 'Objectives' },
-    { key: 'target_audience', label: 'Target Audience' },
-    { key: 'key_message', label: 'Key Message' },
-    { key: 'tone_and_style', label: 'Tone & Style' },
-    { key: 'visual_guidelines', label: 'Visual Guidelines' },
-    { key: 'deliverable', label: 'Deliverables' },
-    { key: 'timelines', label: 'Timelines' },
-    { key: 'cta', label: 'Call to Action' },
-  ];
+    const displayOrder: { key: keyof CreativeBrief; label: string }[] = [
+      { key: 'overview', label: 'Campaign Objective' },
+      { key: 'objectives', label: 'Objectives' },
+      { key: 'target_audience', label: 'Target Audience' },
+      { key: 'key_message', label: 'Key Message' },
+      { key: 'tone_and_style', label: 'Tone & Style' },
+      { key: 'visual_guidelines', label: 'Visual Guidelines' },
+      { key: 'deliverable', label: 'Deliverables' },
+      { key: 'timelines', label: 'Timelines' },
+      { key: 'cta', label: 'Call to Action' },
+    ];
 
-  // Filter to only populated fields
-  const populatedDisplayFields = displayOrder.filter(({ key }) => brief[key]?.trim());
+    return {
+      populatedFields: populated,
+      missingFields: missing,
+      populatedDisplayFields: displayOrder.filter(({ key }) => brief[key]?.trim()),
+    };
+  }, [brief]);
 
   return (
     <div className="message assistant" style={{ 
@@ -182,4 +187,5 @@ export function BriefReview({
       </div>
     </div>
   );
-}
+});
+BriefReview.displayName = 'BriefReview';
