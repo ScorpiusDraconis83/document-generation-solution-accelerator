@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
-import { v4 as uuidv4 } from 'uuid';
 
-import type { ChatMessage, Product, CreativeBrief, GeneratedContent } from '../types';
+import type { ChatMessage, Product, CreativeBrief } from '../types';
+import { createMessage, buildGeneratedContent } from '../utils';
 import httpClient from '../api/httpClient';
 import {
   useAppDispatch,
@@ -24,23 +24,6 @@ import {
   setGeneratedContent,
   toggleChatHistory,
 } from '../store';
-
-/* ------------------------------------------------------------------ */
-/*  Helper: create a ChatMessage literal                               */
-/* ------------------------------------------------------------------ */
-function msg(
-  role: 'user' | 'assistant',
-  content: string,
-  agent?: string,
-): ChatMessage {
-  return {
-    id: uuidv4(),
-    role,
-    content,
-    agent,
-    timestamp: new Date().toISOString(),
-  };
-}
 
 /* ------------------------------------------------------------------ */
 /*  Hook                                                               */
@@ -124,52 +107,7 @@ export function useConversationActions() {
         if (data.generated_content) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const gc = data.generated_content as any;
-          let textContent = gc.text_content;
-          if (typeof textContent === 'string') {
-            try {
-              textContent = JSON.parse(textContent);
-            } catch {
-              // keep as-is
-            }
-          }
-
-          let imageUrl: string | undefined = gc.image_url;
-          if (imageUrl && imageUrl.includes('blob.core.windows.net')) {
-            const parts = imageUrl.split('/');
-            const filename = parts[parts.length - 1];
-            const convId = parts[parts.length - 2];
-            imageUrl = `/api/images/${convId}/${filename}`;
-          }
-          if (!imageUrl && gc.image_base64) {
-            imageUrl = `data:image/png;base64,${gc.image_base64}`;
-          }
-
-          const restoredContent: GeneratedContent = {
-            text_content:
-              typeof textContent === 'object' && textContent
-                ? {
-                    headline: textContent?.headline,
-                    body: textContent?.body,
-                    cta_text: textContent?.cta,
-                    tagline: textContent?.tagline,
-                  }
-                : undefined,
-            image_content:
-              imageUrl || gc.image_prompt
-                ? {
-                    image_url: imageUrl,
-                    prompt_used: gc.image_prompt,
-                    alt_text:
-                      gc.image_revised_prompt ||
-                      'Generated marketing image',
-                  }
-                : undefined,
-            violations: gc.violations || [],
-            requires_modification: gc.requires_modification || false,
-            error: gc.error,
-            image_error: gc.image_error,
-            text_error: gc.text_error,
-          };
+          const restoredContent = buildGeneratedContent(gc, true);
           dispatch(setGeneratedContent(restoredContent));
 
           if (
@@ -219,7 +157,7 @@ export function useConversationActions() {
 
       dispatch(
         addMessage(
-          msg(
+          createMessage(
             'assistant',
             "Great! Your creative brief has been confirmed. Here are the available products for your campaign. Select the ones you'd like to feature, or tell me what you're looking for.",
             'ProductAgent',
@@ -236,7 +174,7 @@ export function useConversationActions() {
     dispatch(setAwaitingClarification(false));
     dispatch(
       addMessage(
-        msg(
+        createMessage(
           'assistant',
           'No problem. Please provide your creative brief again or ask me any questions.',
         ),
@@ -252,7 +190,7 @@ export function useConversationActions() {
     dispatch(setConfirmedBrief(null));
     dispatch(
       addMessage(
-        msg(
+        createMessage(
           'assistant',
           'Starting over. Please provide your creative brief to begin a new campaign.',
         ),

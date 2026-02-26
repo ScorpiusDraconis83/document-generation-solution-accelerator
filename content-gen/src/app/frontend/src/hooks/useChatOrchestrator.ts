@@ -1,7 +1,7 @@
 import { useCallback, type MutableRefObject } from 'react';
-import { v4 as uuidv4 } from 'uuid';
 
-import type { ChatMessage, GeneratedContent } from '../types';
+import type { GeneratedContent } from '../types';
+import { createMessage, matchesAnyKeyword, createNameSwapper } from '../utils';
 import {
   useAppDispatch,
   useAppSelector,
@@ -25,23 +25,6 @@ import {
   selectConversationTitle,
   setConversationTitle,
 } from '../store';
-
-/* ------------------------------------------------------------------ */
-/*  Helper: create a ChatMessage literal                               */
-/* ------------------------------------------------------------------ */
-function msg(
-  role: 'user' | 'assistant',
-  content: string,
-  agent?: string,
-): ChatMessage {
-  return {
-    id: uuidv4(),
-    role,
-    content,
-    agent,
-    timestamp: new Date().toISOString(),
-  };
-}
 
 /* ------------------------------------------------------------------ */
 /*  Hook                                                               */
@@ -81,7 +64,7 @@ export function useChatOrchestrator(
 
   const sendMessage = useCallback(
     async (content: string) => {
-      dispatch(addMessage(msg('user', content)));
+      dispatch(addMessage(createMessage('user', content)));
       dispatch(setIsLoading(true));
 
       // Create new abort controller for this request
@@ -101,10 +84,8 @@ export function useChatOrchestrator(
           const refinementKeywords = [
             'change', 'update', 'modify', 'add', 'remove', 'delete',
             'set', 'make', 'should be',
-          ];
-          const isRefinement = refinementKeywords.some((kw) =>
-            content.toLowerCase().includes(kw),
-          );
+          ] as const;
+          const isRefinement = matchesAnyKeyword(content, refinementKeywords);
 
           if (isRefinement || awaitingClarification) {
             // --- 1-a  Refine the brief --------------------------------
@@ -131,7 +112,7 @@ export function useChatOrchestrator(
               dispatch(setGenerationStatus(''));
               dispatch(
                 addMessage(
-                  msg('assistant', parsed.clarifying_questions, 'PlanningAgent'),
+                  createMessage('assistant', parsed.clarifying_questions, 'PlanningAgent'),
                 ),
               );
             } else {
@@ -139,7 +120,7 @@ export function useChatOrchestrator(
               dispatch(setGenerationStatus(''));
               dispatch(
                 addMessage(
-                  msg(
+                  createMessage(
                     'assistant',
                     "I've updated the brief based on your feedback. Please review the changes above. Let me know if you'd like any other modifications, or click **Confirm Brief** when you're satisfied.",
                     'PlanningAgent',
@@ -168,14 +149,14 @@ export function useChatOrchestrator(
                   !messageAdded
                 ) {
                   dispatch(
-                    addMessage(msg('assistant', fullContent, currentAgent)),
+                    addMessage(createMessage('assistant', fullContent, currentAgent)),
                   );
                   messageAdded = true;
                 }
               } else if (response.type === 'error') {
                 dispatch(
                   addMessage(
-                    msg(
+                    createMessage(
                       'assistant',
                       response.content ||
                         'An error occurred while processing your request.',
@@ -204,7 +185,7 @@ export function useChatOrchestrator(
           dispatch(setGenerationStatus(''));
           dispatch(
             addMessage(
-              msg(
+              createMessage(
                 'assistant',
                 result.message || 'Products updated.',
                 'ProductAgent',
@@ -222,10 +203,8 @@ export function useChatOrchestrator(
             'kitchen', 'dining', 'living', 'bedroom', 'bathroom', 'outdoor',
             'office', 'room', 'scene', 'setting', 'background', 'style',
             'color', 'lighting',
-          ];
-          const isImageModification = imageModificationKeywords.some((kw) =>
-            content.toLowerCase().includes(kw),
-          );
+          ] as const;
+          const isImageModification = matchesAnyKeyword(content, imageModificationKeywords);
 
           if (isImageModification) {
             // --- 3-a  Regenerate image --------------------------------
@@ -275,28 +254,10 @@ export function useChatOrchestrator(
                     parsedContent.image_base64
                   ) {
                     // Replace old product name in text_content when switching
-                    const oldName = selectedProducts[0]?.product_name;
-                    const newName = mentionedProduct?.product_name;
-                    const nameRegex = oldName
-                      ? new RegExp(
-                          oldName.replace(
-                            /[.*+?^${}()|[\]\\]/g,
-                            '\\$&',
-                          ),
-                          'gi',
-                        )
-                      : undefined;
-                    const swapName = (s?: string) => {
-                      if (
-                        !s ||
-                        !oldName ||
-                        !newName ||
-                        oldName === newName ||
-                        !nameRegex
-                      )
-                        return s;
-                      return s.replace(nameRegex, () => newName);
-                    };
+                    const swapName = createNameSwapper(
+                      selectedProducts[0]?.product_name,
+                      mentionedProduct?.product_name,
+                    );
                     const tc = generatedContent.text_content;
 
                     responseData = {
@@ -304,10 +265,10 @@ export function useChatOrchestrator(
                       text_content: mentionedProduct
                         ? {
                             ...tc,
-                            headline: swapName(tc?.headline),
-                            body: swapName(tc?.body),
-                            tagline: swapName(tc?.tagline),
-                            cta_text: swapName(tc?.cta_text),
+                            headline: swapName?.(tc?.headline) ?? tc?.headline,
+                            body: swapName?.(tc?.body) ?? tc?.body,
+                            tagline: swapName?.(tc?.tagline) ?? tc?.tagline,
+                            cta_text: swapName?.(tc?.cta_text) ?? tc?.cta_text,
                           }
                         : tc,
                       image_content: {
@@ -356,7 +317,7 @@ export function useChatOrchestrator(
 
             dispatch(setGenerationStatus(''));
             dispatch(
-              addMessage(msg('assistant', messageContent, 'ImageAgent')),
+              addMessage(createMessage('assistant', messageContent, 'ImageAgent')),
             );
           } else {
             // --- 3-b  General question after content generation --------
@@ -379,14 +340,14 @@ export function useChatOrchestrator(
                   !messageAdded
                 ) {
                   dispatch(
-                    addMessage(msg('assistant', fullContent, currentAgent)),
+                    addMessage(createMessage('assistant', fullContent, currentAgent)),
                   );
                   messageAdded = true;
                 }
               } else if (response.type === 'error') {
                 dispatch(
                   addMessage(
-                    msg(
+                    createMessage(
                       'assistant',
                       response.content || 'An error occurred.',
                     ),
@@ -405,10 +366,8 @@ export function useChatOrchestrator(
           const briefKeywords = [
             'campaign', 'marketing', 'target audience', 'objective',
             'deliverable',
-          ];
-          const isBriefLike = briefKeywords.some((kw) =>
-            content.toLowerCase().includes(kw),
-          );
+          ] as const;
+          const isBriefLike = matchesAnyKeyword(content, briefKeywords);
 
           if (isBriefLike && !confirmedBrief) {
             // --- 4-a  Parse as creative brief --------------------------
@@ -428,7 +387,7 @@ export function useChatOrchestrator(
               dispatch(setGenerationStatus(''));
               dispatch(
                 addMessage(
-                  msg('assistant', parsed.message, 'ContentSafety'),
+                  createMessage('assistant', parsed.message, 'ContentSafety'),
                 ),
               );
             } else if (
@@ -442,7 +401,7 @@ export function useChatOrchestrator(
               dispatch(setGenerationStatus(''));
               dispatch(
                 addMessage(
-                  msg(
+                  createMessage(
                     'assistant',
                     parsed.clarifying_questions,
                     'PlanningAgent',
@@ -457,7 +416,7 @@ export function useChatOrchestrator(
               dispatch(setGenerationStatus(''));
               dispatch(
                 addMessage(
-                  msg(
+                  createMessage(
                     'assistant',
                     "I've parsed your creative brief. Please review the details below and let me know if you'd like to make any changes. You can say things like \"change the target audience to...\" or \"add a call to action...\". When everything looks good, click **Confirm Brief** to proceed.",
                     'PlanningAgent',
@@ -486,14 +445,14 @@ export function useChatOrchestrator(
                   !messageAdded
                 ) {
                   dispatch(
-                    addMessage(msg('assistant', fullContent, currentAgent)),
+                    addMessage(createMessage('assistant', fullContent, currentAgent)),
                   );
                   messageAdded = true;
                 }
               } else if (response.type === 'error') {
                 dispatch(
                   addMessage(
-                    msg(
+                    createMessage(
                       'assistant',
                       response.content ||
                         'An error occurred while processing your request.',
@@ -509,12 +468,12 @@ export function useChatOrchestrator(
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') {
           console.debug('Request cancelled by user');
-          dispatch(addMessage(msg('assistant', 'Generation stopped.')));
+          dispatch(addMessage(createMessage('assistant', 'Generation stopped.')));
         } else {
           console.error('Error sending message:', error);
           dispatch(
             addMessage(
-              msg(
+              createMessage(
                 'assistant',
                 'Sorry, there was an error processing your request. Please try again.',
               ),

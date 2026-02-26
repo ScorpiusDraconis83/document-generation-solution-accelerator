@@ -10,6 +10,8 @@ import type {
   AppConfig,
 } from '../types';
 import httpClient from './httpClient';
+import { parseSSEStream } from '../utils/sseParser';
+import { getGenerationStage } from '../utils/generationStages';
 
 /**
  * Get application configuration including feature flags
@@ -96,31 +98,7 @@ export async function* streamChat(
     throw new Error('No response body');
   }
 
-  const decoder = new TextDecoder();
-  let buffer = '';
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n\n');
-    buffer = lines.pop() || '';
-
-    for (const line of lines) {
-      if (line.startsWith('data: ')) {
-        const data = line.slice(6);
-        if (data === '[DONE]') {
-          return;
-        }
-        try {
-          yield JSON.parse(data) as AgentResponse;
-        } catch {
-          console.error('Failed to parse SSE data:', data);
-        }
-      }
-    }
-  }
+  yield* parseSSEStream(reader);
 }
 
 /**
@@ -189,31 +167,8 @@ export async function* streamGenerateContent(
       } else if (statusData.status === 'failed') {
         throw new Error(statusData.error || 'Generation failed');
       } else if (statusData.status === 'running') {
-        // Determine progress stage based on elapsed time
-        // Typical generation: 0-10s briefing, 10-25s copy, 25-45s image, 45-60s compliance
         const elapsedSeconds = attempts;
-        let stage: number;
-        let stageMessage: string;
-        
-        if (elapsedSeconds < 10) {
-          stage = 0;
-          stageMessage = 'Analyzing creative brief...';
-        } else if (elapsedSeconds < 25) {
-          stage = 1;
-          stageMessage = 'Generating marketing copy...';
-        } else if (elapsedSeconds < 35) {
-          stage = 2;
-          stageMessage = 'Creating image prompt...';
-        } else if (elapsedSeconds < 55) {
-          stage = 3;
-          stageMessage = 'Generating image with AI...';
-        } else if (elapsedSeconds < 70) {
-          stage = 4;
-          stageMessage = 'Running compliance check...';
-        } else {
-          stage = 5;
-          stageMessage = 'Finalizing content...';
-        }
+        const { stage, message: stageMessage } = getGenerationStage(elapsedSeconds);
         
         // Send status update every second for smoother progress
         yield {
@@ -271,29 +226,5 @@ export async function* streamRegenerateImage(
     throw new Error('No response body');
   }
 
-  const decoder = new TextDecoder();
-  let buffer = '';
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n\n');
-    buffer = lines.pop() || '';
-
-    for (const line of lines) {
-      if (line.startsWith('data: ')) {
-        const data = line.slice(6);
-        if (data === '[DONE]') {
-          return;
-        }
-        try {
-          yield JSON.parse(data) as AgentResponse;
-        } catch {
-          console.error('Failed to parse SSE data:', data);
-        }
-      }
-    }
-  }
+  yield* parseSSEStream(reader);
 }

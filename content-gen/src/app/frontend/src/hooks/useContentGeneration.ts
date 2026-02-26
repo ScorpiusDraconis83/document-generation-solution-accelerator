@@ -1,7 +1,6 @@
 import { useCallback, type MutableRefObject } from 'react';
-import { v4 as uuidv4 } from 'uuid';
 
-import type { ChatMessage, GeneratedContent } from '../types';
+import { createMessage, buildGeneratedContent } from '../utils';
 import {
   useAppDispatch,
   useAppSelector,
@@ -64,52 +63,7 @@ export function useContentGeneration(
           dispatch(setGenerationStatus('Processing results...'));
           try {
             const rawContent = JSON.parse(response.content);
-
-            // Parse text_content if it's a string (from orchestrator)
-            let textContent = rawContent.text_content;
-            if (typeof textContent === 'string') {
-              try {
-                textContent = JSON.parse(textContent);
-              } catch {
-                // Keep as string if not valid JSON
-              }
-            }
-
-            // Build image_url: prefer blob URL, fallback to base64 data URL
-            let imageUrl: string | undefined;
-            if (rawContent.image_url) {
-              imageUrl = rawContent.image_url;
-            } else if (rawContent.image_base64) {
-              imageUrl = `data:image/png;base64,${rawContent.image_base64}`;
-            }
-
-            const genContent: GeneratedContent = {
-              text_content:
-                typeof textContent === 'object'
-                  ? {
-                      headline: textContent?.headline,
-                      body: textContent?.body,
-                      cta_text: textContent?.cta,
-                      tagline: textContent?.tagline,
-                    }
-                  : undefined,
-              image_content:
-                imageUrl || rawContent.image_prompt
-                  ? {
-                      image_url: imageUrl,
-                      prompt_used: rawContent.image_prompt,
-                      alt_text:
-                        rawContent.image_revised_prompt ||
-                        'Generated marketing image',
-                    }
-                  : undefined,
-              violations: rawContent.violations || [],
-              requires_modification:
-                rawContent.requires_modification || false,
-              error: rawContent.error,
-              image_error: rawContent.image_error,
-              text_error: rawContent.text_error,
-            };
+            const genContent = buildGeneratedContent(rawContent);
             dispatch(setGeneratedContent(genContent));
             dispatch(setGenerationStatus(''));
           } catch (parseError) {
@@ -117,35 +71,22 @@ export function useContentGeneration(
           }
         } else if (response.type === 'error') {
           dispatch(setGenerationStatus(''));
-          const errorMessage: ChatMessage = {
-            id: uuidv4(),
-            role: 'assistant',
-            content: `Error generating content: ${response.content}`,
-            timestamp: new Date().toISOString(),
-          };
-          dispatch(addMessage(errorMessage));
+          dispatch(addMessage(createMessage(
+            'assistant',
+            `Error generating content: ${response.content}`,
+          )));
         }
       }
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         console.debug('Content generation cancelled by user');
-        const cancelMessage: ChatMessage = {
-          id: uuidv4(),
-          role: 'assistant',
-          content: 'Content generation stopped.',
-          timestamp: new Date().toISOString(),
-        };
-        dispatch(addMessage(cancelMessage));
+        dispatch(addMessage(createMessage('assistant', 'Content generation stopped.')));
       } else {
         console.error('Error generating content:', error);
-        const errorMessage: ChatMessage = {
-          id: uuidv4(),
-          role: 'assistant',
-          content:
-            'Sorry, there was an error generating content. Please try again.',
-          timestamp: new Date().toISOString(),
-        };
-        dispatch(addMessage(errorMessage));
+        dispatch(addMessage(createMessage(
+          'assistant',
+          'Sorry, there was an error generating content. Please try again.',
+        )));
       }
     } finally {
       dispatch(setIsLoading(false));
