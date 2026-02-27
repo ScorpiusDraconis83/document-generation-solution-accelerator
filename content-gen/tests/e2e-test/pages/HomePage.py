@@ -64,6 +64,8 @@ class HomePage(BasePage):
     CLEAR_ALL_BUTTON = "//button[normalize-space()='Clear All']"
     NO_CONVERSATIONS_TEXT = "//span[.='No conversations yet']"
     CHAT_HISTORY_MORE_OPTIONS  = "(//button[@style='min-width: 24px; height: 24px; padding: 2px; color: var(--colorNeutralForeground3);'])[1]"
+    HIDE_CHAT_HISTORY_BUTTON = "//button[@aria-label='Hide chat history']"
+    SHOW_CHAT_HISTORY_BUTTON = "//button[@aria-label='Show chat history']"
 
     # --- ERROR DETECTION PHRASES ---
     # Specific phrases indicating errors in AI responses.
@@ -182,6 +184,63 @@ class HomePage(BasePage):
             raise
         except Exception as e:
             error_msg = f"Failed to validate chat history: {str(e)}"
+            logger.error(f"❌ {error_msg}")
+            raise AssertionError(error_msg) from e
+
+    def show_hide_chat_history(self):
+        """
+        Validate show/hide chat history toggle functionality.
+        Steps:
+        1. Validate 'Hide chat history' button is visible and click it
+        2. Validate chat history panel is hidden (CHAT_HISTORY not visible)
+        3. Validate 'Show chat history' button is visible and click it
+        4. Validate chat history panel is shown again (CHAT_HISTORY visible)
+        """
+        logger.info("=" * 80)
+        logger.info("Starting Show/Hide Chat History Validation")
+        logger.info("=" * 80)
+
+        try:
+            # Step 1: Click 'Hide chat history' button
+            logger.info("Step 1: Clicking 'Hide chat history' button...")
+            hide_button = self.page.locator(self.HIDE_CHAT_HISTORY_BUTTON)
+            expect(hide_button).to_be_visible(timeout=10000)
+            hide_button.click()
+            self.page.wait_for_timeout(2000)
+            logger.info("✓ 'Hide chat history' button clicked")
+
+            # Step 2: Validate chat history panel is hidden
+            logger.info("Step 2: Validating chat history panel is hidden...")
+            chat_history = self.page.locator(self.CHAT_HISTORY)
+            expect(chat_history).not_to_be_visible(timeout=10000)
+            logger.info("✓ Chat history panel is hidden")
+
+            # Step 3: Click 'Show chat history' button
+            logger.info("Step 3: Clicking 'Show chat history' button...")
+            show_button = self.page.locator(self.SHOW_CHAT_HISTORY_BUTTON)
+            expect(show_button).to_be_visible(timeout=10000)
+            show_button.click()
+            self.page.wait_for_timeout(2000)
+            logger.info("✓ 'Show chat history' button clicked")
+
+            # Step 4: Validate chat history panel is visible again
+            logger.info("Step 4: Validating chat history panel is visible again...")
+            expect(chat_history).to_be_visible(timeout=10000)
+            logger.info("✓ Chat history panel is visible again")
+
+            logger.info("=" * 80)
+            logger.info("Show/Hide Chat History Validation Completed Successfully!")
+            logger.info("=" * 80)
+
+            return {
+                'status': 'PASSED',
+                'validation': 'Chat history show/hide toggle works correctly'
+            }
+
+        except AssertionError:
+            raise
+        except Exception as e:
+            error_msg = f"Failed to validate show/hide chat history: {str(e)}"
             logger.error(f"❌ {error_msg}")
             raise AssertionError(error_msg) from e
 

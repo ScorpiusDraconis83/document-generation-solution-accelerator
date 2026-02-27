@@ -137,7 +137,6 @@ def test_validate_gp(login_logout, request):
         raise
 
 
-@pytest.mark.skip(reason="Skipped - running only GP test")
 def test_validate_chat_history_panel(login_logout, request):
     """
     Test case to validate chat history panel is displayed.
@@ -203,16 +202,12 @@ def test_validate_chat_history_panel(login_logout, request):
         raise
 
 
-@pytest.mark.skip(reason="Skipped - running only GP test")
 def test_validate_rename_chat_history(login_logout, request):
     """
     Test case to validate renaming a chat history item.
     Steps:
     1. Validate home page elements are visible
-    2. Send prompt from quick link
-    3. Confirm brief
-    4. Select color and generate content
-    5. Rename chat history item
+    2. Rename chat history item
     """
     page = login_logout
     page.goto(URL)
@@ -227,38 +222,16 @@ def test_validate_rename_chat_history(login_logout, request):
         home.validate_home_page()
         step1_end = time.time()
 
-        # Step 2: Send Prompt from Quick Link
+        # Step 2: Rename Chat History with dynamic name
         step2_start = time.time()
-        home.send_prompt_from_quick_link(home.USER_MESSAGE)
-        step2_end = time.time()
-
-        # Step 3: Confirm Brief
-        step3_start = time.time()
-        home.confirm_brief()
-        step3_end = time.time()
-
-        # Step 4: Select Color and Generate Content
-        step4_start = time.time()
-        home.select_color_and_generate_content(
-            color_locator=home.OLIVE_STONE_TEXT,
-            generated_content_locator=home.GENERATED_CONTENT_TEXT_OLIVE,
-            expected_color="olive"
-        )
-        step4_end = time.time()
-
-        # Step 5: Rename Chat History with dynamic name
-        step5_start = time.time()
         dynamic_name = f"updated_chat_{int(time.time())}"
         home.rename_chat_history(dynamic_name)
-        step5_end = time.time()
+        step2_end = time.time()
 
         # Log test summary
         step_times = [
             ("Step 1 (Home Page Validation)", step1_end - step1_start),
-            ("Step 2 (Send Prompt)", step2_end - step2_start),
-            ("Step 3 (Confirm Brief)", step3_end - step3_start),
-            ("Step 4 (Generate Content)", step4_end - step4_start),
-            ("Step 5 (Rename Chat History)", step5_end - step5_start)
+            ("Step 2 (Rename Chat History)", step2_end - step2_start)
         ]
         total_duration = log_test_summary(start_time, step_times, "Rename Chat History Test")
 
@@ -270,7 +243,6 @@ def test_validate_rename_chat_history(login_logout, request):
         raise
 
 
-@pytest.mark.skip(reason="Skipped - running only GP test")
 def test_validate_delete_chat_history(login_logout, request):
     """
     Test case to validate deleting a chat history item.
@@ -336,17 +308,13 @@ def test_validate_delete_chat_history(login_logout, request):
         raise
 
 
-@pytest.mark.skip(reason="Skipped - running only GP test")
 def test_validate_rename_empty_validation(login_logout, request):
     """
     Test case to validate that the rename button is disabled and a validation
     message is shown when the conversation name input is empty.
     Steps:
     1. Validate home page elements are visible
-    2. Send prompt from quick link
-    3. Confirm brief
-    4. Select color and generate content
-    5. Validate rename button disabled and validation message displayed, then cancel
+    2. Validate rename button disabled and validation message displayed, then cancel
     """
     page = login_logout
     page.goto(URL)
@@ -361,37 +329,15 @@ def test_validate_rename_empty_validation(login_logout, request):
         home.validate_home_page()
         step1_end = time.time()
 
-        # Step 2: Send Prompt from Quick Link
+        # Step 2: Validate rename button disabled & validation message, then cancel
         step2_start = time.time()
-        home.send_prompt_from_quick_link(home.USER_MESSAGE)
-        step2_end = time.time()
-
-        # Step 3: Confirm Brief
-        step3_start = time.time()
-        home.confirm_brief()
-        step3_end = time.time()
-
-        # Step 4: Select Color and Generate Content
-        step4_start = time.time()
-        home.select_color_and_generate_content(
-            color_locator=home.OLIVE_STONE_TEXT,
-            generated_content_locator=home.GENERATED_CONTENT_TEXT_OLIVE,
-            expected_color="olive"
-        )
-        step4_end = time.time()
-
-        # Step 5: Validate rename button disabled & validation message, then cancel
-        step5_start = time.time()
         home.validate_rename_empty_validation()
-        step5_end = time.time()
+        step2_end = time.time()
 
         # Log test summary
         step_times = [
             ("Step 1 (Home Page Validation)", step1_end - step1_start),
-            ("Step 2 (Send Prompt)", step2_end - step2_start),
-            ("Step 3 (Confirm Brief)", step3_end - step3_start),
-            ("Step 4 (Generate Content)", step4_end - step4_start),
-            ("Step 5 (Rename Empty Validation)", step5_end - step5_start)
+            ("Step 2 (Rename Empty Validation)", step2_end - step2_start)
         ]
         total_duration = log_test_summary(start_time, step_times, "Rename Empty Validation Test")
 
@@ -403,7 +349,6 @@ def test_validate_rename_empty_validation(login_logout, request):
         raise
 
 
-@pytest.mark.skip(reason="Skipped - running only GP test")
 def test_validate_stop_generation(login_logout, request):
     """
     Test case to validate stop generation functionality.
@@ -452,7 +397,6 @@ def test_validate_stop_generation(login_logout, request):
         raise
 
 
-@pytest.mark.skip(reason="Skipped - running only GP test")
 def test_validate_start_over(login_logout, request):
     """
     Test case to validate start over functionality after stopping generation.
@@ -503,7 +447,6 @@ def test_validate_start_over(login_logout, request):
         raise
 
 
-@pytest.mark.skip(reason="Skipped - running only GP test")
 def test_validate_start_new_chat(login_logout, request):
     """
     Test case to validate start new chat functionality after content generation.
@@ -570,7 +513,6 @@ def test_validate_start_new_chat(login_logout, request):
         raise
 
 
-@pytest.mark.skip(reason="Skipped - running only GP test")
 def test_validate_input_disabled_during_generation(login_logout, request):
     """
     Test case to validate that the input field and send button are disabled
@@ -619,7 +561,6 @@ def test_validate_input_disabled_during_generation(login_logout, request):
         raise
 
 
-@pytest.mark.skip(reason="Skipped - running only GP test")
 def test_validate_download_image(login_logout, request):
     """
     Test case to validate download image functionality after content generation.
@@ -685,7 +626,39 @@ def test_validate_download_image(login_logout, request):
         raise
 
 
-@pytest.mark.skip(reason="Skipped - running only GP test")
+def test_validate_show_hide_chat_history(login_logout, request):
+    """
+    Test case to validate show/hide chat history toggle functionality.
+    Steps:
+    1. Validate show/hide chat history toggle
+    """
+    page = login_logout
+    page.goto(URL)
+    page.wait_for_timeout(3000)
+    home = HomePage(page)
+    request.node._nodeid = "Content Generation - Validate show/hide chat history"
+    start_time = time.time()
+
+    try:
+        # Step 1: Validate Show/Hide Chat History
+        step1_start = time.time()
+        home.show_hide_chat_history()
+        step1_end = time.time()
+
+        # Log test summary
+        step_times = [
+            ("Step 1 (Show/Hide Chat History)", step1_end - step1_start)
+        ]
+        total_duration = log_test_summary(start_time, step_times, "Show/Hide Chat History Test")
+
+        request.node._report_sections.append(
+            ("call", "log", f"Total execution time: {total_duration:.2f}s")
+        )
+    except Exception as e:
+        log_test_failure(start_time, e)
+        raise
+
+
 def test_validate_clear_all_chat_history(login_logout, request):
     """
     Test case to validate clear all chat history functionality.
