@@ -37,7 +37,7 @@ on:
     outputs:
       WEB_APPURL:
         description: "Container Web App URL"
-        value: ${{ jobs.deploy-linux.outputs.WEB_APPURL }}
+        value: ${{ jobs.deploy-linux.outputs.WEB_APP_URL }}
 permissions:
   contents: read
   actions: read
@@ -48,7 +48,7 @@ jobs:
     env:
       AZURE_DEV_COLLECT_TELEMETRY: ${{ vars.AZURE_DEV_COLLECT_TELEMETRY }}
     outputs:
-      WEB_APPURL: ${{ steps.get_output_linux.outputs.WEB_APPURL }}
+      WEB_APP_URL: ${{ steps.get_output_linux.outputs.WEB_APP_URL }}
     steps:
       - name: Validate Workflow Input Parameters
         shell: bash
@@ -183,7 +183,7 @@ jobs:
           echo ""
           echo "✅ All input parameters validated successfully!"
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       
       - name: Configure Parameters Based on WAF Setting
         shell: bash
@@ -191,7 +191,7 @@ jobs:
           WAF_ENABLED: ${{ inputs.WAF_ENABLED }}
         run: |
           if [[ "$WAF_ENABLED" == "true" ]]; then
-            cp infra/main.waf.parameters.json infra/main.parameters.json
+            cp content-gen/infra/main.waf.parameters.json content-gen/infra/main.parameters.json
             echo "✅ Successfully copied WAF parameters to main parameters file"
           else
             echo "🔧 Configuring Non-WAF deployment - using default main.parameters.json..."
@@ -224,6 +224,9 @@ jobs:
         run: |
           set -e
 
+          # Change to content-gen directory where azure.yaml lives
+          cd content-gen
+
           echo "Creating environment..."
           azd env new "$ENV_NAME" --no-prompt
           echo "Environment created: $ENV_NAME"
@@ -236,13 +239,13 @@ jobs:
           azd env set AZURE_ENV_OPENAI_LOCATION="$AZURE_ENV_OPENAI_LOCATION"
           azd env set AZURE_LOCATION="$AZURE_LOCATION"
           azd env set AZURE_RESOURCE_GROUP="$RESOURCE_GROUP_NAME"
-          azd env set AZURE_ENV_IMAGETAG="$IMAGE_TAG"
+          azd env set IMAGE_TAG="$IMAGE_TAG"
           
           # Set ACR name only when building Docker image
           if [[ "$BUILD_DOCKER_IMAGE" == "true" ]]; then
             # Extract ACR name from login server and set as environment variable
             ACR_NAME="${{ secrets.ACR_TEST_USERNAME }}"
-            azd env set AZURE_ENV_ACR_NAME="$ACR_NAME"
+            azd env set ACR_NAME="$ACR_NAME"
             echo "Set ACR name to: $ACR_NAME"
           else
             echo "Skipping ACR name configuration (using existing image)"
@@ -279,68 +282,9 @@ jobs:
           azd up --no-prompt
 
           # Get deployment outputs using azd
-          echo "Extracting deployment outputs..."
-          DEPLOY_OUTPUT=$(azd env get-values --output json)
-          echo "Deployment output: $DEPLOY_OUTPUT"
-          
-          if [[ -z "$DEPLOY_OUTPUT" ]]; then
-            echo "Error: Deployment output is empty. Please check the deployment logs."
-            exit 1
-          fi
-
-          # Extract values from azd output (adjust these based on actual output variable names)
-          AI_FOUNDRY_RESOURCE_ID=$(echo "$DEPLOY_OUTPUT" | jq -r '.AI_FOUNDRY_RESOURCE_ID // empty')
-          echo "AI_FOUNDRY_RESOURCE_ID=$AI_FOUNDRY_RESOURCE_ID" >> $GITHUB_ENV
-          
-          AI_SEARCH_SERVICE_NAME=$(echo "$DEPLOY_OUTPUT" | jq -r '.AI_SEARCH_SERVICE_NAME // empty')
-          echo "AI_SEARCH_SERVICE_NAME=$AI_SEARCH_SERVICE_NAME" >> $GITHUB_ENV
-          
-          AZURE_COSMOSDB_ACCOUNT=$(echo "$DEPLOY_OUTPUT" | jq -r '.AZURE_COSMOSDB_ACCOUNT // empty')
-          echo "AZURE_COSMOSDB_ACCOUNT=$AZURE_COSMOSDB_ACCOUNT" >> $GITHUB_ENV
-          
-          STORAGE_ACCOUNT_NAME=$(echo "$DEPLOY_OUTPUT" | jq -r '.STORAGE_ACCOUNT_NAME // empty')
-          echo "STORAGE_ACCOUNT_NAME=$STORAGE_ACCOUNT_NAME" >> $GITHUB_ENV
-          
-          STORAGE_CONTAINER_NAME=$(echo "$DEPLOY_OUTPUT" | jq -r '.STORAGE_CONTAINER_NAME // empty')
-          echo "STORAGE_CONTAINER_NAME=$STORAGE_CONTAINER_NAME" >> $GITHUB_ENV
-          
-          KEY_VAULT_NAME=$(echo "$DEPLOY_OUTPUT" | jq -r '.KEY_VAULT_NAME // empty')
-          echo "KEY_VAULT_NAME=$KEY_VAULT_NAME" >> $GITHUB_ENV
-          
-          RESOURCE_GROUP_NAME=$(echo "$DEPLOY_OUTPUT" | jq -r '.RESOURCE_GROUP_NAME // empty')
-          echo "RESOURCE_GROUP_NAME=$RESOURCE_GROUP_NAME" >> $GITHUB_ENV
-          
-          WEB_APPURL=$(echo "$DEPLOY_OUTPUT" | jq -r '.WEB_APP_URL // .SERVICE_BACKEND_ENDPOINT_URL // empty')
-          echo "WEB_APPURL=$WEB_APPURL" >> $GITHUB_OUTPUT
-          sleep 30
-
-      - name: Run Post-Deployment Script
-        id: post_deploy
-        env: 
-          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          STORAGE_ACCOUNT_NAME: ${{ env.STORAGE_ACCOUNT_NAME }}
-          STORAGE_CONTAINER_NAME: ${{ env.STORAGE_CONTAINER_NAME }}
-          KEY_VAULT_NAME: ${{ env.KEY_VAULT_NAME }}
-          AZURE_COSMOSDB_ACCOUNT: ${{ env.AZURE_COSMOSDB_ACCOUNT }}
-          RESOURCE_GROUP_NAME: ${{ env.RESOURCE_GROUP_NAME }}
-          AI_SEARCH_SERVICE_NAME: ${{ env.AI_SEARCH_SERVICE_NAME }}
-          AI_FOUNDRY_RESOURCE_ID: ${{ env.AI_FOUNDRY_RESOURCE_ID }}
-        run: |
-          set -e
-          az account set --subscription "$AZURE_SUBSCRIPTION_ID"
-
-          echo "Running post-deployment script..."
-
-          bash ./infra/scripts/process_sample_data.sh \
-            "$STORAGE_ACCOUNT_NAME" \
-            "$STORAGE_CONTAINER_NAME" \
-            "$KEY_VAULT_NAME" \
-            "$AZURE_COSMOSDB_ACCOUNT" \
-            "$RESOURCE_GROUP_NAME" \
-            "$AI_SEARCH_SERVICE_NAME" \
-            "$AZURE_CLIENT_ID" \
-            "$AI_FOUNDRY_RESOURCE_ID"
+          WEB_APP_URL=$(azd env get-value WEB_APP_URL)
+          echo "WEB_APP_URL=$WEB_APP_URL" >> $GITHUB_ENV
+          echo "WEB_APP_URL=$WEB_APP_URL" >> $GITHUB_OUTPUT
 
       - name: Generate Deploy Job Summary
         if: always()
@@ -352,7 +296,7 @@ jobs:
           AZURE_ENV_OPENAI_LOCATION: ${{ inputs.AZURE_ENV_OPENAI_LOCATION }}
           IMAGE_TAG: ${{ inputs.IMAGE_TAG }}
           JOB_STATUS: ${{ job.status }}
-          WEB_APPURL: ${{ steps.get_output_linux.outputs.WEB_APPURL }}
+          WEB_APP_URL: ${{ steps.get_output_linux.outputs.WEB_APP_URL }}
         run: |
           echo "## 🚀 Deploy Job Summary (Linux)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -386,9 +330,9 @@ jobs:
           
           if [[ "$JOB_STATUS" == "success" ]]; then
             echo "### ✅ Deployment Details" >> $GITHUB_STEP_SUMMARY
-            echo "- **Web App URL**: [$WEB_APPURL]($WEB_APPURL)" >> $GITHUB_STEP_SUMMARY
+            echo "- **Web App URL**: [$WEB_APP_URL]($WEB_APP_URL)" >> $GITHUB_STEP_SUMMARY
             echo "- Successfully deployed to Azure with all resources configured" >> $GITHUB_STEP_SUMMARY
-            echo "- Post-deployment scripts executed successfully" >> $GITHUB_STEP_SUMMARY
+            echo "- All Deployment scripts executed successfully" >> $GITHUB_STEP_SUMMARY
           else
             echo "### ❌ Deployment Failed" >> $GITHUB_STEP_SUMMARY
             echo "- Deployment process encountered an error" >> $GITHUB_STEP_SUMMARY

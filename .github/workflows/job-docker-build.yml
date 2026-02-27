@@ -31,7 +31,7 @@ jobs:
       IMAGE_TAG: ${{ steps.generate_docker_tag.outputs.IMAGE_TAG }}
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Generate Unique Docker Image Tag
         id: generate_docker_tag
@@ -63,8 +63,8 @@ jobs:
         env:
           DOCKER_BUILD_SUMMARY: false
         with:
-          context: ./src
-          file: ./src/WebApp.Dockerfile
+          context: ./content-gen/src/app
+          file: ./content-gen/src/app/WebApp.Dockerfile
           push: true
           tags: |
             ${{ secrets.ACR_TEST_LOGIN_SERVER }}/webapp:${{ steps.generate_docker_tag.outputs.IMAGE_TAG }}

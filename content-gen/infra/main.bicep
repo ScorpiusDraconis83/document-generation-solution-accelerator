@@ -36,8 +36,33 @@ param location string
 @description('Optional. Secondary location for databases creation.')
 param secondaryLocation string = 'uksouth'
 
-@description('Optional. Location for AI deployments. If not specified, uses the main location.')
-param azureAiServiceLocation string = ''
+// NOTE: Metadata must be compile-time constants. Update usageName manually if you change model parameters.
+// Format: 'OpenAI.<DeploymentType>.<ModelName>,<Capacity>'
+// Allowed regions: Union of GPT-5.1, gpt-image-1, and gpt-image-1.5 GlobalStandard availability
+@allowed([
+  'australiaeast'
+  'canadaeast'
+  'eastus2'
+  'japaneast'
+  'koreacentral'
+  'polandcentral'
+  'swedencentral'
+  'switzerlandnorth'
+  'uaenorth'
+  'uksouth'
+  'westus3'
+])
+@metadata({
+  azd: {
+    type: 'location'
+    usageName: [
+      'OpenAI.GlobalStandard.gpt-5.1,150'
+      'OpenAI.GlobalStandard.gpt-image-1,1'
+    ]
+  }
+})
+@description('Required. Location for AI deployments.')
+param azureAiServiceLocation string
 
 @minLength(1)
 @allowed([
@@ -54,11 +79,10 @@ param gptModelName string = 'gpt-5.1'
 @description('Optional. Version of the GPT model to deploy.')
 param gptModelVersion string = '2025-11-13'
 
-@description('Optional. Image model to deploy: gpt-image-1, gpt-image-1.5, dall-e-3, or none to skip.')
+@description('Optional. Image model to deploy: gpt-image-1, gpt-image-1.5, or none to skip.')
 @allowed([
   'gpt-image-1'
   'gpt-image-1.5'
-  'dall-e-3'
   'none'
 ])
 param imageModelChoice string = 'gpt-image-1'
@@ -75,7 +99,7 @@ param gptModelCapacity int = 150
 
 @minValue(1)
 @description('Optional. Image model deployment capacity (RPM).')
-param dalleModelCapacity int = 1
+param imageModelCapacity int = 1
 
 @description('Optional. Existing Log Analytics Workspace Resource ID.')
 param existingLogAnalyticsWorkspaceId string = ''
@@ -121,72 +145,6 @@ param createdBy string = contains(deployer(), 'userPrincipalName')? split(deploy
 // ============== //
 
 var solutionLocation = empty(location) ? resourceGroup().location : location
-
-// Regions that support GPT-5.1, GPT-Image-1, and text-embedding models with GlobalStandard SKU
-// Update this list as Azure expands model availability
-var validAiServiceRegions = [
-  'australiaeast'
-  'eastus'
-  'eastus2'
-  'francecentral'
-  'japaneast'
-  'koreacentral'
-  'swedencentral'
-  'switzerlandnorth'
-  'uaenorth'
-  'uksouth'
-  'westus'
-  'westus3'
-]
-
-// Map regions to recommended AI service regions (for when main region lacks model support)
-var aiServiceRegionFallback = {
-  australiaeast: 'australiaeast'
-  australiasoutheast: 'australiaeast'
-  brazilsouth: 'eastus2'
-  canadacentral: 'eastus2'
-  canadaeast: 'eastus2'
-  centralindia: 'uksouth'
-  centralus: 'eastus2'
-  eastasia: 'japaneast'
-  eastus: 'eastus'
-  eastus2: 'eastus2'
-  francecentral: 'francecentral'
-  germanywestcentral: 'swedencentral'
-  japaneast: 'japaneast'
-  japanwest: 'japaneast'
-  koreacentral: 'koreacentral'
-  koreasouth: 'koreacentral'
-  northcentralus: 'eastus2'
-  northeurope: 'swedencentral'
-  norwayeast: 'swedencentral'
-  polandcentral: 'swedencentral'
-  qatarcentral: 'uaenorth'
-  southafricanorth: 'uksouth'
-  southcentralus: 'eastus2'
-  southeastasia: 'japaneast'
-  southindia: 'uksouth'
-  swedencentral: 'swedencentral'
-  switzerlandnorth: 'switzerlandnorth'
-  uaenorth: 'uaenorth'
-  uksouth: 'uksouth'
-  ukwest: 'uksouth'
-  westcentralus: 'westus'
-  westeurope: 'swedencentral'
-  westindia: 'uksouth'
-  westus: 'westus'
-  westus2: 'westus'
-  westus3: 'westus3'
-}
-
-// Determine effective AI service location:
-// 1. If explicitly set via parameter, use that (user override)
-// 2. If main location is valid for AI services, use it
-// 3. Otherwise, use the fallback mapping
-var requestedAiLocation = empty(azureAiServiceLocation) ? solutionLocation : azureAiServiceLocation
-var aiServiceLocation = contains(validAiServiceRegions, requestedAiLocation) 
-  ? requestedAiLocation 
-  : (aiServiceRegionFallback[?solutionLocation] ?? 'eastus2')
 
 // acrName is required - points to existing ACR with pre-built images
 var acrResourceName = acrName
@@ -240,9 +198,9 @@ var useExistingAiFoundryAiProject = !empty(azureExistingAIProjectResourceId)
 var aiFoundryAiServicesResourceGroupName = useExistingAiFoundryAiProject
   ? split(azureExistingAIProjectResourceId, '/')[4]
   : 'rg-${solutionSuffix}'
-// var aiFoundryAiServicesSubscriptionId = useExistingAiFoundryAiProject
-//   ? split(azureExistingAIProjectResourceId, '/')[2]
-//   : subscription().id
+var aiFoundryAiServicesSubscriptionId = useExistingAiFoundryAiProject
+  ? split(azureExistingAIProjectResourceId, '/')[2]
+  : subscription().subscriptionId
 var aiFoundryAiServicesResourceName = useExistingAiFoundryAiProject
   ? split(azureExistingAIProjectResourceId, '/')[8]
   : 'aif-${solutionSuffix}'
@@ -277,11 +235,6 @@ var imageModelConfig = {
     version: '2025-12-16'
     sku: 'GlobalStandard'
   }
-  'dall-e-3': {
-    name: 'dall-e-3'
-    version: '3.0'
-    sku: 'Standard'
-  }
   none: {
     name: ''
     version: ''
@@ -297,7 +250,7 @@ var imageModelDeployment = imageModelChoice != 'none' ? [
     model: imageModelConfig[imageModelChoice].name
     sku: {
       name: imageModelConfig[imageModelChoice].sku
-      capacity: dalleModelCapacity
+      capacity: imageModelCapacity
     }
     version: imageModelConfig[imageModelChoice].version
     raiPolicyName: 'Microsoft.Default'
@@ -308,6 +261,7 @@ var imageModelDeployment = imageModelChoice != 'none' ? [
 var aiFoundryAiServicesModelDeployment = concat(baseModelDeployments, imageModelDeployment)
 
 var aiFoundryAiProjectDescription = 'Content Generation AI Foundry Project'
+var existingTags = resourceGroup().tags ?? {}
 
 // ============== //
 // Resources      //
@@ -336,13 +290,15 @@ resource avmTelemetry 'Microsoft.Resources/deployments@2024-03-01' = if (enableT
 resource resourceGroupTags 'Microsoft.Resources/tags@2021-04-01' = {
   name: 'default'
   properties: {
-    tags: {
-      ...resourceGroup().tags
-      ... tags
-      TemplateName: 'ContentGen'
-      Type: enablePrivateNetworking ? 'WAF' : 'Non-WAF'
-      CreatedBy: createdBy
-    }
+    tags: union(
+      existingTags,
+      tags,
+      {
+        TemplateName: 'ContentGen'
+        Type: enablePrivateNetworking ? 'WAF' : 'Non-WAF'
+        CreatedBy: createdBy
+      }
+    )
   }
 }
 
@@ -463,7 +419,7 @@ module aiFoundryAiServices 'br/public:avm/res/cognitive-services/account:0.14.0'
   name: take('avm.res.cognitive-services.account.${aiFoundryAiServicesResourceName}', 64)
   params: {
     name: aiFoundryAiServicesResourceName
-    location: aiServiceLocation
+    location: azureAiServiceLocation
     tags: tags
     sku: 'S0'
     kind: 'AIServices'
@@ -557,7 +513,7 @@ module aiFoundryAiServicesProject 'modules/ai-project.bicep' = if (!useExistingA
   name: take('module.ai-project.${aiFoundryAiProjectResourceName}', 64)
   params: {
     name: aiFoundryAiProjectResourceName
-    location: aiServiceLocation
+    location: azureAiServiceLocation
     tags: tags
     desc: aiFoundryAiProjectDescription
     aiServicesName: aiFoundryAiServicesResourceName
@@ -571,6 +527,17 @@ module aiFoundryAiServicesProject 'modules/ai-project.bicep' = if (!useExistingA
 var aiFoundryAiProjectEndpoint = useExistingAiFoundryAiProject
   ? 'https://${aiFoundryAiServicesResourceName}.services.ai.azure.com/api/projects/${aiFoundryAiProjectResourceName}'
   : aiFoundryAiServicesProject!.outputs.apiEndpoint
+
+// ========== Role Assignments for Existing AI Services ========== //
+module existingAiServicesRoleAssignments 'modules/deploy_foundry_role_assignment.bicep' = if (useExistingAiFoundryAiProject) {
+  name: take('module.foundry-role-assignment.${aiFoundryAiServicesResourceName}', 64)
+  scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
+  params: {
+    aiServicesName: aiFoundryAiServicesResourceName
+    principalId: userAssignedIdentity.outputs.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
 
 // ========== AI Search ========== //
 module aiSearch 'br/public:avm/res/search/search-service:0.11.1' = {
@@ -992,7 +959,7 @@ output AZURE_AI_AGENT_API_VERSION string = azureAiAgentApiVersion
 output AZURE_APPLICATION_INSIGHTS_CONNECTION_STRING string = (enableMonitoring && !useExistingLogAnalytics) ? applicationInsights!.outputs.connectionString : ''
 
 @description('Contains the location used for AI Services deployment')
-output AI_SERVICE_LOCATION string = aiServiceLocation
+output AZURE_ENV_OPENAI_LOCATION string = azureAiServiceLocation
 
 @description('Contains Container Instance Name')
 output CONTAINER_INSTANCE_NAME string = containerInstance.outputs.name

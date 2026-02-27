@@ -35,14 +35,14 @@ ADMIN_API_KEY = os.environ.get("ADMIN_API_KEY", "")
 def verify_admin_api_key() -> bool:
     """
     Verify the admin API key from request headers.
-    
+
     If ADMIN_API_KEY is not set, all requests are allowed (development mode).
     If set, the request must include X-Admin-API-Key header with matching value.
     """
     if not ADMIN_API_KEY:
         # No API key configured - allow all requests (development/initial setup)
         return True
-    
+
     provided_key = request.headers.get("X-Admin-API-Key", "")
     return provided_key == ADMIN_API_KEY
 
@@ -61,7 +61,7 @@ def unauthorized_response():
 async def upload_images():
     """
     Upload product images to Blob Storage.
-    
+
     Request body:
     {
         "images": [
@@ -73,7 +73,7 @@ async def upload_images():
             ...
         ]
     }
-    
+
     Returns:
     {
         "success": true,
@@ -87,29 +87,29 @@ async def upload_images():
     """
     if not verify_admin_api_key():
         return unauthorized_response()
-    
+
     try:
         data = await request.get_json()
         images = data.get("images", [])
-        
+
         if not images:
             return jsonify({
                 "error": "No images provided",
                 "message": "Request body must contain 'images' array"
             }), 400
-        
+
         blob_service = await get_blob_service()
         await blob_service.initialize()
-        
+
         results = []
         uploaded_count = 0
         failed_count = 0
-        
+
         for image_info in images:
             filename = image_info.get("filename", "")
             content_type = image_info.get("content_type", "image/png")
             image_data_b64 = image_info.get("data", "")
-            
+
             if not filename or not image_data_b64:
                 results.append({
                     "filename": filename or "unknown",
@@ -118,11 +118,11 @@ async def upload_images():
                 })
                 failed_count += 1
                 continue
-            
+
             try:
                 # Decode base64 image data
                 image_data = base64.b64decode(image_data_b64)
-                
+
                 # Upload to product-images container
                 blob_client = blob_service._product_images_container.get_blob_client(filename)
                 await blob_client.upload_blob(
@@ -130,7 +130,7 @@ async def upload_images():
                     overwrite=True,
                     content_settings=ContentSettings(content_type=content_type)
                 )
-                
+
                 results.append({
                     "filename": filename,
                     "status": "uploaded",
@@ -139,7 +139,7 @@ async def upload_images():
                 })
                 uploaded_count += 1
                 logger.info(f"Uploaded image: {filename} ({len(image_data):,} bytes)")
-                
+
             except Exception as e:
                 logger.error(f"Failed to upload image {filename}: {e}")
                 results.append({
@@ -148,14 +148,14 @@ async def upload_images():
                     "error": str(e)
                 })
                 failed_count += 1
-        
+
         return jsonify({
             "success": failed_count == 0,
             "uploaded": uploaded_count,
             "failed": failed_count,
             "results": results
         })
-        
+
     except Exception as e:
         logger.exception(f"Error in upload_images: {e}")
         return jsonify({
@@ -170,7 +170,7 @@ async def upload_images():
 async def load_sample_data():
     """
     Load sample product data to Cosmos DB.
-    
+
     Request body:
     {
         "products": [
@@ -187,7 +187,7 @@ async def load_sample_data():
         ],
         "clear_existing": true  // Optional: delete existing products first
     }
-    
+
     Returns:
     {
         "success": true,
@@ -202,34 +202,34 @@ async def load_sample_data():
     """
     if not verify_admin_api_key():
         return unauthorized_response()
-    
+
     try:
         data = await request.get_json()
         products_data = data.get("products", [])
         clear_existing = data.get("clear_existing", False)
-        
+
         if not products_data:
             return jsonify({
                 "error": "No products provided",
                 "message": "Request body must contain 'products' array"
             }), 400
-        
+
         cosmos_service = await get_cosmos_service()
-        
+
         deleted_count = 0
         if clear_existing:
             logger.info("Deleting existing products...")
             deleted_count = await cosmos_service.delete_all_products()
             logger.info(f"Deleted {deleted_count} existing products")
-        
+
         results = []
         loaded_count = 0
         failed_count = 0
-        
+
         for product_data in products_data:
             sku = product_data.get("sku", "")
             product_name = product_data.get("product_name", "")
-            
+
             try:
                 # Map incoming fields to Product model fields
                 # Note: Product model requires 'description' field, map from incoming 'description' or 'marketing_description'
@@ -248,10 +248,10 @@ async def load_sample_data():
                     "tags": product_data.get("tags", ""),
                     "price": product_data.get("price", 0.0),
                 }
-                
+
                 product = Product(**product_fields)
                 await cosmos_service.upsert_product(product)
-                
+
                 results.append({
                     "sku": sku,
                     "product_name": product_name,
@@ -259,7 +259,7 @@ async def load_sample_data():
                 })
                 loaded_count += 1
                 logger.info(f"Loaded product: {product_name} ({sku})")
-                
+
             except Exception as e:
                 logger.error(f"Failed to load product {sku}: {e}")
                 results.append({
@@ -269,19 +269,19 @@ async def load_sample_data():
                     "error": str(e)
                 })
                 failed_count += 1
-        
+
         response = {
             "success": failed_count == 0,
             "loaded": loaded_count,
             "failed": failed_count,
             "results": results
         }
-        
+
         if clear_existing:
             response["deleted"] = deleted_count
-        
+
         return jsonify(response)
-        
+
     except Exception as e:
         logger.exception(f"Error in load_sample_data: {e}")
         return jsonify({
@@ -296,13 +296,13 @@ async def load_sample_data():
 async def create_search_index():
     """
     Create or update the Azure AI Search index with products from Cosmos DB.
-    
+
     Request body (optional):
     {
         "index_name": "products",  // Optional: defaults to "products"
         "reindex_all": true        // Optional: re-index all products
     }
-    
+
     Returns:
     {
         "success": true,
@@ -317,7 +317,7 @@ async def create_search_index():
     """
     if not verify_admin_api_key():
         return unauthorized_response()
-    
+
     try:
         # Import search-related dependencies
         from azure.core.credentials import AzureKeyCredential
@@ -338,17 +338,17 @@ async def create_search_index():
             VectorSearch,
             VectorSearchProfile,
         )
-        
+
         data = await request.get_json() or {}
         index_name = data.get("index_name", app_settings.search.products_index if app_settings.search else "products")
-        
+
         search_endpoint = app_settings.search.endpoint if app_settings.search else None
         if not search_endpoint:
             return jsonify({
                 "error": "Search service not configured",
                 "message": "AZURE_AI_SEARCH_ENDPOINT environment variable not set"
             }), 500
-        
+
         # Get credential - try API key first, then RBAC
         admin_key = app_settings.search.admin_key if app_settings.search else None
         if admin_key:
@@ -357,10 +357,10 @@ async def create_search_index():
         else:
             credential = DefaultAzureCredential()
             logger.info("Using RBAC authentication for search")
-        
+
         # Create index client
         index_client = SearchIndexClient(endpoint=search_endpoint, credential=credential)
-        
+
         # Define index schema
         fields = [
             SimpleField(name="id", type=SearchFieldDataType.String, key=True, filterable=True),
@@ -381,12 +381,12 @@ async def create_search_index():
                 vector_search_profile_name="product-vector-profile"
             )
         ]
-        
+
         vector_search = VectorSearch(
             algorithms=[HnswAlgorithmConfiguration(name="hnsw-algorithm")],
             profiles=[VectorSearchProfile(name="product-vector-profile", algorithm_configuration_name="hnsw-algorithm")]
         )
-        
+
         semantic_config = SemanticConfiguration(
             name="product-semantic-config",
             prioritized_fields=SemanticPrioritizedFields(
@@ -404,24 +404,24 @@ async def create_search_index():
                 ]
             )
         )
-        
+
         index = SearchIndex(
             name=index_name,
             fields=fields,
             vector_search=vector_search,
             semantic_search=SemanticSearch(configurations=[semantic_config])
         )
-        
+
         # Create or update index
         logger.info(f"Creating/updating search index: {index_name}")
         index_client.create_or_update_index(index)
         logger.info("Search index created/updated successfully")
-        
+
         # Get products from Cosmos DB
         cosmos_service = await get_cosmos_service()
         products = await cosmos_service.get_all_products(limit=1000)
         logger.info(f"Found {len(products)} products to index")
-        
+
         if not products:
             return jsonify({
                 "success": True,
@@ -431,15 +431,15 @@ async def create_search_index():
                 "message": "No products found to index",
                 "results": []
             })
-        
+
         # Prepare documents for indexing
         documents = []
         results = []
-        
+
         for product in products:
             p = product.model_dump()
             doc_id = p.get('sku', '').lower().replace("-", "_").replace(" ", "_") or p.get('id', 'unknown')
-            
+
             combined_text = f"""
             {p.get('product_name', '')}
             Category: {p.get('category', '')} - {p.get('sub_category', '')}
@@ -448,7 +448,7 @@ async def create_search_index():
             Specifications: {p.get('detailed_spec_description', '')}
             Visual: {p.get('image_description', '')}
             """
-            
+
             documents.append({
                 "id": doc_id,
                 "product_name": p.get("product_name", ""),
@@ -462,22 +462,22 @@ async def create_search_index():
                 "combined_text": combined_text.strip(),
                 "content_vector": [0.0] * 1536  # Placeholder vector
             })
-            
+
             results.append({
                 "sku": p.get("sku", ""),
                 "product_name": p.get("product_name", ""),
                 "status": "pending"
             })
-        
+
         # Upload documents to search index
         search_client = SearchClient(endpoint=search_endpoint, index_name=index_name, credential=credential)
-        
+
         try:
             upload_result = search_client.upload_documents(documents)
-            
+
             indexed_count = 0
             failed_count = 0
-            
+
             for i, r in enumerate(upload_result):
                 if r.succeeded:
                     results[i]["status"] = "indexed"
@@ -486,9 +486,9 @@ async def create_search_index():
                     results[i]["status"] = "failed"
                     results[i]["error"] = str(r.error_message) if hasattr(r, 'error_message') else "Unknown error"
                     failed_count += 1
-            
+
             logger.info(f"Indexed {indexed_count} products, {failed_count} failed")
-            
+
             return jsonify({
                 "success": failed_count == 0,
                 "indexed": indexed_count,
@@ -496,14 +496,14 @@ async def create_search_index():
                 "index_name": index_name,
                 "results": results
             })
-            
+
         except Exception as e:
             logger.exception(f"Failed to index documents: {e}")
             return jsonify({
                 "error": "Failed to index documents",
                 "message": str(e)
             }), 500
-        
+
     except Exception as e:
         logger.exception(f"Error in create_search_index: {e}")
         return jsonify({
@@ -518,7 +518,7 @@ async def create_search_index():
 async def admin_health():
     """
     Health check for admin API.
-    
+
     Does not require authentication - used to verify the admin API is available.
     """
     return jsonify({

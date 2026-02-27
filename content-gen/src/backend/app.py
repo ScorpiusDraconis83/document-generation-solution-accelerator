@@ -9,6 +9,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import uuid
 from datetime import datetime, timezone
 from typing import Dict, Any
@@ -21,6 +22,7 @@ from models import CreativeBrief, Product
 from orchestrator import get_orchestrator
 from services.cosmos_service import get_cosmos_service
 from services.blob_service import get_blob_service
+from services.title_service import get_title_service
 from api.admin import admin_bp
 
 # In-memory task storage for generation tasks
@@ -32,6 +34,7 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
+logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 # Create Quart app
@@ -47,14 +50,14 @@ app.register_blueprint(admin_bp)
 def get_authenticated_user():
     """
     Get the authenticated user from EasyAuth headers.
-    
+
     In production (with App Service Auth), the X-Ms-Client-Principal-Id header
     contains the user's ID. In development mode, returns "anonymous".
     """
     user_principal_id = request.headers.get("X-Ms-Client-Principal-Id", "")
     user_name = request.headers.get("X-Ms-Client-Principal-Name", "")
     auth_provider = request.headers.get("X-Ms-Client-Principal-Idp", "")
-    
+
     return {
         "user_principal_id": user_principal_id or "anonymous",
         "user_name": user_name or "",
@@ -82,30 +85,40 @@ async def health_check():
 async def chat():
     """
     Process a chat message through the agent orchestration.
-    
+
     Request body:
     {
         "message": "User's message",
         "conversation_id": "optional-uuid",
         "user_id": "user identifier"
     }
-    
+
     Returns streaming response with agent responses.
     """
     data = await request.get_json()
-    
+
     message = data.get("message", "")
     conversation_id = data.get("conversation_id") or str(uuid.uuid4())
     user_id = data.get("user_id", "anonymous")
-    
+
     if not message:
         return jsonify({"error": "Message is required"}), 400
-    
+
     orchestrator = get_orchestrator()
-    
+
     # Try to save to CosmosDB but don't fail if it's unavailable
     try:
         cosmos_service = await get_cosmos_service()
+
+        generated_title = None
+        existing_conversation = await cosmos_service.get_conversation(conversation_id, user_id)
+        existing_metadata = existing_conversation.get("metadata", {}) if existing_conversation else {}
+        has_existing_title = bool(existing_metadata.get("custom_title") or existing_metadata.get("generated_title"))
+
+        if not has_existing_title:
+            title_service = get_title_service()
+            generated_title = await title_service.generate_title(message)
+
         await cosmos_service.add_message_to_conversation(
             conversation_id=conversation_id,
             user_id=user_id,
@@ -113,11 +126,12 @@ async def chat():
                 "role": "user",
                 "content": message,
                 "timestamp": datetime.now(timezone.utc).isoformat()
-            }
+            },
+            generated_title=generated_title
         )
     except Exception as e:
         logger.warning(f"Failed to save message to CosmosDB: {e}")
-    
+
     async def generate():
         """Stream responses from the orchestrator."""
         try:
@@ -126,7 +140,7 @@ async def chat():
                 conversation_id=conversation_id
             ):
                 yield f"data: {json.dumps(response)}\n\n"
-                
+
                 # Save assistant responses when final OR when requiring user input
                 if response.get("is_final") or response.get("requires_user_input"):
                     if response.get("content"):
@@ -147,9 +161,9 @@ async def chat():
         except Exception as e:
             logger.exception(f"Error in orchestrator: {e}")
             yield f"data: {json.dumps({'type': 'error', 'content': str(e), 'is_final': True})}\n\n"
-        
+
         yield "data: [DONE]\n\n"
-    
+
     return Response(
         generate(),
         mimetype="text/event-stream",
@@ -167,14 +181,14 @@ async def parse_brief():
     """
     Parse a free-text creative brief into structured format.
     If critical information is missing, return clarifying questions.
-    
+
     Request body:
     {
         "brief_text": "Free-form creative brief text",
         "conversation_id": "optional-uuid",
         "user_id": "user identifier"
     }
-    
+
     Returns:
         Structured CreativeBrief JSON for user confirmation,
         or clarifying questions if info is missing.
@@ -183,13 +197,26 @@ async def parse_brief():
     brief_text = data.get("brief_text", "")
     conversation_id = data.get("conversation_id") or str(uuid.uuid4())
     user_id = data.get("user_id", "anonymous")
-    
+
     if not brief_text:
         return jsonify({"error": "Brief text is required"}), 400
-    
+
+    orchestrator = get_orchestrator()
+    generated_title = None
+
     # Save the user's brief text as a message to CosmosDB
     try:
         cosmos_service = await get_cosmos_service()
+
+        # Generate title for new conversations
+        existing_conversation = await cosmos_service.get_conversation(conversation_id, user_id)
+        existing_metadata = existing_conversation.get("metadata", {}) if existing_conversation else {}
+        has_existing_title = bool(existing_metadata.get("custom_title") or existing_metadata.get("generated_title"))
+
+        if not has_existing_title:
+            title_service = get_title_service()
+            generated_title = await title_service.generate_title(brief_text)
+
         await cosmos_service.add_message_to_conversation(
             conversation_id=conversation_id,
             user_id=user_id,
@@ -197,14 +224,14 @@ async def parse_brief():
                 "role": "user",
                 "content": brief_text,
                 "timestamp": datetime.now(timezone.utc).isoformat()
-            }
+            },
+            generated_title=generated_title
         )
     except Exception as e:
         logger.warning(f"Failed to save brief message to CosmosDB: {e}")
-    
-    orchestrator = get_orchestrator()
+
     parsed_brief, clarifying_questions, rai_blocked = await orchestrator.parse_brief(brief_text)
-    
+
     # Check if request was blocked due to harmful content
     if rai_blocked:
         # Save the refusal as assistant response
@@ -222,15 +249,16 @@ async def parse_brief():
             )
         except Exception as e:
             logger.warning(f"Failed to save RAI response to CosmosDB: {e}")
-        
+
         return jsonify({
             "rai_blocked": True,
             "requires_clarification": False,
             "requires_confirmation": False,
             "conversation_id": conversation_id,
+            "generated_title": generated_title,
             "message": clarifying_questions
         })
-    
+
     # Check if we need clarifying questions
     if clarifying_questions:
         # Save the clarifying questions as assistant response
@@ -248,16 +276,17 @@ async def parse_brief():
             )
         except Exception as e:
             logger.warning(f"Failed to save clarifying questions to CosmosDB: {e}")
-        
+
         return jsonify({
             "brief": parsed_brief.model_dump(),
             "requires_clarification": True,
             "requires_confirmation": False,
             "clarifying_questions": clarifying_questions,
             "conversation_id": conversation_id,
+            "generated_title": generated_title,
             "message": clarifying_questions
         })
-    
+
     # Save the assistant's parsing response
     try:
         cosmos_service = await get_cosmos_service()
@@ -273,12 +302,13 @@ async def parse_brief():
         )
     except Exception as e:
         logger.warning(f"Failed to save parsing response to CosmosDB: {e}")
-    
+
     return jsonify({
         "brief": parsed_brief.model_dump(),
         "requires_clarification": False,
         "requires_confirmation": True,
         "conversation_id": conversation_id,
+        "generated_title": generated_title,
         "message": "Please review and confirm the parsed creative brief"
     })
 
@@ -287,14 +317,14 @@ async def parse_brief():
 async def confirm_brief():
     """
     Confirm or modify a parsed creative brief.
-    
+
     Request body:
     {
         "brief": { ... CreativeBrief fields ... },
         "conversation_id": "optional-uuid",
         "user_id": "user identifier"
     }
-    
+
     Returns:
         Confirmation status and next steps.
     """
@@ -302,20 +332,20 @@ async def confirm_brief():
     brief_data = data.get("brief", {})
     conversation_id = data.get("conversation_id") or str(uuid.uuid4())
     user_id = data.get("user_id", "anonymous")
-    
+
     try:
         brief = CreativeBrief(**brief_data)
     except Exception as e:
         return jsonify({"error": f"Invalid brief format: {str(e)}"}), 400
-    
+
     # Try to save the confirmed brief to CosmosDB, preserving existing messages
     try:
         cosmos_service = await get_cosmos_service()
-        
+
         # Get existing conversation to preserve messages
         existing = await cosmos_service.get_conversation(conversation_id, user_id)
         existing_messages = existing.get("messages", []) if existing else []
-        
+
         # Add confirmation message
         existing_messages.append({
             "role": "assistant",
@@ -323,7 +353,7 @@ async def confirm_brief():
             "agent": "TriageAgent",
             "timestamp": datetime.now(timezone.utc).isoformat()
         })
-        
+
         await cosmos_service.save_conversation(
             conversation_id=conversation_id,
             user_id=user_id,
@@ -333,7 +363,7 @@ async def confirm_brief():
         )
     except Exception as e:
         logger.warning(f"Failed to save brief to CosmosDB: {e}")
-    
+
     return jsonify({
         "status": "confirmed",
         "conversation_id": conversation_id,
@@ -348,7 +378,7 @@ async def confirm_brief():
 async def select_products():
     """
     Select or modify products via natural language.
-    
+
     Request body:
     {
         "request": "User's natural language request",
@@ -356,20 +386,20 @@ async def select_products():
         "conversation_id": "optional-uuid",
         "user_id": "user identifier"
     }
-    
+
     Returns:
         Selected products and assistant message.
     """
     data = await request.get_json()
-    
+
     request_text = data.get("request", "")
     current_products = data.get("current_products", [])
     conversation_id = data.get("conversation_id") or str(uuid.uuid4())
     user_id = data.get("user_id", "anonymous")
-    
+
     if not request_text:
         return jsonify({"error": "Request text is required"}), 400
-    
+
     # Save user message
     try:
         cosmos_service = await get_cosmos_service()
@@ -384,14 +414,14 @@ async def select_products():
         )
     except Exception as e:
         logger.warning(f"Failed to save product selection request to CosmosDB: {e}")
-    
+
     # Get available products from catalog
     try:
         cosmos_service = await get_cosmos_service()
         all_products = await cosmos_service.get_all_products(limit=50)
         # Use mode='json' to ensure datetime objects are serialized to strings
         available_products = [p.model_dump(mode='json') for p in all_products]
-        
+
         # Convert blob URLs to proxy URLs
         for p in available_products:
             if p.get("image_url"):
@@ -401,7 +431,7 @@ async def select_products():
     except Exception as e:
         logger.warning(f"Failed to get products from CosmosDB: {e}")
         available_products = []
-    
+
     # Use orchestrator to process the selection request
     orchestrator = get_orchestrator()
     result = await orchestrator.select_products(
@@ -409,7 +439,7 @@ async def select_products():
         current_products=current_products,
         available_products=available_products
     )
-    
+
     # Save assistant response
     try:
         cosmos_service = await get_cosmos_service()
@@ -425,7 +455,7 @@ async def select_products():
         )
     except Exception as e:
         logger.warning(f"Failed to save product selection response to CosmosDB: {e}")
-    
+
     return jsonify({
         "products": result.get("products", []),
         "action": result.get("action", "search"),
@@ -436,23 +466,23 @@ async def select_products():
 
 # ==================== Content Generation Endpoints ====================
 
-async def _run_generation_task(task_id: str, brief: CreativeBrief, products_data: list, 
-                                generate_images: bool, conversation_id: str, user_id: str):
+async def _run_generation_task(task_id: str, brief: CreativeBrief, products_data: list,
+                               generate_images: bool, conversation_id: str, user_id: str):
     """Background task to run content generation."""
     try:
         logger.info(f"Starting background generation task {task_id}")
         _generation_tasks[task_id]["status"] = "running"
         _generation_tasks[task_id]["started_at"] = datetime.now(timezone.utc).isoformat()
-        
+
         orchestrator = get_orchestrator()
         response = await orchestrator.generate_content(
             brief=brief,
             products=products_data,
             generate_images=generate_images
         )
-        
+
         logger.info(f"Generation task {task_id} completed. Response keys: {list(response.keys()) if response else 'None'}")
-        
+
         # Handle image URL from orchestrator's blob save
         if response.get("image_blob_url"):
             blob_url = response["image_blob_url"]
@@ -479,11 +509,11 @@ async def _run_generation_task(task_id: str, brief: CreativeBrief, products_data
                     del response["image_base64"]
             except Exception as e:
                 logger.warning(f"Failed to save image to blob: {e}")
-        
+
         # Save to CosmosDB
         try:
             cosmos_service = await get_cosmos_service()
-            
+
             await cosmos_service.add_message_to_conversation(
                 conversation_id=conversation_id,
                 user_id=user_id,
@@ -494,7 +524,7 @@ async def _run_generation_task(task_id: str, brief: CreativeBrief, products_data
                     "timestamp": datetime.now(timezone.utc).isoformat()
                 }
             )
-            
+
             generated_content_to_save = {
                 "text_content": response.get("text_content"),
                 "image_url": response.get("image_url"),
@@ -511,12 +541,12 @@ async def _run_generation_task(task_id: str, brief: CreativeBrief, products_data
             )
         except Exception as e:
             logger.warning(f"Failed to save generated content to CosmosDB: {e}")
-        
+
         _generation_tasks[task_id]["status"] = "completed"
         _generation_tasks[task_id]["result"] = response
         _generation_tasks[task_id]["completed_at"] = datetime.now(timezone.utc).isoformat()
         logger.info(f"Task {task_id} marked as completed")
-        
+
     except Exception as e:
         logger.exception(f"Generation task {task_id} failed: {e}")
         _generation_tasks[task_id]["status"] = "failed"
@@ -529,7 +559,7 @@ async def start_generation():
     """
     Start content generation and return immediately with a task ID.
     Client should poll /api/generate/status/<task_id> for results.
-    
+
     Request body:
     {
         "brief": { ... CreativeBrief fields ... },
@@ -537,7 +567,7 @@ async def start_generation():
         "generate_images": true/false,
         "conversation_id": "uuid"
     }
-    
+
     Returns:
     {
         "task_id": "uuid",
@@ -545,24 +575,23 @@ async def start_generation():
         "message": "Generation started"
     }
     """
-    global _generation_tasks
-    
+
     data = await request.get_json()
-    
+
     brief_data = data.get("brief", {})
     products_data = data.get("products", [])
     generate_images = data.get("generate_images", True)
     conversation_id = data.get("conversation_id") or str(uuid.uuid4())
     user_id = data.get("user_id", "anonymous")
-    
+
     try:
         brief = CreativeBrief(**brief_data)
     except Exception as e:
         return jsonify({"error": f"Invalid brief format: {str(e)}"}), 400
-    
+
     # Create task ID
     task_id = str(uuid.uuid4())
-    
+
     # Initialize task state
     _generation_tasks[task_id] = {
         "status": "pending",
@@ -571,7 +600,7 @@ async def start_generation():
         "result": None,
         "error": None
     }
-    
+
     # Save user request
     try:
         cosmos_service = await get_cosmos_service()
@@ -587,7 +616,7 @@ async def start_generation():
         )
     except Exception as e:
         logger.warning(f"Failed to save generation request to CosmosDB: {e}")
-    
+
     # Start background task
     asyncio.create_task(_run_generation_task(
         task_id=task_id,
@@ -597,9 +626,9 @@ async def start_generation():
         conversation_id=conversation_id,
         user_id=user_id
     ))
-    
+
     logger.info(f"Started generation task {task_id} for conversation {conversation_id}")
-    
+
     return jsonify({
         "task_id": task_id,
         "status": "pending",
@@ -612,7 +641,7 @@ async def start_generation():
 async def get_generation_status(task_id: str):
     """
     Get the status of a generation task.
-    
+
     Returns:
     {
         "task_id": "uuid",
@@ -621,20 +650,19 @@ async def get_generation_status(task_id: str):
         "error": "error message" (if failed)
     }
     """
-    global _generation_tasks
-    
+
     if task_id not in _generation_tasks:
         return jsonify({"error": "Task not found"}), 404
-    
+
     task = _generation_tasks[task_id]
-    
+
     response = {
         "task_id": task_id,
         "status": task["status"],
         "conversation_id": task.get("conversation_id"),
         "created_at": task.get("created_at"),
     }
-    
+
     if task["status"] == "completed":
         response["result"] = task["result"]
         response["completed_at"] = task.get("completed_at")
@@ -644,7 +672,7 @@ async def get_generation_status(task_id: str):
     elif task["status"] == "running":
         response["started_at"] = task.get("started_at")
         response["message"] = "Generation in progress..."
-    
+
     return jsonify(response)
 
 
@@ -652,7 +680,7 @@ async def get_generation_status(task_id: str):
 async def generate_content():
     """
     Generate content from a confirmed creative brief.
-    
+
     Request body:
     {
         "brief": { ... CreativeBrief fields ... },
@@ -660,24 +688,22 @@ async def generate_content():
         "generate_images": true/false,
         "conversation_id": "uuid"
     }
-    
+
     Returns streaming response with generated content.
     """
-    import asyncio
-    
     data = await request.get_json()
-    
+
     brief_data = data.get("brief", {})
     products_data = data.get("products", [])
     generate_images = data.get("generate_images", True)
     conversation_id = data.get("conversation_id") or str(uuid.uuid4())
     user_id = data.get("user_id", "anonymous")
-    
+
     try:
         brief = CreativeBrief(**brief_data)
     except Exception as e:
         return jsonify({"error": f"Invalid brief format: {str(e)}"}), 400
-    
+
     # Save user request for content generation
     try:
         cosmos_service = await get_cosmos_service()
@@ -693,14 +719,14 @@ async def generate_content():
         )
     except Exception as e:
         logger.warning(f"Failed to save generation request to CosmosDB: {e}")
-    
+
     orchestrator = get_orchestrator()
-    
+
     async def generate():
         """Stream content generation responses with keepalive heartbeats."""
         logger.info(f"Starting SSE generator for conversation {conversation_id}")
         generation_task = None
-        
+
         try:
             # Create a task for the long-running generation
             generation_task = asyncio.create_task(
@@ -711,10 +737,10 @@ async def generate_content():
                 )
             )
             logger.info("Generation task created")
-            
+
             # Send keepalive heartbeats every 15 seconds while generation is running
             heartbeat_count = 0
-            
+
             while not generation_task.done():
                 # Check every 0.5 seconds (faster response to completion)
                 for _ in range(30):  # 30 * 0.5s = 15 seconds
@@ -722,12 +748,12 @@ async def generate_content():
                         logger.info("Task completed during heartbeat wait (iteration)")
                         break
                     await asyncio.sleep(0.5)
-                
+
                 if not generation_task.done():
                     heartbeat_count += 1
                     logger.info(f"Sending heartbeat {heartbeat_count}")
                     yield f"data: {json.dumps({'type': 'heartbeat', 'count': heartbeat_count, 'message': 'Generating content...'})}\n\n"
-            
+
             logger.info(f"Generation task completed after {heartbeat_count} heartbeats")
         except asyncio.CancelledError:
             logger.warning(f"SSE generator cancelled for conversation {conversation_id}")
@@ -744,7 +770,7 @@ async def generate_content():
             if generation_task and not generation_task.done():
                 generation_task.cancel()
             raise
-        
+
         # Get the result
         try:
             response = generation_task.result()
@@ -753,7 +779,7 @@ async def generate_content():
             has_image_blob = bool(response.get("image_blob_url")) if response else False
             image_size = len(response.get("image_base64", "")) if response else 0
             logger.info(f"Has image_base64: {has_image_base64}, has_image_blob_url: {has_image_blob}, base64_size: {image_size} bytes")
-            
+
             # Handle image URL from orchestrator's blob save
             if response.get("image_blob_url"):
                 blob_url = response["image_blob_url"]
@@ -787,11 +813,11 @@ async def generate_content():
                     # Keep image_base64 in response as fallback if blob storage fails
             else:
                 logger.info("No image in response")
-            
+
             # Save generated content to conversation
             try:
                 cosmos_service = await get_cosmos_service()
-                
+
                 # Save the message
                 await cosmos_service.add_message_to_conversation(
                     conversation_id=conversation_id,
@@ -803,7 +829,7 @@ async def generate_content():
                         "timestamp": datetime.now(timezone.utc).isoformat()
                     }
                 )
-                
+
                 # Save the full generated content for restoration
                 # Note: image_base64 is NOT saved to CosmosDB as it exceeds document size limits
                 # Images will only persist if blob storage is working
@@ -823,15 +849,15 @@ async def generate_content():
                 )
             except Exception as e:
                 logger.warning(f"Failed to save generated content to CosmosDB: {e}")
-            
+
             # Format response to match what frontend expects
             yield f"data: {json.dumps({'type': 'agent_response', 'content': json.dumps(response), 'is_final': True})}\n\n"
         except Exception as e:
             logger.exception(f"Error generating content: {e}")
             yield f"data: {json.dumps({'type': 'error', 'content': str(e), 'is_final': True})}\n\n"
-        
+
         yield "data: [DONE]\n\n"
-    
+
     return Response(
         generate(),
         mimetype="text/event-stream",
@@ -848,10 +874,10 @@ async def generate_content():
 async def regenerate_content():
     """
     Regenerate image based on user modification request.
-    
+
     This endpoint is called when the user wants to modify the generated image
     after initial content generation (e.g., "show a kitchen instead of dining room").
-    
+
     Request body:
     {
         "modification_request": "User's modification request",
@@ -860,28 +886,26 @@ async def regenerate_content():
         "previous_image_prompt": "Previous image prompt (optional)",
         "conversation_id": "uuid"
     }
-    
+
     Returns regenerated image with the modification applied.
     """
-    import asyncio
-    
     data = await request.get_json()
-    
+
     modification_request = data.get("modification_request", "")
     brief_data = data.get("brief", {})
     products_data = data.get("products", [])
     previous_image_prompt = data.get("previous_image_prompt")
     conversation_id = data.get("conversation_id") or str(uuid.uuid4())
     user_id = data.get("user_id", "anonymous")
-    
+
     if not modification_request:
         return jsonify({"error": "modification_request is required"}), 400
-    
+
     try:
         brief = CreativeBrief(**brief_data)
     except Exception as e:
         return jsonify({"error": f"Invalid brief format: {str(e)}"}), 400
-    
+
     # Save user request for regeneration
     try:
         cosmos_service = await get_cosmos_service()
@@ -896,14 +920,14 @@ async def regenerate_content():
         )
     except Exception as e:
         logger.warning(f"Failed to save regeneration request to CosmosDB: {e}")
-    
+
     orchestrator = get_orchestrator()
-    
+
     async def generate():
         """Stream regeneration responses with keepalive heartbeats."""
         logger.info(f"Starting image regeneration for conversation {conversation_id}")
         regeneration_task = None
-        
+
         try:
             # Create a task for the regeneration
             regeneration_task = asyncio.create_task(
@@ -914,7 +938,7 @@ async def regenerate_content():
                     previous_image_prompt=previous_image_prompt
                 )
             )
-            
+
             # Send keepalive heartbeats while regeneration is running
             heartbeat_count = 0
             while not regeneration_task.done():
@@ -922,11 +946,11 @@ async def regenerate_content():
                     if regeneration_task.done():
                         break
                     await asyncio.sleep(0.5)
-                
+
                 if not regeneration_task.done():
                     heartbeat_count += 1
                     yield f"data: {json.dumps({'type': 'heartbeat', 'count': heartbeat_count, 'message': 'Regenerating image...'})}\n\n"
-            
+
         except asyncio.CancelledError:
             logger.warning(f"Regeneration cancelled for conversation {conversation_id}")
             if regeneration_task and not regeneration_task.done():
@@ -937,18 +961,18 @@ async def regenerate_content():
             if regeneration_task and not regeneration_task.done():
                 regeneration_task.cancel()
             return
-        
+
         # Get the result
         try:
             response = regeneration_task.result()
             logger.info(f"Regeneration complete. Response keys: {list(response.keys()) if response else 'None'}")
-            
+
             # Check for RAI block
             if response.get("rai_blocked"):
                 yield f"data: {json.dumps({'type': 'error', 'content': response.get('error', 'Request blocked by content safety'), 'rai_blocked': True, 'is_final': True})}\n\n"
                 yield "data: [DONE]\n\n"
                 return
-            
+
             # Handle image URL from orchestrator's blob save
             if response.get("image_blob_url"):
                 blob_url = response["image_blob_url"]
@@ -972,8 +996,8 @@ async def regenerate_content():
                         del response["image_base64"]
                 except Exception as e:
                     logger.warning(f"Failed to save regenerated image to blob: {e}")
-            
-            # Save assistant response
+
+            # Save assistant response and update persisted generated_content
             try:
                 cosmos_service = await get_cosmos_service()
                 await cosmos_service.add_message_to_conversation(
@@ -986,16 +1010,57 @@ async def regenerate_content():
                         "timestamp": datetime.now(timezone.utc).isoformat()
                     }
                 )
+
+                # Persist the regenerated image and updated products to generated_content
+                # so the latest image and color/product name are restored on conversation reload
+                new_image_url = response.get("image_url")
+                new_image_prompt = response.get("image_prompt")
+                new_image_revised_prompt = response.get("image_revised_prompt")
+
+                existing_conversation = await cosmos_service.get_conversation(conversation_id, user_id)
+                raw_content = (existing_conversation or {}).get("generated_content")
+                existing_content = raw_content if isinstance(raw_content, dict) else {}
+                old_image_url = existing_content.get("image_url")
+
+                # Replace old color/product name in text_content when product changes
+                old_products = existing_content.get("selected_products", [])
+                old_name = old_products[0].get("product_name", "") if old_products else ""
+                new_name = products_data[0].get("product_name", "") if products_data else ""
+                existing_text = existing_content.get("text_content")
+                if existing_text and old_name and new_name and old_name != new_name:
+                    pat = re.compile(re.escape(old_name), re.IGNORECASE)
+                    if isinstance(existing_text, dict):
+                        existing_text = {
+                            k: pat.sub(lambda _m: new_name, v) if isinstance(v, str) else v
+                            for k, v in existing_text.items()
+                        }
+                    elif isinstance(existing_text, str):
+                        existing_text = pat.sub(lambda _m: new_name, existing_text)
+
+                updated_content = {
+                    **existing_content,
+                    "image_url": new_image_url if new_image_url else old_image_url,
+                    "image_prompt": new_image_prompt if new_image_prompt else existing_content.get("image_prompt"),
+                    "image_revised_prompt": new_image_revised_prompt if new_image_revised_prompt else existing_content.get("image_revised_prompt"),
+                    "selected_products": products_data if products_data else existing_content.get("selected_products", []),
+                    **(({"text_content": existing_text} if existing_text is not None else {})),
+                }
+
+                await cosmos_service.save_generated_content(
+                    conversation_id=conversation_id,
+                    user_id=user_id,
+                    generated_content=updated_content
+                )
             except Exception as e:
                 logger.warning(f"Failed to save regeneration response to CosmosDB: {e}")
-            
+
             yield f"data: {json.dumps({'type': 'agent_response', 'content': json.dumps(response), 'is_final': True})}\n\n"
         except Exception as e:
             logger.exception(f"Error in regeneration: {e}")
             yield f"data: {json.dumps({'type': 'error', 'content': str(e), 'is_final': True})}\n\n"
-        
+
         yield "data: [DONE]\n\n"
-    
+
     return Response(
         generate(),
         mimetype="text/event-stream",
@@ -1019,17 +1084,17 @@ async def proxy_generated_image(conversation_id: str, filename: str):
     try:
         blob_service = await get_blob_service()
         await blob_service.initialize()
-        
+
         blob_name = f"{conversation_id}/{filename}"
         blob_client = blob_service._generated_images_container.get_blob_client(blob_name)
-        
+
         # Download the blob
         download = await blob_client.download_blob()
         image_data = await download.readall()
-        
+
         # Determine content type from filename
         content_type = "image/png" if filename.endswith(".png") else "image/jpeg"
-        
+
         return Response(
             image_data,
             mimetype=content_type,
@@ -1052,26 +1117,26 @@ async def proxy_product_image(filename: str):
     try:
         blob_service = await get_blob_service()
         await blob_service.initialize()
-        
+
         blob_client = blob_service._product_images_container.get_blob_client(filename)
-        
+
         # Get blob properties for ETag/Last-Modified
         properties = await blob_client.get_blob_properties()
         etag = properties.etag.strip('"') if properties.etag else None
         last_modified = properties.last_modified
-        
+
         # Check If-None-Match header for cache validation
         if_none_match = request.headers.get("If-None-Match")
         if if_none_match and etag and if_none_match.strip('"') == etag:
             return Response(status=304)  # Not Modified
-        
+
         # Download the blob
         download = await blob_client.download_blob()
         image_data = await download.readall()
-        
+
         # Determine content type from filename
         content_type = "image/png" if filename.endswith(".png") else "image/jpeg"
-        
+
         headers = {
             "Cache-Control": "public, max-age=300, must-revalidate",  # Cache 5 min, revalidate
         }
@@ -1079,7 +1144,7 @@ async def proxy_product_image(filename: str):
             headers["ETag"] = f'"{etag}"'
         if last_modified:
             headers["Last-Modified"] = last_modified.strftime("%a, %d %b %Y %H:%M:%S GMT")
-        
+
         return Response(
             image_data,
             mimetype=content_type,
@@ -1096,7 +1161,7 @@ async def proxy_product_image(filename: str):
 async def list_products():
     """
     List all products.
-    
+
     Query params:
         category: Filter by category
         sub_category: Filter by sub-category
@@ -1107,9 +1172,9 @@ async def list_products():
     sub_category = request.args.get("sub_category")
     search = request.args.get("search")
     limit = int(request.args.get("limit", 20))
-    
+
     cosmos_service = await get_cosmos_service()
-    
+
     if search:
         products = await cosmos_service.search_products(search, limit)
     elif category:
@@ -1118,7 +1183,7 @@ async def list_products():
         )
     else:
         products = await cosmos_service.get_all_products(limit)
-    
+
     # Convert blob URLs to proxy URLs for products with images
     product_list = []
     for p in products:
@@ -1130,7 +1195,7 @@ async def list_products():
             filename = original_url.split("/")[-1] if "/" in original_url else original_url
             product_dict["image_url"] = f"/api/product-images/{filename}"
         product_list.append(product_dict)
-    
+
     return jsonify({
         "products": product_list,
         "count": len(product_list)
@@ -1142,17 +1207,17 @@ async def get_product(sku: str):
     """Get a product by SKU."""
     cosmos_service = await get_cosmos_service()
     product = await cosmos_service.get_product_by_sku(sku)
-    
+
     if not product:
         return jsonify({"error": "Product not found"}), 404
-    
+
     product_dict = product.model_dump()
     # Convert direct blob URL to proxy URL
     if product_dict.get("image_url"):
         original_url = product_dict["image_url"]
         filename = original_url.split("/")[-1] if "/" in original_url else original_url
         product_dict["image_url"] = f"/api/product-images/{filename}"
-    
+
     return jsonify(product_dict)
 
 
@@ -1160,7 +1225,7 @@ async def get_product(sku: str):
 async def create_product():
     """
     Create or update a product.
-    
+
     Request body:
     {
         "product_name": "...",
@@ -1173,15 +1238,15 @@ async def create_product():
     }
     """
     data = await request.get_json()
-    
+
     try:
         product = Product(**data)
     except Exception as e:
         return jsonify({"error": f"Invalid product format: {str(e)}"}), 400
-    
+
     cosmos_service = await get_cosmos_service()
     saved_product = await cosmos_service.upsert_product(product)
-    
+
     return jsonify(saved_product.model_dump()), 201
 
 
@@ -1189,38 +1254,38 @@ async def create_product():
 async def upload_product_image(sku: str):
     """
     Upload an image for a product.
-    
+
     The image will be stored and a description will be auto-generated
     using GPT-5 Vision.
-    
+
     Request: multipart/form-data with 'image' file
     """
     cosmos_service = await get_cosmos_service()
     product = await cosmos_service.get_product_by_sku(sku)
-    
+
     if not product:
         return jsonify({"error": "Product not found"}), 404
-    
+
     files = await request.files
     if "image" not in files:
         return jsonify({"error": "No image file provided"}), 400
-    
+
     image_file = files["image"]
     image_data = image_file.read()
     content_type = image_file.content_type or "image/jpeg"
-    
+
     blob_service = await get_blob_service()
     image_url, description = await blob_service.upload_product_image(
         sku=sku,
         image_data=image_data,
         content_type=content_type
     )
-    
+
     # Update product with image info
     product.image_url = image_url
     product.image_description = description
     await cosmos_service.upsert_product(product)
-    
+
     return jsonify({
         "image_url": image_url,
         "image_description": description,
@@ -1234,21 +1299,21 @@ async def upload_product_image(sku: str):
 async def list_conversations():
     """
     List conversations for a user.
-    
+
     Uses authenticated user from EasyAuth headers. In development mode
     (when not authenticated), uses "anonymous" as user_id.
-    
+
     Query params:
         limit: Max number of results (default 20)
     """
     auth_user = get_authenticated_user()
     user_id = auth_user["user_principal_id"]
-    
+
     limit = int(request.args.get("limit", 20))
-    
+
     cosmos_service = await get_cosmos_service()
     conversations = await cosmos_service.get_user_conversations(user_id, limit)
-    
+
     return jsonify({
         "conversations": conversations,
         "count": len(conversations)
@@ -1259,18 +1324,18 @@ async def list_conversations():
 async def get_conversation(conversation_id: str):
     """
     Get a specific conversation.
-    
+
     Uses authenticated user from EasyAuth headers.
     """
     auth_user = get_authenticated_user()
     user_id = auth_user["user_principal_id"]
-    
+
     cosmos_service = await get_cosmos_service()
     conversation = await cosmos_service.get_conversation(conversation_id, user_id)
-    
+
     if not conversation:
         return jsonify({"error": "Conversation not found"}), 404
-    
+
     return jsonify(conversation)
 
 
@@ -1278,12 +1343,12 @@ async def get_conversation(conversation_id: str):
 async def delete_conversation(conversation_id: str):
     """
     Delete a specific conversation.
-    
+
     Uses authenticated user from EasyAuth headers.
     """
     auth_user = get_authenticated_user()
     user_id = auth_user["user_principal_id"]
-    
+
     try:
         cosmos_service = await get_cosmos_service()
         await cosmos_service.delete_conversation(conversation_id, user_id)
@@ -1297,9 +1362,9 @@ async def delete_conversation(conversation_id: str):
 async def update_conversation(conversation_id: str):
     """
     Update a conversation (rename).
-    
+
     Uses authenticated user from EasyAuth headers.
-    
+
     Request body:
     {
         "title": "New conversation title"
@@ -1307,13 +1372,13 @@ async def update_conversation(conversation_id: str):
     """
     auth_user = get_authenticated_user()
     user_id = auth_user["user_principal_id"]
-    
+
     data = await request.get_json()
     new_title = data.get("title", "").strip()
-    
+
     if not new_title:
         return jsonify({"error": "Title is required"}), 400
-    
+
     try:
         cosmos_service = await get_cosmos_service()
         result = await cosmos_service.rename_conversation(conversation_id, user_id, new_title)
@@ -1323,6 +1388,29 @@ async def update_conversation(conversation_id: str):
     except Exception as e:
         logger.warning(f"Failed to rename conversation: {e}")
         return jsonify({"error": "Failed to rename conversation"}), 500
+
+
+@app.route("/api/conversations", methods=["DELETE"])
+async def delete_all_conversations():
+    """
+    Delete all conversations for the current user.
+
+    Uses authenticated user from EasyAuth headers.
+    """
+    auth_user = get_authenticated_user()
+    user_id = auth_user["user_principal_id"]
+
+    try:
+        cosmos_service = await get_cosmos_service()
+        deleted_count = await cosmos_service.delete_all_conversations(user_id)
+        return jsonify({
+            "success": True,
+            "message": f"Deleted {deleted_count} conversations",
+            "deleted_count": deleted_count
+        })
+    except Exception as e:
+        logger.warning(f"Failed to delete all conversations: {e}")
+        return jsonify({"error": "Failed to delete conversations"}), 500
 
 
 # ==================== Brand Guidelines Endpoints ====================
@@ -1364,24 +1452,24 @@ async def get_ui_config():
 async def startup():
     """Initialize services on application startup."""
     logger.info("Starting Content Generation Solution Accelerator...")
-    
+
     # Initialize orchestrator
     get_orchestrator()
     logger.info("Orchestrator initialized with Microsoft Agent Framework")
-    
+
     # Try to initialize services - they may fail if CosmosDB/Blob storage is not accessible
     try:
         await get_cosmos_service()
         logger.info("CosmosDB service initialized")
     except Exception as e:
         logger.warning(f"CosmosDB service initialization failed (may be firewall): {e}")
-    
+
     try:
         await get_blob_service()
         logger.info("Blob storage service initialized")
     except Exception as e:
         logger.warning(f"Blob storage service initialization failed: {e}")
-    
+
     logger.info("Application startup complete")
 
 
@@ -1389,13 +1477,13 @@ async def startup():
 async def shutdown():
     """Cleanup on application shutdown."""
     logger.info("Shutting down Content Generation Solution Accelerator...")
-    
+
     cosmos_service = await get_cosmos_service()
     await cosmos_service.close()
-    
+
     blob_service = await get_blob_service()
     await blob_service.close()
-    
+
     logger.info("Application shutdown complete")
 
 
