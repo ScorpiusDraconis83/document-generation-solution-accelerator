@@ -1,7 +1,6 @@
 """Test module for Content Generation golden path test cases."""
 import logging
 import time
-import pytest
 
 from pages.HomePage import HomePage
 from config.constants import URL
@@ -690,7 +689,4 @@ def test_validate_clear_all_chat_history(login_logout, request):
     except Exception as e:
         log_test_failure(start_time, e)
         raise
-
-
-
 

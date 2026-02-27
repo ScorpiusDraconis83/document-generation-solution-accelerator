@@ -1,6 +1,7 @@
 """Home page object module for Fabric SQL automation tests."""
 import logging
 import json
+import os
 import re
 import math
 from io import BytesIO
@@ -440,7 +441,7 @@ class HomePage(BasePage):
             initial_count = chat_history.count()
             logger.info(f"Initial chat history count: {initial_count}")
 
-            if initial_count == 0:
+            if not initial_count:
                 error_msg = "No chat history items available to delete"
                 logger.error(f"❌ {error_msg}")
                 raise AssertionError(error_msg)
@@ -574,7 +575,7 @@ class HomePage(BasePage):
 
         try:
             # Step 1: Click on the quick link
-            logger.info(f"Step 1: Clicking on quick link...")
+            logger.info("Step 1: Clicking on quick link...")
             user_message = self.page.locator(quick_link)
             expect(user_message).to_be_visible(timeout=10000)
             user_message.click()
@@ -902,7 +903,6 @@ class HomePage(BasePage):
             # Step 3: Validate the downloaded file is not empty
             logger.info("Step 3: Validating downloaded file is not empty...")
             download_path = download.path()
-            import os
             file_size = os.path.getsize(download_path)
             logger.info(f"  Downloaded file size: {file_size} bytes")
             assert file_size > 0, "Downloaded file is empty (0 bytes)"
@@ -1226,7 +1226,7 @@ class HomePage(BasePage):
             logger.error(f"❌ {error_msg}")
             raise AssertionError(error_msg) from e
 
-    def validate_generated_copy_accuracy(self, product_name, generated_content_locator=None,
+    def validate_generated_copy_accuracy(self, product_name, generated_content_locator=None,  # noqa: ARG002
                                            min_length=30, expected_copy_keywords=None):
         """
         Validate that the generated marketing copy is accurate and relevant.
@@ -1391,7 +1391,6 @@ class HomePage(BasePage):
                     logger.info(f"✓ [Soft] Price found: {expected_price_pattern}")
                 else:
                     # Also try a generic price regex as fallback
-                    import re
                     price_match = re.search(r'\$\d+\.\d{2}\s*usd', section_text_lower)
                     if price_match:
                         logger.info(
