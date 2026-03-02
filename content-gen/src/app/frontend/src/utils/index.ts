@@ -15,7 +15,6 @@ export { parseSSEStream } from './sseParser';
 
 // Generation progress stages
 export { getGenerationStage } from './generationStages';
-export type { GenerationStage } from './generationStages';
 
 // Brief-field metadata
 export { BRIEF_FIELD_LABELS, BRIEF_DISPLAY_ORDER, BRIEF_FIELD_KEYS } from './briefFields';

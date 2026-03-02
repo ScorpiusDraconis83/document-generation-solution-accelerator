@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 
 import type { ChatMessage, Product, CreativeBrief } from '../types';
 import { createMessage, buildGeneratedContent } from '../utils';
-import httpClient from '../api/httpClient';
+import { httpClient } from '../api';
 import {
   useAppDispatch,
   useAppSelector,

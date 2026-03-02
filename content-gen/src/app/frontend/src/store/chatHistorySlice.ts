@@ -4,7 +4,7 @@
  * Granular selectors for each piece of history state.
  */
 import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit';
-import httpClient from '../api/httpClient';
+import { httpClient } from '../api';
 
 export interface ConversationSummary {
   id: string;

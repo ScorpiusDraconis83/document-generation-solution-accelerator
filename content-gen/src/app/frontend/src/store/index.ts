@@ -15,7 +15,6 @@ export {
   toggleChatHistory,
   setShowChatHistory,
   GenerationStatus,
-  GENERATION_STATUS_LABELS,
 } from './appSlice';
 
 // Chat slice – actions
@@ -55,7 +54,6 @@ export {
   selectUserId,
   selectUserName,
   selectIsLoading,
-  selectGenerationStatus,
   selectGenerationStatusLabel,
   selectImageGenerationEnabled,
   selectShowChatHistory,

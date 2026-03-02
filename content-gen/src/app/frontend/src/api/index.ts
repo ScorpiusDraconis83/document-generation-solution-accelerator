@@ -10,6 +10,7 @@ import type {
   AppConfig,
 } from '../types';
 import httpClient from './httpClient';
+export { default as httpClient } from './httpClient';
 import { parseSSEStream, getGenerationStage } from '../utils';
 
 /**
