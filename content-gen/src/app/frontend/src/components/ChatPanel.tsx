@@ -30,7 +30,6 @@ interface ChatPanelProps {
   onBriefCancel?: () => void;
   onGenerateContent?: () => void;
   onRegenerateContent?: () => void;
-  onProductsStartOver?: () => void;
   onProductSelect?: (product: Product) => void;
   onNewConversation?: () => void;
 }
@@ -42,7 +41,6 @@ export const ChatPanel = memo(function ChatPanel({
   onBriefCancel,
   onGenerateContent,
   onRegenerateContent,
-  onProductsStartOver,
   onProductSelect,
   onNewConversation,
 }: ChatPanelProps) {
@@ -87,9 +85,6 @@ export const ChatPanel = memo(function ChatPanel({
   }, []);
 
   const isInputDisabled = useMemo(() => isLoading, [isLoading]);
-
-  const startOverFallback = useCallback(() => {}, []);
-  const effectiveProductsStartOver = onProductsStartOver || startOverFallback;
 
   return (
     <div className="chat-container">
@@ -142,7 +137,6 @@ export const ChatPanel = memo(function ChatPanel({
                 products={selectedProducts}
                 availableProducts={availableProducts}
                 onConfirm={onGenerateContent!}
-                onStartOver={effectiveProductsStartOver}
                 isAwaitingResponse={isLoading}
                 onProductSelect={onProductSelect}
                 disabled={isLoading}

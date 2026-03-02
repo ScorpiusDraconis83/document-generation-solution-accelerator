@@ -7,8 +7,7 @@ import {
 import { ShieldError20Regular } from '@fluentui/react-icons';
 import type { GeneratedContent, Product } from '../types';
 import { useWindowSize } from '../hooks/useWindowSize';
-import { isContentFilterError, getErrorMessage } from '../utils/contentErrors';
-import { downloadImage } from '../utils/downloadImage';
+import { isContentFilterError, getErrorMessage, downloadImage } from '../utils';
 import { useCopyToClipboard } from '../hooks/useCopyToClipboard';
 import { ImagePreviewCard } from './ImagePreviewCard';
 import { ComplianceSection } from './ComplianceSection';

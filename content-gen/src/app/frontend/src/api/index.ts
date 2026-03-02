@@ -10,8 +10,7 @@ import type {
   AppConfig,
 } from '../types';
 import httpClient from './httpClient';
-import { parseSSEStream } from '../utils/sseParser';
-import { getGenerationStage } from '../utils/generationStages';
+import { parseSSEStream, getGenerationStage } from '../utils';
 
 /**
  * Get application configuration including feature flags
@@ -178,7 +177,6 @@ export async function* streamGenerateContent(
         } as AgentResponse;
       }
     } catch (error) {
-      console.error(`Error polling task ${taskId}:`, error);
       // Continue polling on transient errors
       if (attempts >= maxAttempts) {
         throw error;

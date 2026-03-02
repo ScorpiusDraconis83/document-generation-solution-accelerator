@@ -23,10 +23,6 @@ export { BRIEF_FIELD_LABELS, BRIEF_DISPLAY_ORDER, BRIEF_FIELD_KEYS } from './bri
 // String utilities
 export { createNameSwapper, matchesAnyKeyword } from './stringUtils';
 
-// Production API utilities
-export { retryRequest, RequestCache, throttle } from './apiUtils';
-export type { RetryOptions } from './apiUtils';
-
 // Content error detection
 export { isContentFilterError, getErrorMessage } from './contentErrors';
 

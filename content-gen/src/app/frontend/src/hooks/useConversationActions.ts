@@ -182,19 +182,6 @@ export function useConversationActions() {
   /* ------------------------------------------------------------ */
   /*  Product actions                                              */
   /* ------------------------------------------------------------ */
-  const productsStartOver = useCallback(() => {
-    dispatch(setSelectedProducts([]));
-    dispatch(setConfirmedBrief(null));
-    dispatch(
-      addMessage(
-        createMessage(
-          'assistant',
-          'Starting over. Please provide your creative brief to begin a new campaign.',
-        ),
-      ),
-    );
-  }, [dispatch]);
-
   const selectProduct = useCallback(
     (product: Product) => {
       const isSelected = selectedProducts.some(
@@ -224,7 +211,6 @@ export function useConversationActions() {
     newConversation,
     confirmBrief,
     cancelBrief,
-    productsStartOver,
     selectProduct,
     toggleHistory,
   };

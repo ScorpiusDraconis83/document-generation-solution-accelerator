@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import {
   Text,
 } from '@fluentui/react-components';
@@ -17,7 +17,7 @@ export interface ViolationCardProps {
  * A single compliance violation row with severity-coloured icon and background.
  */
 export const ViolationCard = memo(function ViolationCard({ violation }: ViolationCardProps) {
-  const getSeverityStyles = () => {
+  const { icon, bg } = useMemo(() => {
     switch (violation.severity) {
       case 'error':
         return {
@@ -35,9 +35,7 @@ export const ViolationCard = memo(function ViolationCard({ violation }: Violatio
           bg: '#deecf9',
         };
     }
-  };
-
-  const { icon, bg } = getSeverityStyles();
+  }, [violation.severity]);
 
   return (
     <div

@@ -13,7 +13,6 @@ import { ProductCard } from './ProductCard';
 interface ProductReviewProps {
   products: Product[];
   onConfirm: () => void;
-  onStartOver: () => void;
   isAwaitingResponse?: boolean;
   availableProducts?: Product[];
   onProductSelect?: (product: Product) => void;
@@ -23,7 +22,6 @@ interface ProductReviewProps {
 export const ProductReview = memo(function ProductReview({
   products,
   onConfirm,
-  onStartOver: _onStartOver,
   isAwaitingResponse = false,
   availableProducts = [],
   onProductSelect,

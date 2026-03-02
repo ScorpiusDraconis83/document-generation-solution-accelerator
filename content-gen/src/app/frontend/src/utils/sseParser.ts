@@ -40,7 +40,7 @@ export async function* parseSSEStream(
         try {
           yield JSON.parse(data) as AgentResponse;
         } catch {
-          console.error('Failed to parse SSE data:', data);
+          // Malformed SSE frame — skip silently
         }
       }
     }

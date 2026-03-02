@@ -32,7 +32,6 @@ function App() {
     newConversation,
     confirmBrief,
     cancelBrief,
-    productsStartOver,
     selectProduct,
     toggleHistory,
   } = useConversationActions();
@@ -63,7 +62,6 @@ function App() {
             onBriefCancel={cancelBrief}
             onGenerateContent={generateContent}
             onRegenerateContent={generateContent}
-            onProductsStartOver={productsStartOver}
             onProductSelect={selectProduct}
             onNewConversation={newConversation}
           />

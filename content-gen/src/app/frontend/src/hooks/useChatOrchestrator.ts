@@ -1,6 +1,6 @@
 import { useCallback, type MutableRefObject } from 'react';
 
-import type { GeneratedContent } from '../types';
+import type { AgentResponse, GeneratedContent } from '../types';
 import { createMessage, createErrorMessage, matchesAnyKeyword, createNameSwapper } from '../utils';
 import {
   useAppDispatch,
@@ -25,6 +25,42 @@ import {
   selectConversationTitle,
   setConversationTitle,
 } from '../store';
+import type { AppDispatch } from '../store';
+
+/* ------------------------------------------------------------------ */
+/*  Shared helper — consumes a streamChat generator and dispatches     */
+/*  the final assistant message.  Used by branches 1-b, 3-b, 4-b.     */
+/* ------------------------------------------------------------------ */
+
+async function consumeStreamChat(
+  stream: AsyncGenerator<AgentResponse>,
+  dispatch: AppDispatch,
+): Promise<void> {
+  let fullContent = '';
+  let currentAgent = '';
+  let messageAdded = false;
+
+  for await (const response of stream) {
+    if (response.type === 'agent_response') {
+      fullContent = response.content;
+      currentAgent = response.agent || '';
+      if ((response.is_final || response.requires_user_input) && !messageAdded) {
+        dispatch(addMessage(createMessage('assistant', fullContent, currentAgent)));
+        messageAdded = true;
+      }
+    } else if (response.type === 'error') {
+      dispatch(
+        addMessage(
+          createMessage(
+            'assistant',
+            response.content || 'An error occurred while processing your request.',
+          ),
+        ),
+      );
+      messageAdded = true;
+    }
+  }
+}
 
 /* ------------------------------------------------------------------ */
 /*  Hook                                                               */
@@ -130,42 +166,11 @@ export function useChatOrchestrator(
             }
           } else {
             // --- 1-b  General question while brief is pending -----------
-            let fullContent = '';
-            let currentAgent = '';
-            let messageAdded = false;
-
             dispatch(setGenerationStatus('Processing your question...'));
-            for await (const response of streamChat(
-              content,
-              conversationId,
-              userId,
-              signal,
-            )) {
-              if (response.type === 'agent_response') {
-                fullContent = response.content;
-                currentAgent = response.agent || '';
-                if (
-                  (response.is_final || response.requires_user_input) &&
-                  !messageAdded
-                ) {
-                  dispatch(
-                    addMessage(createMessage('assistant', fullContent, currentAgent)),
-                  );
-                  messageAdded = true;
-                }
-              } else if (response.type === 'error') {
-                dispatch(
-                  addMessage(
-                    createMessage(
-                      'assistant',
-                      response.content ||
-                        'An error occurred while processing your request.',
-                    ),
-                  ),
-                );
-                messageAdded = true;
-              }
-            }
+            await consumeStreamChat(
+              streamChat(content, conversationId, userId, signal),
+              dispatch,
+            );
             dispatch(setGenerationStatus(''));
           }
 
@@ -321,41 +326,11 @@ export function useChatOrchestrator(
             );
           } else {
             // --- 3-b  General question after content generation --------
-            let fullContent = '';
-            let currentAgent = '';
-            let messageAdded = false;
-
             dispatch(setGenerationStatus('Processing your request...'));
-            for await (const response of streamChat(
-              content,
-              conversationId,
-              userId,
-              signal,
-            )) {
-              if (response.type === 'agent_response') {
-                fullContent = response.content;
-                currentAgent = response.agent || '';
-                if (
-                  (response.is_final || response.requires_user_input) &&
-                  !messageAdded
-                ) {
-                  dispatch(
-                    addMessage(createMessage('assistant', fullContent, currentAgent)),
-                  );
-                  messageAdded = true;
-                }
-              } else if (response.type === 'error') {
-                dispatch(
-                  addMessage(
-                    createMessage(
-                      'assistant',
-                      response.content || 'An error occurred.',
-                    ),
-                  ),
-                );
-                messageAdded = true;
-              }
-            }
+            await consumeStreamChat(
+              streamChat(content, conversationId, userId, signal),
+              dispatch,
+            );
             dispatch(setGenerationStatus(''));
           }
 
@@ -426,42 +401,11 @@ export function useChatOrchestrator(
             }
           } else {
             // --- 4-b  Generic chat -----------------------------------
-            let fullContent = '';
-            let currentAgent = '';
-            let messageAdded = false;
-
             dispatch(setGenerationStatus('Processing your request...'));
-            for await (const response of streamChat(
-              content,
-              conversationId,
-              userId,
-              signal,
-            )) {
-              if (response.type === 'agent_response') {
-                fullContent = response.content;
-                currentAgent = response.agent || '';
-                if (
-                  (response.is_final || response.requires_user_input) &&
-                  !messageAdded
-                ) {
-                  dispatch(
-                    addMessage(createMessage('assistant', fullContent, currentAgent)),
-                  );
-                  messageAdded = true;
-                }
-              } else if (response.type === 'error') {
-                dispatch(
-                  addMessage(
-                    createMessage(
-                      'assistant',
-                      response.content ||
-                        'An error occurred while processing your request.',
-                    ),
-                  ),
-                );
-                messageAdded = true;
-              }
-            }
+            await consumeStreamChat(
+              streamChat(content, conversationId, userId, signal),
+              dispatch,
+            );
             dispatch(setGenerationStatus(''));
           }
         }
