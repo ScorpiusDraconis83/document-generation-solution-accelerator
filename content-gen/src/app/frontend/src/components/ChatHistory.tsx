@@ -75,8 +75,8 @@ export const ChatHistory = memo(function ChatHistory({
     try {
       await dispatch(clearAllConversations()).unwrap();
       onNewConversation();
-    } catch (err) {
-      console.error('Error clearing all conversations:', err);
+    } catch {
+      // Error clearing all conversations
     }
   }, [dispatch, onNewConversation]);
 
@@ -86,16 +86,16 @@ export const ChatHistory = memo(function ChatHistory({
       if (conversationId === currentConversationId) {
         onNewConversation();
       }
-    } catch (err) {
-      console.error('Error deleting conversation:', err);
+    } catch {
+      // Error deleting conversation
     }
   }, [dispatch, currentConversationId, onNewConversation]);
 
   const handleRenameConversation = useCallback(async (conversationId: string, newTitle: string) => {
     try {
       await dispatch(renameConversation({ conversationId, newTitle })).unwrap();
-    } catch (err) {
-      console.error('Error renaming conversation:', err);
+    } catch {
+      // Error renaming conversation
     }
   }, [dispatch]);
 

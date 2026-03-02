@@ -13,8 +13,8 @@ export function useCopyToClipboard(resetTimeout = 2000) {
 
   const copy = useCallback(
     (text: string) => {
-      navigator.clipboard.writeText(text).catch((err) => {
-        console.error('Failed to copy text:', err);
+      navigator.clipboard.writeText(text).catch(() => {
+        // Clipboard write failure — non-critical
       });
       setCopied(true);
       clearTimeout(timerRef.current);

@@ -7,8 +7,9 @@
 
 /**
  * Escape a string so it can be safely embedded in a `RegExp` pattern.
+ * @internal — only used by `createNameSwapper` within this module.
  */
-export function escapeRegex(str: string): string {
+function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 

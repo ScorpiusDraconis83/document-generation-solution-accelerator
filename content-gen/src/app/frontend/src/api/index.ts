@@ -122,8 +122,6 @@ export async function* streamGenerateContent(
   }, { signal });
   const taskId = startData.task_id;
   
-  console.debug(`Generation started with task ID: ${taskId}`);
-  
   // Yield initial status
   yield {
     type: 'status',

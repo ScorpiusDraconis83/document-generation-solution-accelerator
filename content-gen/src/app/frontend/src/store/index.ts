@@ -44,8 +44,6 @@ export {
   renameConversation,
   clearAllConversations,
   setShowAll,
-  setConversations,
-  upsertConversation,
   setIsClearAllDialogOpen,
 } from './chatHistorySlice';
 export type { ConversationSummary } from './chatHistorySlice';

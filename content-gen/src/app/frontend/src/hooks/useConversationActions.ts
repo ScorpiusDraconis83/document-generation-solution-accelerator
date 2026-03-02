@@ -96,11 +96,8 @@ export function useConversationActions() {
               products?: Product[];
             }>('/products');
             dispatch(setAvailableProducts(productsData.products || []));
-          } catch (err) {
-            console.error(
-              'Error loading products for restored conversation:',
-              err,
-            );
+          } catch {
+            // Non-critical — product load failure for restored conversation
           }
         }
 
@@ -122,8 +119,8 @@ export function useConversationActions() {
           dispatch(setGeneratedContent(null));
           dispatch(setSelectedProducts([]));
         }
-      } catch (error) {
-        console.error('Error loading conversation:', error);
+      } catch {
+        // Error loading conversation — swallowed silently
       }
     },
     [userId, dispatch],
@@ -164,8 +161,8 @@ export function useConversationActions() {
           ),
         ),
       );
-    } catch (error) {
-      console.error('Error confirming brief:', error);
+    } catch {
+      // Error confirming brief — swallowed silently
     }
   }, [conversationId, userId, pendingBrief, dispatch]);
 

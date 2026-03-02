@@ -25,20 +25,10 @@ export function createMessage(
 }
 
 /**
- * Assemble a copyable plain-text string from generated text content.
- *
- * Used by `InlineContentPreview` to copy headline + body + tagline
- * to clipboard.
+ * Shorthand for creating an assistant error message.
+ * Consolidates the repeated `createMessage('assistant', errorText)` pattern
+ * used in error catch blocks across multiple hooks.
  */
-export function formatContentForClipboard(
-  textContent?: { headline?: string; body?: string; tagline?: string },
-): string {
-  if (!textContent) return '';
-  return [
-    textContent.headline && `✨ ${textContent.headline} ✨`,
-    textContent.body,
-    textContent.tagline,
-  ]
-    .filter(Boolean)
-    .join('\n\n');
+export function createErrorMessage(content: string): ChatMessage {
+  return createMessage('assistant', content);
 }

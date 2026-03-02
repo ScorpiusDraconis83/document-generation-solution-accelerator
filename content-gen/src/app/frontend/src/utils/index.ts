@@ -5,7 +5,7 @@
  */
 
 // Message factories & formatting
-export { createMessage, formatContentForClipboard } from './messageUtils';
+export { createMessage, createErrorMessage } from './messageUtils';
 
 // Content parsing (raw API → typed domain objects)
 export { parseTextContent, resolveImageUrl, buildGeneratedContent } from './contentParsing';
@@ -21,7 +21,7 @@ export type { GenerationStage } from './generationStages';
 export { BRIEF_FIELD_LABELS, BRIEF_DISPLAY_ORDER, BRIEF_FIELD_KEYS } from './briefFields';
 
 // String utilities
-export { escapeRegex, createNameSwapper, matchesAnyKeyword } from './stringUtils';
+export { createNameSwapper, matchesAnyKeyword } from './stringUtils';
 
 // Production API utilities
 export { retryRequest, RequestCache, throttle } from './apiUtils';

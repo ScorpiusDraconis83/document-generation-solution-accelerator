@@ -1,7 +1,7 @@
 import { useCallback, type MutableRefObject } from 'react';
 
 import type { GeneratedContent } from '../types';
-import { createMessage, matchesAnyKeyword, createNameSwapper } from '../utils';
+import { createMessage, createErrorMessage, matchesAnyKeyword, createNameSwapper } from '../utils';
 import {
   useAppDispatch,
   useAppSelector,
@@ -467,14 +467,11 @@ export function useChatOrchestrator(
         }
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') {
-          console.debug('Request cancelled by user');
           dispatch(addMessage(createMessage('assistant', 'Generation stopped.')));
         } else {
-          console.error('Error sending message:', error);
           dispatch(
             addMessage(
-              createMessage(
-                'assistant',
+              createErrorMessage(
                 'Sorry, there was an error processing your request. Please try again.',
               ),
             ),

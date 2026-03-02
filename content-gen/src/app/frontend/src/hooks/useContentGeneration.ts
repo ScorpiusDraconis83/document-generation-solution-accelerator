@@ -1,6 +1,6 @@
 import { useCallback, type MutableRefObject } from 'react';
 
-import { createMessage, buildGeneratedContent } from '../utils';
+import { createMessage, createErrorMessage, buildGeneratedContent } from '../utils';
 import {
   useAppDispatch,
   useAppSelector,
@@ -66,25 +66,21 @@ export function useContentGeneration(
             const genContent = buildGeneratedContent(rawContent);
             dispatch(setGeneratedContent(genContent));
             dispatch(setGenerationStatus(''));
-          } catch (parseError) {
-            console.error('Error parsing generated content:', parseError);
+          } catch {
+            // Content parse failure — non-critical, generation result may be malformed
           }
         } else if (response.type === 'error') {
           dispatch(setGenerationStatus(''));
-          dispatch(addMessage(createMessage(
-            'assistant',
+          dispatch(addMessage(createErrorMessage(
             `Error generating content: ${response.content}`,
           )));
         }
       }
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        console.debug('Content generation cancelled by user');
         dispatch(addMessage(createMessage('assistant', 'Content generation stopped.')));
       } else {
-        console.error('Error generating content:', error);
-        dispatch(addMessage(createMessage(
-          'assistant',
+        dispatch(addMessage(createErrorMessage(
           'Sorry, there was an error generating content. Please try again.',
         )));
       }

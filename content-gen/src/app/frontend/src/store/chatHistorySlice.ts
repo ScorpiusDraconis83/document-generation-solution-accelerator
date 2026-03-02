@@ -78,17 +78,6 @@ const chatHistorySlice = createSlice({
     setShowAll(state, action: PayloadAction<boolean>) {
       state.showAll = action.payload;
     },
-    setConversations(state, action: PayloadAction<ConversationSummary[]>) {
-      state.conversations = action.payload;
-    },
-    upsertConversation(state, action: PayloadAction<ConversationSummary>) {
-      const idx = state.conversations.findIndex((c) => c.id === action.payload.id);
-      if (idx >= 0) {
-        state.conversations[idx] = action.payload;
-      } else {
-        state.conversations.unshift(action.payload);
-      }
-    },
     setIsClearAllDialogOpen(state, action: PayloadAction<boolean>) {
       state.isClearAllDialogOpen = action.payload;
     },
@@ -133,6 +122,6 @@ const chatHistorySlice = createSlice({
   },
 });
 
-export const { setShowAll, setConversations, upsertConversation, setIsClearAllDialogOpen } =
+export const { setShowAll, setIsClearAllDialogOpen } =
   chatHistorySlice.actions;
 export default chatHistorySlice.reducer;
