@@ -16,6 +16,7 @@ import {
   addMessage,
   setIsLoading,
   setGenerationStatus,
+  GenerationStatus,
   setPendingBrief,
   setConfirmedBrief,
   setAwaitingClarification,
@@ -127,7 +128,7 @@ export function useChatOrchestrator(
             // --- 1-a  Refine the brief --------------------------------
             const refinementPrompt = `Current creative brief:\n${JSON.stringify(pendingBrief, null, 2)}\n\nUser requested change: ${content}\n\nPlease update the brief accordingly and return the complete updated brief.`;
 
-            dispatch(setGenerationStatus('Updating creative brief...'));
+            dispatch(setGenerationStatus(GenerationStatus.UPDATING_BRIEF));
             const parsed = await parseBrief(
               refinementPrompt,
               conversationId,
@@ -145,7 +146,7 @@ export function useChatOrchestrator(
 
             if (parsed.requires_clarification && parsed.clarifying_questions) {
               dispatch(setAwaitingClarification(true));
-              dispatch(setGenerationStatus(''));
+              dispatch(setGenerationStatus(GenerationStatus.IDLE));
               dispatch(
                 addMessage(
                   createMessage('assistant', parsed.clarifying_questions, 'PlanningAgent'),
@@ -153,7 +154,7 @@ export function useChatOrchestrator(
               );
             } else {
               dispatch(setAwaitingClarification(false));
-              dispatch(setGenerationStatus(''));
+              dispatch(setGenerationStatus(GenerationStatus.IDLE));
               dispatch(
                 addMessage(
                   createMessage(
@@ -166,19 +167,19 @@ export function useChatOrchestrator(
             }
           } else {
             // --- 1-b  General question while brief is pending -----------
-            dispatch(setGenerationStatus('Processing your question...'));
+            dispatch(setGenerationStatus(GenerationStatus.PROCESSING_QUESTION));
             await consumeStreamChat(
               streamChat(content, conversationId, userId, signal),
               dispatch,
             );
-            dispatch(setGenerationStatus(''));
+            dispatch(setGenerationStatus(GenerationStatus.IDLE));
           }
 
           /* ---------------------------------------------------------- */
           /*  Branch 2 – brief confirmed, in product selection          */
           /* ---------------------------------------------------------- */
         } else if (confirmedBrief && !generatedContent) {
-          dispatch(setGenerationStatus('Finding products...'));
+          dispatch(setGenerationStatus(GenerationStatus.FINDING_PRODUCTS));
           const result = await selectProducts(
             content,
             selectedProducts,
@@ -187,7 +188,7 @@ export function useChatOrchestrator(
             signal,
           );
           dispatch(setSelectedProducts(result.products || []));
-          dispatch(setGenerationStatus(''));
+          dispatch(setGenerationStatus(GenerationStatus.IDLE));
           dispatch(
             addMessage(
               createMessage(
@@ -215,7 +216,7 @@ export function useChatOrchestrator(
             // --- 3-a  Regenerate image --------------------------------
             const { streamRegenerateImage } = await import('../api');
             dispatch(
-              setGenerationStatus('Regenerating image with your changes...'),
+              setGenerationStatus(GenerationStatus.REGENERATING_IMAGE),
             );
 
             let responseData: GeneratedContent | null = null;
@@ -243,9 +244,10 @@ export function useChatOrchestrator(
             )) {
               if (response.type === 'heartbeat') {
                 dispatch(
-                  setGenerationStatus(
-                    response.message || 'Regenerating image...',
-                  ),
+                  setGenerationStatus({
+                    status: GenerationStatus.POLLING,
+                    label: response.message || 'Regenerating image...',
+                  }),
                 );
               } else if (
                 response.type === 'agent_response' &&
@@ -320,18 +322,18 @@ export function useChatOrchestrator(
               }
             }
 
-            dispatch(setGenerationStatus(''));
+            dispatch(setGenerationStatus(GenerationStatus.IDLE));
             dispatch(
               addMessage(createMessage('assistant', messageContent, 'ImageAgent')),
             );
           } else {
             // --- 3-b  General question after content generation --------
-            dispatch(setGenerationStatus('Processing your request...'));
+            dispatch(setGenerationStatus(GenerationStatus.PROCESSING_REQUEST));
             await consumeStreamChat(
               streamChat(content, conversationId, userId, signal),
               dispatch,
             );
-            dispatch(setGenerationStatus(''));
+            dispatch(setGenerationStatus(GenerationStatus.IDLE));
           }
 
           /* ---------------------------------------------------------- */
@@ -346,7 +348,7 @@ export function useChatOrchestrator(
 
           if (isBriefLike && !confirmedBrief) {
             // --- 4-a  Parse as creative brief --------------------------
-            dispatch(setGenerationStatus('Analyzing creative brief...'));
+            dispatch(setGenerationStatus(GenerationStatus.ANALYZING_BRIEF));
             const parsed = await parseBrief(
               content,
               conversationId,
@@ -359,7 +361,7 @@ export function useChatOrchestrator(
             }
 
             if (parsed.rai_blocked) {
-              dispatch(setGenerationStatus(''));
+              dispatch(setGenerationStatus(GenerationStatus.IDLE));
               dispatch(
                 addMessage(
                   createMessage('assistant', parsed.message, 'ContentSafety'),
@@ -373,7 +375,7 @@ export function useChatOrchestrator(
                 dispatch(setPendingBrief(parsed.brief));
               }
               dispatch(setAwaitingClarification(true));
-              dispatch(setGenerationStatus(''));
+              dispatch(setGenerationStatus(GenerationStatus.IDLE));
               dispatch(
                 addMessage(
                   createMessage(
@@ -388,7 +390,7 @@ export function useChatOrchestrator(
                 dispatch(setPendingBrief(parsed.brief));
               }
               dispatch(setAwaitingClarification(false));
-              dispatch(setGenerationStatus(''));
+              dispatch(setGenerationStatus(GenerationStatus.IDLE));
               dispatch(
                 addMessage(
                   createMessage(
@@ -401,12 +403,12 @@ export function useChatOrchestrator(
             }
           } else {
             // --- 4-b  Generic chat -----------------------------------
-            dispatch(setGenerationStatus('Processing your request...'));
+            dispatch(setGenerationStatus(GenerationStatus.PROCESSING_REQUEST));
             await consumeStreamChat(
               streamChat(content, conversationId, userId, signal),
               dispatch,
             );
-            dispatch(setGenerationStatus(''));
+            dispatch(setGenerationStatus(GenerationStatus.IDLE));
           }
         }
       } catch (error) {
@@ -423,7 +425,7 @@ export function useChatOrchestrator(
         }
       } finally {
         dispatch(setIsLoading(false));
-        dispatch(setGenerationStatus(''));
+        dispatch(setGenerationStatus(GenerationStatus.IDLE));
         abortControllerRef.current = null;
         dispatch(incrementHistoryRefresh());
       }

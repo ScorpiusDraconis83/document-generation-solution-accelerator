@@ -6,9 +6,8 @@ import {
 } from '@fluentui/react-components';
 import { ShieldError20Regular } from '@fluentui/react-icons';
 import type { GeneratedContent, Product } from '../types';
-import { useWindowSize } from '../hooks/useWindowSize';
+import { useWindowSize, useCopyToClipboard } from '../hooks';
 import { isContentFilterError, getErrorMessage, downloadImage } from '../utils';
-import { useCopyToClipboard } from '../hooks/useCopyToClipboard';
 import { ImagePreviewCard } from './ImagePreviewCard';
 import { ComplianceSection } from './ComplianceSection';
 

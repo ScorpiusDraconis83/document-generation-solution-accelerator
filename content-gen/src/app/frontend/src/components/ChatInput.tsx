@@ -37,10 +37,10 @@ export const ChatInput = memo(function ChatInput({
 
   // Support both controlled & uncontrolled modes
   const inputValue = controlledValue ?? internalValue;
-  const setInputValue = (v: string) => {
+  const setInputValue = useCallback((v: string) => {
     controlledOnChange?.(v);
     if (controlledValue === undefined) setInternalValue(v);
-  };
+  }, [controlledOnChange, controlledValue]);
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();

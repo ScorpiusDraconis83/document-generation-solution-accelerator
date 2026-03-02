@@ -11,6 +11,7 @@ import {
   addMessage,
   setIsLoading,
   setGenerationStatus,
+  GenerationStatus,
   setGeneratedContent,
 } from '../store';
 
@@ -35,7 +36,7 @@ export function useContentGeneration(
     if (!confirmedBrief) return;
 
     dispatch(setIsLoading(true));
-    dispatch(setGenerationStatus('Starting content generation...'));
+    dispatch(setGenerationStatus(GenerationStatus.STARTING_GENERATION));
 
     abortControllerRef.current = new AbortController();
     const signal = abortControllerRef.current.signal;
@@ -55,22 +56,25 @@ export function useContentGeneration(
         if (response.type === 'heartbeat') {
           const statusMessage = response.content || 'Generating content...';
           const elapsed = (response as { elapsed?: number }).elapsed || 0;
-          dispatch(setGenerationStatus(`${statusMessage} (${elapsed}s)`));
+          dispatch(setGenerationStatus({
+            status: GenerationStatus.POLLING,
+            label: `${statusMessage} (${elapsed}s)`,
+          }));
           continue;
         }
 
         if (response.is_final && response.type !== 'error') {
-          dispatch(setGenerationStatus('Processing results...'));
+          dispatch(setGenerationStatus(GenerationStatus.PROCESSING_RESULTS));
           try {
             const rawContent = JSON.parse(response.content);
             const genContent = buildGeneratedContent(rawContent);
             dispatch(setGeneratedContent(genContent));
-            dispatch(setGenerationStatus(''));
+            dispatch(setGenerationStatus(GenerationStatus.IDLE));
           } catch {
             // Content parse failure — non-critical, generation result may be malformed
           }
         } else if (response.type === 'error') {
-          dispatch(setGenerationStatus(''));
+          dispatch(setGenerationStatus(GenerationStatus.IDLE));
           dispatch(addMessage(createErrorMessage(
             `Error generating content: ${response.content}`,
           )));
@@ -86,7 +90,7 @@ export function useContentGeneration(
       }
     } finally {
       dispatch(setIsLoading(false));
-      dispatch(setGenerationStatus(''));
+      dispatch(setGenerationStatus(GenerationStatus.IDLE));
       abortControllerRef.current = null;
     }
   }, [

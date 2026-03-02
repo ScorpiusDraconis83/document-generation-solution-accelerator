@@ -6,6 +6,46 @@
 import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit';
 
 /* ------------------------------------------------------------------ */
+/*  Generation-status enum                                             */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Finite set of generation-status values.  Components that read
+ * `generationStatus` can compare against these constants instead of
+ * relying on magic strings.
+ *
+ * `IDLE` means "no status to display".  Every other member maps to a
+ * user-facing label via {@link GENERATION_STATUS_LABELS}.
+ */
+export enum GenerationStatus {
+  IDLE = '',
+  UPDATING_BRIEF = 'UPDATING_BRIEF',
+  PROCESSING_QUESTION = 'PROCESSING_QUESTION',
+  FINDING_PRODUCTS = 'FINDING_PRODUCTS',
+  REGENERATING_IMAGE = 'REGENERATING_IMAGE',
+  PROCESSING_REQUEST = 'PROCESSING_REQUEST',
+  ANALYZING_BRIEF = 'ANALYZING_BRIEF',
+  STARTING_GENERATION = 'STARTING_GENERATION',
+  PROCESSING_RESULTS = 'PROCESSING_RESULTS',
+  /** Used for heartbeat polling where the label is dynamic. */
+  POLLING = 'POLLING',
+}
+
+/** Display strings shown in the UI for each status. */
+export const GENERATION_STATUS_LABELS: Record<GenerationStatus, string> = {
+  [GenerationStatus.IDLE]: '',
+  [GenerationStatus.UPDATING_BRIEF]: 'Updating creative brief...',
+  [GenerationStatus.PROCESSING_QUESTION]: 'Processing your question...',
+  [GenerationStatus.FINDING_PRODUCTS]: 'Finding products...',
+  [GenerationStatus.REGENERATING_IMAGE]: 'Regenerating image with your changes...',
+  [GenerationStatus.PROCESSING_REQUEST]: 'Processing your request...',
+  [GenerationStatus.ANALYZING_BRIEF]: 'Analyzing creative brief...',
+  [GenerationStatus.STARTING_GENERATION]: 'Starting content generation...',
+  [GenerationStatus.PROCESSING_RESULTS]: 'Processing results...',
+  [GenerationStatus.POLLING]: 'Generating content...',
+};
+
+/* ------------------------------------------------------------------ */
 /*  Async Thunks                                                      */
 /* ------------------------------------------------------------------ */
 
@@ -47,7 +87,10 @@ interface AppState {
   isLoading: boolean;
   imageGenerationEnabled: boolean;
   showChatHistory: boolean;
-  generationStatus: string;
+  /** Current generation status enum value. */
+  generationStatus: GenerationStatus;
+  /** Dynamic label override (used with GenerationStatus.POLLING). */
+  generationStatusLabel: string;
 }
 
 const initialState: AppState = {
@@ -56,7 +99,8 @@ const initialState: AppState = {
   isLoading: false,
   imageGenerationEnabled: true,
   showChatHistory: true,
-  generationStatus: '',
+  generationStatus: GenerationStatus.IDLE,
+  generationStatusLabel: '',
 };
 
 const appSlice = createSlice({
@@ -66,8 +110,17 @@ const appSlice = createSlice({
     setIsLoading(state, action: PayloadAction<boolean>) {
       state.isLoading = action.payload;
     },
-    setGenerationStatus(state, action: PayloadAction<string>) {
-      state.generationStatus = action.payload;
+    setGenerationStatus(
+      state,
+      action: PayloadAction<GenerationStatus | { status: GenerationStatus; label: string }>,
+    ) {
+      if (typeof action.payload === 'string') {
+        state.generationStatus = action.payload;
+        state.generationStatusLabel = GENERATION_STATUS_LABELS[action.payload];
+      } else {
+        state.generationStatus = action.payload.status;
+        state.generationStatusLabel = action.payload.label;
+      }
     },
     toggleChatHistory(state) {
       state.showChatHistory = !state.showChatHistory;

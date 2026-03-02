@@ -9,12 +9,12 @@ import { WelcomeCard } from './WelcomeCard';
 import { MessageBubble } from './MessageBubble';
 import { TypingIndicator } from './TypingIndicator';
 import { ChatInput } from './ChatInput';
-import { useAutoScroll } from '../hooks/useAutoScroll';
+import { useAutoScroll } from '../hooks';
 import {
   useAppSelector,
   selectMessages,
   selectIsLoading,
-  selectGenerationStatus,
+  selectGenerationStatusLabel,
   selectPendingBrief,
   selectConfirmedBrief,
   selectGeneratedContent,
@@ -46,7 +46,7 @@ export const ChatPanel = memo(function ChatPanel({
 }: ChatPanelProps) {
   const messages = useAppSelector(selectMessages);
   const isLoading = useAppSelector(selectIsLoading);
-  const generationStatus = useAppSelector(selectGenerationStatus);
+  const generationStatus = useAppSelector(selectGenerationStatusLabel);
   const pendingBrief = useAppSelector(selectPendingBrief);
   const confirmedBrief = useAppSelector(selectConfirmedBrief);
   const generatedContent = useAppSelector(selectGeneratedContent);
@@ -83,8 +83,6 @@ export const ChatPanel = memo(function ChatPanel({
   const handleSuggestionClick = useCallback((prompt: string) => {
     setInputValue(prompt);
   }, []);
-
-  const isInputDisabled = useMemo(() => isLoading, [isLoading]);
 
   return (
     <div className="chat-container">
@@ -171,7 +169,7 @@ export const ChatPanel = memo(function ChatPanel({
       <ChatInput
         onSendMessage={onSendMessage}
         onNewConversation={onNewConversation}
-        disabled={isInputDisabled}
+        disabled={isLoading}
         value={inputValue}
         onChange={setInputValue}
       />

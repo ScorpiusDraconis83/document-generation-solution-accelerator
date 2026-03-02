@@ -9,7 +9,7 @@ import {
 import { Copy20Regular } from '@fluentui/react-icons';
 import ReactMarkdown from 'react-markdown';
 import type { ChatMessage } from '../types';
-import { useCopyToClipboard } from '../hooks/useCopyToClipboard';
+import { useCopyToClipboard } from '../hooks';
 
 export interface MessageBubbleProps {
   message: ChatMessage;

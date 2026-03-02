@@ -7,7 +7,6 @@ import {
 
 export interface SuggestionCardProps {
   title: string;
-  prompt: string;
   icon: string;
   isSelected?: boolean;
   onClick: () => void;

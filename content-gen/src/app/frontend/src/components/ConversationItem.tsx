@@ -23,6 +23,23 @@ import {
 } from '@fluentui/react-icons';
 import type { ConversationSummary } from '../store';
 
+/* ------------------------------------------------------------------ */
+/*  Validation constants & helper                                      */
+/* ------------------------------------------------------------------ */
+
+const NAME_MIN_LENGTH = 5;
+const NAME_MAX_LENGTH = 50;
+
+/** Returns an error message, or `''` when the value is valid. */
+function validateConversationName(value: string): string {
+  const trimmed = value.trim();
+  if (trimmed === '') return 'Conversation name cannot be empty or contain only spaces';
+  if (trimmed.length < NAME_MIN_LENGTH) return `Conversation name must be at least ${NAME_MIN_LENGTH} characters`;
+  if (value.length > NAME_MAX_LENGTH) return `Conversation name cannot exceed ${NAME_MAX_LENGTH} characters`;
+  if (!/[a-zA-Z0-9]/.test(trimmed)) return 'Conversation name must contain at least one letter or number';
+  return '';
+}
+
 export interface ConversationItemProps {
   conversation: ConversationSummary;
   isActive: boolean;
@@ -61,21 +78,13 @@ export const ConversationItem = memo(function ConversationItem({
   }, [conversation.title]);
 
   const handleRenameConfirm = useCallback(async () => {
+    const error = validateConversationName(renameValue);
+    if (error) {
+      setRenameError(error);
+      return;
+    }
+
     const trimmedValue = renameValue.trim();
-
-    if (trimmedValue.length < 5) {
-      setRenameError('Conversation name must be at least 5 characters');
-      return;
-    }
-    if (trimmedValue.length > 50) {
-      setRenameError('Conversation name cannot exceed 50 characters');
-      return;
-    }
-    if (!/[a-zA-Z0-9]/.test(trimmedValue)) {
-      setRenameError('Conversation name must contain at least one letter or number');
-      return;
-    }
-
     if (trimmedValue === conversation.title) {
       setIsRenameDialogOpen(false);
       setRenameError('');
@@ -194,21 +203,11 @@ export const ConversationItem = memo(function ConversationItem({
               <Input
                 ref={renameInputRef}
                 value={renameValue}
-                maxLength={50}
+                maxLength={NAME_MAX_LENGTH}
                 onChange={(e) => {
                   const newValue = e.target.value;
                   setRenameValue(newValue);
-                  if (newValue.trim() === '') {
-                    setRenameError('Conversation name cannot be empty or contain only spaces');
-                  } else if (newValue.trim().length < 5) {
-                    setRenameError('Conversation name must be at least 5 characters');
-                  } else if (!/[a-zA-Z0-9]/.test(newValue)) {
-                    setRenameError('Conversation name must contain at least one letter or number');
-                  } else if (newValue.length > 50) {
-                    setRenameError('Conversation name cannot exceed 50 characters');
-                  } else {
-                    setRenameError('');
-                  }
+                  setRenameError(validateConversationName(newValue));
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && renameValue.trim()) {
@@ -228,7 +227,7 @@ export const ConversationItem = memo(function ConversationItem({
                   display: 'block',
                 }}
               >
-                Maximum 50 characters ({renameValue.length}/50)
+                Maximum {NAME_MAX_LENGTH} characters ({renameValue.length}/{NAME_MAX_LENGTH})
               </Text>
               {renameError && (
                 <Text
@@ -257,11 +256,7 @@ export const ConversationItem = memo(function ConversationItem({
             <Button
               appearance="primary"
               onClick={handleRenameConfirm}
-              disabled={
-                renameValue.trim().length < 5 ||
-                !/[a-zA-Z0-9]/.test(renameValue) ||
-                renameValue.length > 50
-              }
+              disabled={!!validateConversationName(renameValue)}
             >
               Rename
             </Button>

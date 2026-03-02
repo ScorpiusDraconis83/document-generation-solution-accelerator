@@ -6,7 +6,7 @@ export { store } from './store';
 export type { RootState, AppDispatch } from './store';
 export { useAppDispatch, useAppSelector } from './hooks';
 
-// App slice – actions & thunks
+// App slice – actions, thunks & enums
 export {
   fetchAppConfig,
   fetchUserInfo,
@@ -14,6 +14,8 @@ export {
   setGenerationStatus,
   toggleChatHistory,
   setShowChatHistory,
+  GenerationStatus,
+  GENERATION_STATUS_LABELS,
 } from './appSlice';
 
 // Chat slice – actions
@@ -54,6 +56,7 @@ export {
   selectUserName,
   selectIsLoading,
   selectGenerationStatus,
+  selectGenerationStatusLabel,
   selectImageGenerationEnabled,
   selectShowChatHistory,
   selectConversationId,

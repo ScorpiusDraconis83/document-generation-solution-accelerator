@@ -1,4 +1,4 @@
-import { memo, useMemo, useCallback } from 'react';
+import { memo, useMemo } from 'react';
 import {
   Text,
   tokens,
@@ -7,13 +7,13 @@ import { SuggestionCard } from './SuggestionCard';
 import FirstPromptIcon from '../styles/images/firstprompt.png';
 import SecondPromptIcon from '../styles/images/secondprompt.png';
 
-interface SuggestionCard {
+interface SuggestionData {
   title: string;
   prompt: string;
   icon: string;
 }
 
-const suggestions: SuggestionCard[] = [
+const suggestions: SuggestionData[] = [
   {
     title: "I need to create a social media post about paint products for home remodels. The campaign is titled \"Brighten Your Springtime\" and the audience is new homeowners. I need marketing copy plus an image. The image should be an informal living room with tasteful furnishings.",
     prompt: "I need to create a social media post about paint products for home remodels. The campaign is titled \"Brighten Your Springtime\" and the audience is new homeowners. I need marketing copy plus an image. The image should be an informal living room with tasteful furnishings.",
@@ -37,9 +37,6 @@ export const WelcomeCard = memo(function WelcomeCard({ onSuggestionClick, curren
     [currentInput],
   );
 
-  const handleSuggestionClick = useCallback((prompt: string) => {
-    onSuggestionClick(prompt);
-  }, [onSuggestionClick]);
   return (
     <div style={{
       display: 'flex',
@@ -100,10 +97,9 @@ export const WelcomeCard = memo(function WelcomeCard({ onSuggestionClick, curren
             <SuggestionCard
               key={index}
               title={suggestion.title}
-              prompt={suggestion.prompt}
               icon={suggestion.icon}
               isSelected={isSelected}
-              onClick={() => handleSuggestionClick(suggestion.prompt)}
+              onClick={() => onSuggestionClick(suggestion.prompt)}
             />
             );
           })}
