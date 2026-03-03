@@ -24,6 +24,7 @@ from services.cosmos_service import get_cosmos_service
 from services.blob_service import get_blob_service
 from services.title_service import get_title_service
 from api.admin import admin_bp
+from azure.monitor.opentelemetry import configure_azure_monitor
 
 # In-memory task storage for generation tasks
 # In production, this should be replaced with Redis or similar
@@ -36,6 +37,16 @@ logging.basicConfig(
 )
 logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
+
+# Check if the Application Insights Instrumentation Key is set in the environment variables
+instrumentation_key = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")
+if instrumentation_key:
+    # Configure Application Insights if the Instrumentation Key is found
+    configure_azure_monitor(connection_string=instrumentation_key)
+    logging.info("Application Insights configured with the provided Instrumentation Key")
+else:
+    # Log a warning if the Instrumentation Key is not found
+    logging.warning("No Application Insights Instrumentation Key found. Skipping configuration")
 
 # Create Quart app
 app = Quart(__name__)
