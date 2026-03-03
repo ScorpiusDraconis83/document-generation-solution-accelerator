@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import { AI_DISCLAIMER } from '../utils';
 import {
   Text,
   Badge,
@@ -145,7 +146,7 @@ export const ComplianceSection = memo(function ComplianceSection({
           marginTop: '8px',
         }}
       >
-        AI-generated content may be incorrect
+        {AI_DISCLAIMER}
       </Text>
 
       {/* Collapsible Compliance Accordion */}

@@ -142,10 +142,7 @@ export const ChatHistory = memo(function ChatHistory({
     () => showAll ? displayConversations : displayConversations.slice(0, INITIAL_COUNT),
     [showAll, displayConversations],
   );
-  const hasMore = useMemo(
-    () => displayConversations.length > INITIAL_COUNT,
-    [displayConversations.length],
-  );
+  const hasMore = displayConversations.length > INITIAL_COUNT;
 
   const handleRefreshConversations = useCallback(() => {
     dispatch(fetchConversations());

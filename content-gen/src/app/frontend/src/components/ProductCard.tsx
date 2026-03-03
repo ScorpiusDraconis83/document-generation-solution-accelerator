@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react';
+import { memo } from 'react';
 import {
   Text,
   tokens,
@@ -30,7 +30,7 @@ export const ProductCard = memo(function ProductCard({
 }: ProductCardProps) {
   const isCompact = size === 'compact';
   const imgSize = isCompact ? 56 : 80;
-  const isInteractive = useMemo(() => !!onClick && !disabled, [onClick, disabled]);
+  const isInteractive = !!onClick && !disabled;
 
   return (
     <div

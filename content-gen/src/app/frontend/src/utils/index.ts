@@ -27,3 +27,6 @@ export { isContentFilterError, getErrorMessage } from './contentErrors';
 
 // Image download
 export { downloadImage } from './downloadImage';
+
+// Shared UI constants
+export const AI_DISCLAIMER = 'AI-generated content may be incorrect';

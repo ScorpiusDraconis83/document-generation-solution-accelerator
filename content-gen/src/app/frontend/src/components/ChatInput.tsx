@@ -5,6 +5,7 @@ import {
   Tooltip,
   tokens,
 } from '@fluentui/react-components';
+import { AI_DISCLAIMER } from '../utils';
 import {
   Send20Regular,
   Add20Regular,
@@ -140,7 +141,7 @@ export const ChatInput = memo(function ChatInput({
           fontSize: '12px',
         }}
       >
-        AI generated content may be incorrect
+        {AI_DISCLAIMER}
       </Text>
     </div>
   );

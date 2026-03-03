@@ -5,7 +5,7 @@ import {
   tokens,
 } from '@fluentui/react-components';
 import type { CreativeBrief } from '../types';
-import { BRIEF_FIELD_LABELS, BRIEF_DISPLAY_ORDER, BRIEF_FIELD_KEYS } from '../utils';
+import { BRIEF_FIELD_LABELS, BRIEF_DISPLAY_ORDER, BRIEF_FIELD_KEYS, AI_DISCLAIMER } from '../utils';
 
 interface BriefReviewProps {
   brief: CreativeBrief;
@@ -154,7 +154,7 @@ export const BriefReview = memo(function BriefReview({
         paddingTop: '8px',
       }}>
         <Text size={100} style={{ color: tokens.colorNeutralForeground4 }}>
-          AI-generated content may be incorrect
+          {AI_DISCLAIMER}
         </Text>
       </div>
     </div>

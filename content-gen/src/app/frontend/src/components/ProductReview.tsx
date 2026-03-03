@@ -8,6 +8,7 @@ import {
   Sparkle20Regular,
 } from '@fluentui/react-icons';
 import type { Product } from '../types';
+import { AI_DISCLAIMER } from '../utils';
 import { ProductCard } from './ProductCard';
 
 interface ProductReviewProps {
@@ -126,7 +127,7 @@ export const ProductReview = memo(function ProductReview({
         paddingTop: '8px',
       }}>
         <Text size={100} style={{ color: tokens.colorNeutralForeground4 }}>
-          AI-generated content may be incorrect
+          {AI_DISCLAIMER}
         </Text>
       </div>
     </div>

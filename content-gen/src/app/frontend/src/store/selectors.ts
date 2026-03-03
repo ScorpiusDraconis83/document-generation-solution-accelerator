@@ -9,7 +9,6 @@ import type { RootState } from './store';
 export const selectUserId = (state: RootState) => state.app.userId;
 export const selectUserName = (state: RootState) => state.app.userName;
 export const selectIsLoading = (state: RootState) => state.app.isLoading;
-export const selectGenerationStatus = (state: RootState) => state.app.generationStatus;
 export const selectGenerationStatusLabel = (state: RootState) => state.app.generationStatusLabel;
 export const selectImageGenerationEnabled = (state: RootState) => state.app.imageGenerationEnabled;
 export const selectShowChatHistory = (state: RootState) => state.app.showChatHistory;

@@ -10,6 +10,7 @@ import { Copy20Regular } from '@fluentui/react-icons';
 import ReactMarkdown from 'react-markdown';
 import type { ChatMessage } from '../types';
 import { useCopyToClipboard } from '../hooks';
+import { AI_DISCLAIMER } from '../utils';
 
 export interface MessageBubbleProps {
   message: ChatMessage;
@@ -91,7 +92,7 @@ export const MessageBubble = memo(function MessageBubble({ message }: MessageBub
                 fontSize: '11px',
               }}
             >
-              AI-generated content may be incorrect
+              {AI_DISCLAIMER}
             </Text>
 
             <div className="assistant-actions" style={{ display: 'flex', gap: '4px' }}>

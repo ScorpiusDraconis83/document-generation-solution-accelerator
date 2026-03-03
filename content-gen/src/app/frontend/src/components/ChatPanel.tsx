@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, memo } from 'react';
+import { useState, useCallback, memo } from 'react';
 import type { Product } from '../types';
 import { BriefReview } from './BriefReview';
 import { ConfirmedBriefView } from './ConfirmedBriefView';
@@ -62,22 +62,10 @@ export const ChatPanel = memo(function ChatPanel({
   ]);
 
   // Determine if we should show inline components
-  const showBriefReview = useMemo(
-    () => !!(pendingBrief && onBriefConfirm && onBriefCancel),
-    [pendingBrief, onBriefConfirm, onBriefCancel],
-  );
-  const showProductReview = useMemo(
-    () => !!(confirmedBrief && !generatedContent && onGenerateContent),
-    [confirmedBrief, generatedContent, onGenerateContent],
-  );
-  const showContentPreview = useMemo(
-    () => !!(generatedContent && onRegenerateContent),
-    [generatedContent, onRegenerateContent],
-  );
-  const showWelcome = useMemo(
-    () => messages.length === 0 && !showBriefReview && !showProductReview && !showContentPreview,
-    [messages.length, showBriefReview, showProductReview, showContentPreview],
-  );
+  const showBriefReview = !!(pendingBrief && onBriefConfirm && onBriefCancel);
+  const showProductReview = !!(confirmedBrief && !generatedContent && onGenerateContent);
+  const showContentPreview = !!(generatedContent && onRegenerateContent);
+  const showWelcome = messages.length === 0 && !showBriefReview && !showProductReview && !showContentPreview;
 
   // Handle suggestion click from welcome card
   const handleSuggestionClick = useCallback((prompt: string) => {
