@@ -125,9 +125,6 @@ const appSlice = createSlice({
     toggleChatHistory(state) {
       state.showChatHistory = !state.showChatHistory;
     },
-    setShowChatHistory(state, action: PayloadAction<boolean>) {
-      state.showChatHistory = action.payload;
-    },
   },
   extraReducers: (builder) => {
     builder
@@ -148,6 +145,6 @@ const appSlice = createSlice({
   },
 });
 
-export const { setIsLoading, setGenerationStatus, toggleChatHistory, setShowChatHistory } =
+export const { setIsLoading, setGenerationStatus, toggleChatHistory } =
   appSlice.actions;
 export default appSlice.reducer;

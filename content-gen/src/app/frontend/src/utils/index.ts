@@ -8,7 +8,7 @@
 export { createMessage, createErrorMessage } from './messageUtils';
 
 // Content parsing (raw API → typed domain objects)
-export { parseTextContent, resolveImageUrl, buildGeneratedContent } from './contentParsing';
+export { buildGeneratedContent } from './contentParsing';
 
 // SSE stream parser
 export { parseSSEStream } from './sseParser';

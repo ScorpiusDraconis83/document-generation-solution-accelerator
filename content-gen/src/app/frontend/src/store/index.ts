@@ -13,7 +13,6 @@ export {
   setIsLoading,
   setGenerationStatus,
   toggleChatHistory,
-  setShowChatHistory,
   GenerationStatus,
 } from './appSlice';
 
