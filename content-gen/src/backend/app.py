@@ -38,15 +38,15 @@ logging.basicConfig(
 logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
-# Check if the Application Insights Instrumentation Key is set in the environment variables
-instrumentation_key = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")
-if instrumentation_key:
-    # Configure Application Insights if the Instrumentation Key is found
-    configure_azure_monitor(connection_string=instrumentation_key)
-    logging.info("Application Insights configured with the provided Instrumentation Key")
+# Check if the Application Insights connection string is set in the environment variables
+appinsights_connection_string = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")
+if appinsights_connection_string:
+    # Configure Application Insights if the connection string is found
+    configure_azure_monitor(connection_string=appinsights_connection_string)
+    logger.info("Application Insights configured with the provided connection string")
 else:
-    # Log a warning if the Instrumentation Key is not found
-    logging.warning("No Application Insights Instrumentation Key found. Skipping configuration")
+    # Log a warning if the connection string is not found
+    logger.warning("No Application Insights connection string found. Skipping configuration")
 
 # Create Quart app
 app = Quart(__name__)
