@@ -163,6 +163,12 @@ export class HttpClient {
 
 const httpClient = new HttpClient('/api');
 
+/**
+ * Client for Azure platform endpoints (/.auth/me, etc.) — no base URL prefix.
+ * Shares the same interceptor pattern but targets the host root.
+ */
+export const platformClient = new HttpClient('', 10_000);
+
 // ---- request interceptor: auth headers ----
 httpClient.onRequest((_url, init) => {
   const headers = new Headers(init.headers);

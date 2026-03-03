@@ -9,19 +9,16 @@ import SecondPromptIcon from '../styles/images/secondprompt.png';
 
 interface SuggestionData {
   title: string;
-  prompt: string;
   icon: string;
 }
 
 const suggestions: SuggestionData[] = [
   {
     title: "I need to create a social media post about paint products for home remodels. The campaign is titled \"Brighten Your Springtime\" and the audience is new homeowners. I need marketing copy plus an image. The image should be an informal living room with tasteful furnishings.",
-    prompt: "I need to create a social media post about paint products for home remodels. The campaign is titled \"Brighten Your Springtime\" and the audience is new homeowners. I need marketing copy plus an image. The image should be an informal living room with tasteful furnishings.",
     icon: FirstPromptIcon,
   },
   {
     title: "Generate a social media campaign with ad copy and an image. This is for \"Back to School\" and the audience is parents of school age children. Tone is playful and humorous. The image must have minimal kids accessories in a children's bedroom. Show the room in a wide view.",
-    prompt: "Generate a social media campaign with ad copy and an image. This is for \"Back to School\" and the audience is parents of school age children. Tone is playful and humorous. The image must have minimal kids accessories in a children's bedroom. Show the room in a wide view.",
     icon: SecondPromptIcon,
   }
 ];
@@ -33,7 +30,7 @@ interface WelcomeCardProps {
 
 export const WelcomeCard = memo(function WelcomeCard({ onSuggestionClick, currentInput = '' }: WelcomeCardProps) {
   const selectedIndex = useMemo(
-    () => suggestions.findIndex(s => s.prompt === currentInput),
+    () => suggestions.findIndex(s => s.title === currentInput),
     [currentInput],
   );
 
@@ -99,7 +96,7 @@ export const WelcomeCard = memo(function WelcomeCard({ onSuggestionClick, curren
               title={suggestion.title}
               icon={suggestion.icon}
               isSelected={isSelected}
-              onClick={() => onSuggestionClick(suggestion.prompt)}
+              onClick={() => onSuggestionClick(suggestion.title)}
             />
             );
           })}

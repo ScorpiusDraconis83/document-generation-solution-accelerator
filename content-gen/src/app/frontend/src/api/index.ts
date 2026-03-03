@@ -13,6 +13,11 @@ import httpClient from './httpClient';
 export { default as httpClient } from './httpClient';
 import { parseSSEStream, getGenerationStage } from '../utils';
 
+/** Normalize optional userId to a safe fallback. */
+function normalizeUserId(userId?: string): string {
+  return userId || 'anonymous';
+}
+
 /**
  * Get application configuration including feature flags
  */
@@ -32,7 +37,7 @@ export async function parseBrief(
   return httpClient.post<ParsedBriefResponse>('/brief/parse', {
     brief_text: briefText,
     conversation_id: conversationId,
-    user_id: userId || 'anonymous',
+    user_id: normalizeUserId(userId),
   }, { signal });
 }
 
@@ -47,7 +52,7 @@ export async function confirmBrief(
   return httpClient.post('/brief/confirm', {
     brief,
     conversation_id: conversationId,
-    user_id: userId || 'anonymous',
+    user_id: normalizeUserId(userId),
   });
 }
 
@@ -65,7 +70,7 @@ export async function selectProducts(
     request,
     current_products: currentProducts,
     conversation_id: conversationId,
-    user_id: userId || 'anonymous',
+    user_id: normalizeUserId(userId),
   }, { signal });
 }
 
@@ -85,7 +90,7 @@ export async function* streamChat(
     body: JSON.stringify({
       message,
       conversation_id: conversationId,
-      user_id: userId || 'anonymous',
+      user_id: normalizeUserId(userId),
     }),
   });
 
@@ -118,7 +123,7 @@ export async function* streamGenerateContent(
     products: products || [],
     generate_images: generateImages,
     conversation_id: conversationId,
-    user_id: userId || 'anonymous',
+    user_id: normalizeUserId(userId),
   }, { signal });
   const taskId = startData.task_id;
   
@@ -210,7 +215,7 @@ export async function* streamRegenerateImage(
       products: products || [],
       previous_image_prompt: previousImagePrompt,
       conversation_id: conversationId,
-      user_id: userId || 'anonymous',
+      user_id: normalizeUserId(userId),
     }),
   });
 

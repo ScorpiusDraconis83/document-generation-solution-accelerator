@@ -61,7 +61,8 @@ export const fetchAppConfig = createAsyncThunk(
 export const fetchUserInfo = createAsyncThunk(
   'app/fetchUserInfo',
   async () => {
-    const response = await fetch('/.auth/me');
+    const { platformClient } = await import('../api/httpClient');
+    const response = await platformClient.raw('/.auth/me');
     if (!response.ok) return { userId: 'anonymous', userName: '' };
 
     const payload = await response.json();

@@ -25,14 +25,14 @@ function rewriteBlobUrl(url: string): string {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Exported utilities                                                 */
+/*  Parsing helpers (module-internal — not re-exported)                */
 /* ------------------------------------------------------------------ */
 
 /**
  * Parse `text_content` which may arrive as a JSON string or an object.
  * Returns an object with known fields, or `undefined` if unusable.
  */
-export function parseTextContent(
+function parseTextContent(
   raw: unknown,
 ): { headline?: string; body?: string; cta_text?: string; tagline?: string } | undefined {
   let textContent = raw;
@@ -64,7 +64,7 @@ export function parseTextContent(
  * Pass `rewriteBlobs: true` (default) when restoring from a saved
  * conversation; `false` when the response just came from the live API.
  */
-export function resolveImageUrl(
+function resolveImageUrl(
   raw: { image_url?: string; image_base64?: string },
   rewriteBlobs = false,
 ): string | undefined {
