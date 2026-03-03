@@ -19,6 +19,27 @@ function normalizeUserId(userId?: string): string {
 }
 
 /**
+ * Validate an SSE response, extract its body reader, and yield parsed events.
+ * Consolidates the duplicated response → reader → parseSSEStream pipeline
+ * used by streamChat and streamRegenerateImage.
+ */
+async function* readSSEResponse(
+  response: Response,
+  context: string,
+): AsyncGenerator<AgentResponse> {
+  if (!response.ok) {
+    throw new Error(`${context}: ${response.statusText}`);
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) {
+    throw new Error('No response body');
+  }
+
+  yield* parseSSEStream(reader);
+}
+
+/**
  * Get application configuration including feature flags
  */
 export async function getAppConfig(): Promise<AppConfig> {
@@ -94,16 +115,7 @@ export async function* streamChat(
     }),
   });
 
-  if (!response.ok) {
-    throw new Error(`Chat request failed: ${response.statusText}`);
-  }
-
-  const reader = response.body?.getReader();
-  if (!reader) {
-    throw new Error('No response body');
-  }
-
-  yield* parseSSEStream(reader);
+  yield* readSSEResponse(response, 'Chat request failed');
 }
 
 /**
@@ -219,14 +231,5 @@ export async function* streamRegenerateImage(
     }),
   });
 
-  if (!response.ok) {
-    throw new Error(`Regeneration request failed: ${response.statusText}`);
-  }
-
-  const reader = response.body?.getReader();
-  if (!reader) {
-    throw new Error('No response body');
-  }
-
-  yield* parseSSEStream(reader);
+  yield* readSSEResponse(response, 'Regeneration request failed');
 }

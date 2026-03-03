@@ -32,7 +32,7 @@ export enum GenerationStatus {
 }
 
 /** Display strings shown in the UI for each status. */
-export const GENERATION_STATUS_LABELS: Record<GenerationStatus, string> = {
+const GENERATION_STATUS_LABELS: Record<GenerationStatus, string> = {
   [GenerationStatus.IDLE]: '',
   [GenerationStatus.UPDATING_BRIEF]: 'Updating creative brief...',
   [GenerationStatus.PROCESSING_QUESTION]: 'Processing your question...',
