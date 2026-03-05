@@ -1,6 +1,10 @@
 name: Azure Template Validation
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+      - psl-bug-36267
 
 permissions:
   contents: read
@@ -10,6 +14,7 @@ permissions:
 jobs:
   template_validation_job:
     runs-on: ubuntu-latest
+    environment: production
     name: Template validation
 
     steps:
@@ -23,6 +28,9 @@ jobs:
         id: validation
         with:
           workingDirectory: ./content-gen
+          validateAzd: ${{ vars.TEMPLATE_VALIDATE_AZD }}
+          useDevContainer: ${{ vars.TEMPLATE_USE_DEV_CONTAINER }}
+          validateTests: ${{ vars.TEMPLATE_VALIDATE_TESTS }}
         env:
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
