@@ -27,7 +27,6 @@ jobs:
         uses: microsoft/template-validation-action@v0.4.3
         id: validation
         with:
-          workingDirectory: ./content-gen
           validateAzd: ${{ vars.TEMPLATE_VALIDATE_AZD }}
           useDevContainer: ${{ vars.TEMPLATE_USE_DEV_CONTAINER }}
           validateTests: ${{ vars.TEMPLATE_VALIDATE_TESTS }}
