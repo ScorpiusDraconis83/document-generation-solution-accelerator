@@ -1,0 +1,5 @@
+archive-doc-gen/
+coverage_html/
+.venv/
+.git/
+.vscode/
