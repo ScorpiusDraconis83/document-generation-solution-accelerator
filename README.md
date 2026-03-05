@@ -41,6 +41,8 @@ The sample data includes synthetic product catalogs and brand guidelines. The da
 
 <br/>
 
+## Features
+
 ### Key features
 <details open>
   <summary>Click to learn more about the key features this solution enables</summary>
@@ -82,6 +84,8 @@ Follow the quick deploy steps on the deployment guide to deploy this solution to
 
 <br/>
 
+## Guidance
+
 ### Prerequisites and costs
 
 To deploy this solution accelerator, ensure you have access to an [Azure subscription](https://azure.microsoft.com/free/) with the necessary permissions to create **resource groups, resources, app registrations, and assign roles at the resource group level**. This should include Contributor role at the subscription level and  Role Based Access Control role on the subscription and/or resource group level. Follow the steps in [Azure Account Set Up](./content-gen/docs/AzureAccountSetUp.md).
@@ -97,6 +101,8 @@ Review a [sample pricing sheet](https://azure.com/e/2402502429fc46429e395e0bb93d
 _Note: This is not meant to outline all costs as selected SKUs, scaled use, customizations, and integrations into your own tenant can affect the total consumption of this sample solution. The sample pricing sheet is meant to give you a starting point to customize the estimate for your specific needs._
 
 <br/>
+
+## Resources
 
 | Product | Description | Cost |
 |---|---|---|
