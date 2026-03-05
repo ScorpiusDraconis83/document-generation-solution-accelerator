@@ -286,7 +286,7 @@ export function ChatPanel({
                 icon={<Add20Regular />}
                 size="small"
                 onClick={onNewConversation}
-                disabled={isLoading}
+                disabled={isLoading || messages.length === 0}
                 style={{ 
                   minWidth: '32px',
                   height: '32px',

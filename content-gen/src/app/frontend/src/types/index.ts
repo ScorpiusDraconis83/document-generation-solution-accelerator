@@ -92,6 +92,7 @@ export interface ParsedBriefResponse {
   rai_blocked?: boolean;
   message: string;
   conversation_id?: string;
+  generated_title?: string;
 }
 
 export interface GeneratedContent {

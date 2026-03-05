@@ -320,7 +320,7 @@ jobs:
           
           
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Login to Azure (OIDC)
         uses: azure/login@v2
