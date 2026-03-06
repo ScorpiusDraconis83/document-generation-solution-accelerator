@@ -5,27 +5,49 @@ on:
     branches:
       - main
       - psl-bug-36267
-
+ 
 permissions:
   contents: read
   id-token: write
   pull-requests: write
-
+ 
 jobs:
   template_validation_job:
     runs-on: ubuntu-latest
     environment: production
     name: Template validation
-
+ 
     steps:
       # Step 1: Checkout the code from your repository
       - name: Checkout code
         uses: actions/checkout@v4
-
-      # Step 2: Validate the Azure template using microsoft/template-validation-action
+ 
+      # Step 2: Copy root-level files required by template validation into working directory
+      - name: Copy root files to content-gen
+        run: |
+          for file in README.md LICENSE SECURITY.md CODE_OF_CONDUCT.md CONTRIBUTING.md; do
+            if [ -f "$file" ] && [ ! -f "content-gen/$file" ]; then
+              cp "$file" "content-gen/$file"
+            fi
+          done
+ 
+          # Copy ISSUE_TEMPLATE folder into content-gen/.github/
+          if [ -d ".github/ISSUE_TEMPLATE" ] && [ ! -d "content-gen/.github/ISSUE_TEMPLATE" ]; then
+            mkdir -p content-gen/.github/ISSUE_TEMPLATE
+            cp -r .github/ISSUE_TEMPLATE/* content-gen/.github/ISSUE_TEMPLATE/
+          fi
+ 
+          # Copy azure-dev.yml workflow into content-gen/.github/workflows/
+          if [ -f ".github/workflows/azure-dev.yml" ] && [ ! -f "content-gen/.github/workflows/azure-dev.yml" ]; then
+            mkdir -p content-gen/.github/workflows
+            cp .github/workflows/azure-dev.yml content-gen/.github/workflows/azure-dev.yml
+          fi
+ 
+      # Step 3: Validate the Azure template using microsoft/template-validation-action
       - name: Validate Azure Template
         uses: microsoft/template-validation-action@v0.4.3
         with:
+          workingDirectory: ./content-gen
           validateAzd: ${{ vars.TEMPLATE_VALIDATE_AZD }}
           useDevContainer: ${{ vars.TEMPLATE_USE_DEV_CONTAINER }}
           validateTests: ${{ vars.TEMPLATE_VALIDATE_TESTS }}
@@ -37,7 +59,7 @@ jobs:
           AZURE_ENV_NAME: ${{ secrets.AZURE_ENV_NAME }}
           AZURE_LOCATION: ${{ secrets.AZURE_LOCATION }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # Step 3: Print the result of the validation
+ 
+      # Step 4: Print the result of the validation
       - name: Print result
         run: cat ${{ steps.validation.outputs.resultFile }}
