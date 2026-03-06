@@ -62,6 +62,9 @@ The sample data includes synthetic product catalogs and brand guidelines. The da
 </details>
 
 <br /><br />
+
+## Getting Started
+
 <h2><img src="./docs/images/readme/quick_deploy.png" width="48" />
 Quick deploy
 </h2>
