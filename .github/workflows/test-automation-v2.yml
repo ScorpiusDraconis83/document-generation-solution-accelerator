@@ -24,13 +24,11 @@ env:
     url: ${{ inputs.DOCGEN_URL }}
     accelerator_name: "DocGen"
     test_suite: ${{ inputs.TEST_SUITE }}
-permissions:
-  contents: read
-  actions: read
-  
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    environment: production
     outputs:
       TEST_SUCCESS: ${{ steps.test1.outcome == 'success' || steps.test2.outcome == 'success' || steps.test3.outcome == 'success' }}
       TEST_REPORT_URL: ${{ steps.upload_report.outputs.artifact-url }}
@@ -43,15 +41,17 @@ jobs:
         with:
           python-version: '3.13'
 
-      - name: Login to Azure
-        run: |
-          az login --service-principal -u ${{ secrets.AZURE_CLIENT_ID }} -p ${{ secrets.AZURE_CLIENT_SECRET }} --tenant ${{ secrets.AZURE_TENANT_ID }}
-          az account set --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Login to Azure (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r tests/e2e-test/requirements.txt
+          pip install -r content-gen/tests/e2e-test/requirements.txt
 
       - name: Ensure browsers are installed
         run: python -m playwright install --with-deps chromium
@@ -94,11 +94,11 @@ jobs:
         id: test1
         run: |
           if [ "${{ env.test_suite }}" == "GoldenPath-Testing" ]; then
-            xvfb-run pytest -m goldenpath --html=report/report.html --self-contained-html
+            xvfb-run pytest -m gp --html=report/report.html --self-contained-html
           else
             xvfb-run pytest --html=report/report.html --self-contained-html
           fi
-        working-directory: tests/e2e-test
+        working-directory: content-gen/tests/e2e-test
         continue-on-error: true
 
       - name: Sleep for 30 seconds
@@ -111,11 +111,11 @@ jobs:
         if: ${{ steps.test1.outcome == 'failure' }}
         run: |
           if [ "${{ env.test_suite }}" == "GoldenPath-Testing" ]; then
-            xvfb-run pytest -m goldenpath --html=report/report.html --self-contained-html
+            xvfb-run pytest -m gp --html=report/report.html --self-contained-html
           else
             xvfb-run pytest --html=report/report.html --self-contained-html
           fi
-        working-directory: tests/e2e-test
+        working-directory: content-gen/tests/e2e-test
         continue-on-error: true
 
       - name: Sleep for 60 seconds
@@ -128,21 +128,22 @@ jobs:
         if: ${{ steps.test2.outcome == 'failure' }}
         run: |
           if [ "${{ env.test_suite }}" == "GoldenPath-Testing" ]; then
-            xvfb-run pytest -m goldenpath --html=report/report.html --self-contained-html
+            xvfb-run pytest -m gp --html=report/report.html --self-contained-html
           else
             xvfb-run pytest --html=report/report.html --self-contained-html
           fi
-        working-directory: tests/e2e-test
+        working-directory: content-gen/tests/e2e-test
 
       - name: Upload test report
         id: upload_report
         uses: actions/upload-artifact@v6
-        if: ${{ !cancelled() }}
+        if: always()
         with:
           name: test-report
           path: | 
-            tests/e2e-test/report/*
-            tests/e2e-test/screenshots/*
+            content-gen/tests/e2e-test/report/*
+            content-gen/tests/e2e-test/tests/screenshots/*
+            content-gen/tests/e2e-test/screenshots/*
 
       - name: Generate E2E Test Summary
         if: always()
