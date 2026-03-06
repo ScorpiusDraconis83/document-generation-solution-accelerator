@@ -137,11 +137,12 @@ jobs:
       - name: Upload test report
         id: upload_report
         uses: actions/upload-artifact@v6
-        if: ${{ !cancelled() }}
+        if: always()
         with:
           name: test-report
           path: | 
             content-gen/tests/e2e-test/report/*
+            content-gen/tests/e2e-test/tests/screenshots/*
             content-gen/tests/e2e-test/screenshots/*
 
       - name: Generate E2E Test Summary
