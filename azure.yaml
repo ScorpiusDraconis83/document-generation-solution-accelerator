@@ -43,7 +43,7 @@ parameters:
 
 infra:
   provider: bicep
-  path: ./content-gen/infra
+  path: ./infra
   module: main
 
 workflows:
@@ -82,10 +82,10 @@ hooks:
         elseif (Test-Path "../.venv/Scripts/python.exe") { $python = "../.venv/Scripts/python.exe" }
         elseif (Test-Path "./.venv/bin/python") { $python = "./.venv/bin/python" }
         elseif (Test-Path "../.venv/bin/python") { $python = "../.venv/bin/python" }
-        & $python -m pip install -r ./content-gen/scripts/requirements-post-deploy.txt --quiet | Out-Null
+        & $python -m pip install -r ./scripts/requirements-post-deploy.txt --quiet | Out-Null
         
-        if (Test-Path "./content-gen/scripts/post_deploy.py") {
-          & $python ./content-gen/scripts/post_deploy.py --skip-tests
+        if (Test-Path "./scripts/post_deploy.py") {
+          & $python ./scripts/post_deploy.py --skip-tests
           
           if ($LASTEXITCODE -eq 0) {
             Write-Host "Post-deploy script completed successfully!" -ForegroundColor Green
@@ -124,7 +124,7 @@ hooks:
         echo "===== Running Post-Deploy Script ====="
         echo "This will upload sample data and create the search index..."
         
-        if [ -f "./content-gen/scripts/post_deploy.py" ]; then
+        if [ -f "./scripts/post_deploy.py" ]; then
           # Prefer local venv if present (repo root or content-gen)
           if [ -x "./.venv/bin/python" ]; then
             PYTHON_BIN="./.venv/bin/python"
@@ -134,8 +134,8 @@ hooks:
             PYTHON_BIN="python3"
           fi
 
-          "$PYTHON_BIN" -m pip install -r ./content-gen/scripts/requirements-post-deploy.txt --quiet > /dev/null \
-            && "$PYTHON_BIN" ./content-gen/scripts/post_deploy.py --skip-tests \
+          "$PYTHON_BIN" -m pip install -r ./scripts/requirements-post-deploy.txt --quiet > /dev/null \
+            && "$PYTHON_BIN" ./scripts/post_deploy.py --skip-tests \
             && echo "Post-deploy script completed successfully!" \
             || echo "Post-deploy script completed with warnings (some steps may have failed)"
         else
@@ -150,3 +150,4 @@ hooks:
       shell: sh
       continueOnError: false
       interactive: true
+  
