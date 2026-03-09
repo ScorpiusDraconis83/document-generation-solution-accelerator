@@ -81,13 +81,10 @@ async def set_conversation_context():
 
     # 1. Extract from JSON body (POST requests)
     if request.content_type and "json" in request.content_type:
-        try:
-            data = await request.get_json()
-            if data and isinstance(data, dict):
-                conversation_id = data.get("conversation_id", "")
-                user_id = data.get("user_id", "")
-        except Exception:
-            pass
+        data = await request.get_json(silent=True)
+        if data and isinstance(data, dict):
+            conversation_id = data.get("conversation_id", "")
+            user_id = data.get("user_id", "")
 
     # 2. Extract from URL path parameters (e.g. /api/conversations/<conversation_id>)
     if not conversation_id and request.view_args:
