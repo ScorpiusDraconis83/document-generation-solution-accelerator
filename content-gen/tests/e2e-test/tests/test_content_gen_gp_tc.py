@@ -2,13 +2,15 @@
 import logging
 import time
 
+import pytest
+
 from pages.HomePage import HomePage
 from config.constants import URL
 from tests.test_utils import log_test_summary, log_test_failure
 
 logger = logging.getLogger(__name__)
 
-
+@pytest.mark.gp
 def test_validate_gp(login_logout, request):
     """
     Test case to validate content generation golden path flow for two quick links.
