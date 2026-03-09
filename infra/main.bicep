@@ -42,7 +42,6 @@ param secondaryLocation string = 'uksouth'
 @allowed([
   'australiaeast'
   'canadaeast'
-  'eastus'
   'eastus2'
   'japaneast'
   'koreacentral'
