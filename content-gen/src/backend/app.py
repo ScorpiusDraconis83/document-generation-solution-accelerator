@@ -53,6 +53,7 @@ if appinsights_connection_string:
     configure_azure_monitor(
         connection_string=appinsights_connection_string,
         enable_live_metrics=False,
+        enable_performance_counters=False,
         logging_level=logging.WARNING,
     )
     # Disable Azure SDK native span creation (ContainerProxy.*, BlobClient.* InProc spans)
