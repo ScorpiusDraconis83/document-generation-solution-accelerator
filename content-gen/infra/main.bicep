@@ -869,6 +869,8 @@ module containerInstance 'modules/container-instance.bicep' = {
       { name: 'AZURE_AI_PROJECT_ENDPOINT', value: aiFoundryAiProjectEndpoint }
       { name: 'AZURE_AI_MODEL_DEPLOYMENT_NAME', value: gptModelName }
       { name: 'AZURE_AI_IMAGE_MODEL_DEPLOYMENT', value: imageModelConfig[imageModelChoice].name }
+      // Application Insights
+      { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: enableMonitoring ? applicationInsights!.outputs.connectionString : '' }
     ]
   }
 }

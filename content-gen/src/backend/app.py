@@ -16,6 +16,7 @@ from typing import Dict, Any
 
 from quart import Quart, request, jsonify, Response
 from quart_cors import cors
+from opentelemetry import trace
 
 from settings import app_settings
 from models import CreativeBrief, Product
@@ -24,7 +25,9 @@ from services.cosmos_service import get_cosmos_service
 from services.blob_service import get_blob_service
 from services.title_service import get_title_service
 from api.admin import admin_bp
+from azure.core.settings import settings as azure_settings
 from azure.monitor.opentelemetry import configure_azure_monitor
+from opentelemetry.instrumentation.asgi import OpenTelemetryMiddleware
 
 # In-memory task storage for generation tasks
 # In production, this should be replaced with Redis or similar
@@ -35,25 +38,71 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
-logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
-
-# Check if the Application Insights connection string is set in the environment variables
-appinsights_connection_string = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")
-if appinsights_connection_string:
-    # Configure Application Insights if the connection string is found
-    configure_azure_monitor(connection_string=appinsights_connection_string)
-    logger.info("Application Insights configured with the provided connection string")
-else:
-    # Log a warning if the connection string is not found
-    logger.warning("No Application Insights connection string found. Skipping configuration")
 
 # Create Quart app
 app = Quart(__name__)
 app = cors(app, allow_origin="*")
 
+# Check if the Application Insights connection string is set in the environment variables
+appinsights_connection_string = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")
+if appinsights_connection_string:
+    # Configure Application Insights if the connection string is found
+    # logging_level=WARNING sends only WARNING/ERROR/CRITICAL to App Insights
+    # (INFO traces like "Loaded product", "Uploaded image", workflow steps stay in container logs only)
+    configure_azure_monitor(
+        connection_string=appinsights_connection_string,
+        enable_live_metrics=False,
+        logging_level=logging.WARNING,
+    )
+    # Disable Azure SDK native span creation (ContainerProxy.*, BlobClient.* InProc spans)
+    azure_settings.tracing_implementation = None
+    # Apply ASGI middleware for request tracing (Quart is not auto-instrumented by configure_azure_monitor)
+    app.asgi_app = OpenTelemetryMiddleware(
+        app.asgi_app,
+        exclude_spans=["receive", "send"],
+        excluded_urls="api/generate/status",
+    )
+    logger.info("Application Insights configured with the provided connection string")
+else:
+    # Log a warning if the connection string is not found
+    logger.warning("No Application Insights connection string found. Skipping configuration")
+
 # Register blueprints
 app.register_blueprint(admin_bp)
+
+
+@app.before_request
+async def set_conversation_context():
+    """Attach conversation_id and user_id to the current OTel span for App Insights."""
+    conversation_id = ""
+    user_id = ""
+
+    # 1. Extract from JSON body (POST requests)
+    if request.content_type and "json" in request.content_type:
+        try:
+            data = await request.get_json()
+            if data and isinstance(data, dict):
+                conversation_id = data.get("conversation_id", "")
+                user_id = data.get("user_id", "")
+        except Exception:
+            pass
+
+    # 2. Extract from URL path parameters (e.g. /api/conversations/<conversation_id>)
+    if not conversation_id and request.view_args:
+        conversation_id = request.view_args.get("conversation_id", "")
+
+    # 3. Extract from query parameters (e.g. ?conversation_id=xxx)
+    if not conversation_id:
+        conversation_id = request.args.get("conversation_id", "")
+
+    if not user_id:
+        user_id = request.args.get("user_id", "") or request.headers.get("X-Ms-Client-Principal-Id", "anonymous")
+
+    span = trace.get_current_span()
+    if span.is_recording():
+        span.set_attribute("conversation_id", conversation_id)
+        span.set_attribute("user_id", user_id)
 
 
 # ==================== Authentication Helper ====================
