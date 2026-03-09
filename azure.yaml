@@ -17,7 +17,7 @@ parameters:
     description: A unique prefix for all resources (3-15 chars)
   azureAiServiceLocation:
     type: string
-    default: eastus
+    default: eastus2
     displayName: AI Services Location
     description: Location for Azure AI Services deployments
   enableMonitoring:
