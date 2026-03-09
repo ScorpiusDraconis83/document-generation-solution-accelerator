@@ -1,6 +1,6 @@
 environment:
   name: content-generation
-  location: eastus2
+  location: eastus
 
 name: content-generation
 metadata:
@@ -17,7 +17,7 @@ parameters:
     description: A unique prefix for all resources (3-15 chars)
   azureAiServiceLocation:
     type: string
-    default: eastus2
+    default: eastus
     displayName: AI Services Location
     description: Location for Azure AI Services deployments
   enableMonitoring:
