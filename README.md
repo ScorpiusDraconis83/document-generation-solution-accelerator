@@ -169,6 +169,10 @@ Accelerate your marketing content creation by leveraging AI to interpret creativ
 Supporting documentation
 </h2>
 
+### Technical guide
+
+For comprehensive technical documentation including architecture, agent orchestration, configuration, and development setup, see the [Technical Guide](./docs/TECHNICAL_GUIDE.md).
+
 ### Security guidelines
 
 This template uses [Managed Identity](https://learn.microsoft.com/entra/identity/managed-identities-azure-resources/overview) for authentication between Azure services.

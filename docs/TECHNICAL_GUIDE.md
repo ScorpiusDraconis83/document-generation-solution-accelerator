@@ -116,7 +116,7 @@ cd content-gen
 azd up
 ```
 
-See [docs/AZD_DEPLOYMENT.md](docs/AZD_DEPLOYMENT.md) for detailed `azd` deployment instructions.
+See [AZD_DEPLOYMENT.md](./AZD_DEPLOYMENT.md) for detailed `azd` deployment instructions.
 
 ### Manual Deployment
 
@@ -131,7 +131,7 @@ cd content-gen
 ./scripts/deploy.sh
 ```
 
-See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed manual deployment instructions.
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed manual deployment instructions.
 
 ### Local Development
 
@@ -179,10 +179,10 @@ BRAND_SECONDARY_COLOR=#107C10
 
 ## Documentation
 
-- [Local Development Guide](docs/LOCAL_DEPLOYMENT.md) - Run locally for development
-- [AZD Deployment Guide](docs/AZD_DEPLOYMENT.md) - Deploy with Azure Developer CLI
-- [Manual Deployment Guide](docs/DEPLOYMENT.md) - Step-by-step manual deployment
-- [Image Generation Configuration](docs/IMAGE_GENERATION.md) - GPT image model setup
+- [Local Development Guide](./LOCAL_DEPLOYMENT.md) - Run locally for development
+- [AZD Deployment Guide](./AZD_DEPLOYMENT.md) - Deploy with Azure Developer CLI
+- [Manual Deployment Guide](./DEPLOYMENT.md) - Step-by-step manual deployment
+- [Image Generation Configuration](./IMAGE_GENERATION.md) - GPT image model setup
 
 ## License
 
