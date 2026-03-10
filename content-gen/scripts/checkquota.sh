@@ -10,7 +10,7 @@
 #
 # Usage (local):
 #   bash checkquota.sh [image_model_choice]
-#   bash checkquota.sh gpt-image-1
+#   bash checkquota.sh gpt-image-1-mini
 #   bash checkquota.sh none
 #
 # Usage (CI - via env vars):
@@ -28,9 +28,9 @@ fi
 # ---- Configuration ----
 # In local mode, image model can be passed as first argument
 if [[ "$RUN_MODE" == "local" ]]; then
-    IMAGE_MODEL_CHOICE="${1:-${IMAGE_MODEL_CHOICE:-gpt-image-1}}"
+    IMAGE_MODEL_CHOICE="${1:-${IMAGE_MODEL_CHOICE:-gpt-image-1-mini}}"
 else
-    IMAGE_MODEL_CHOICE="${IMAGE_MODEL_CHOICE:-gpt-image-1}"
+    IMAGE_MODEL_CHOICE="${IMAGE_MODEL_CHOICE:-gpt-image-1-mini}"
 fi
 
 GPT_MIN_CAPACITY="${GPT_MIN_CAPACITY:-150}"
@@ -46,13 +46,13 @@ fi
 # Map image model choice to Azure quota model name
 declare -A IMAGE_MODEL_QUOTA_NAME
 IMAGE_MODEL_QUOTA_NAME=(
-  ["gpt-image-1"]="OpenAI.GlobalStandard.gpt-image-1"
+  ["gpt-image-1-mini"]="OpenAI.GlobalStandard.gpt-image-1-mini"
   ["gpt-image-1.5"]="OpenAI.GlobalStandard.gpt-image-1.5"
   ["none"]=""
 )
 
 # ---- Validate image model choice ----
-ALLOWED_MODELS=("gpt-image-1" "gpt-image-1.5" "none")
+ALLOWED_MODELS=("gpt-image-1-mini" "gpt-image-1.5" "none")
 if [[ ! " ${ALLOWED_MODELS[@]} " =~ " ${IMAGE_MODEL_CHOICE} " ]]; then
     echo "❌ ERROR: Invalid image model choice: '$IMAGE_MODEL_CHOICE'"
     echo "   Allowed values: ${ALLOWED_MODELS[*]}"

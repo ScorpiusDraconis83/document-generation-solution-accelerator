@@ -10,7 +10,7 @@ Prerequisites:
    - AZURE_OPENAI_ENDPOINT: Your Azure OpenAI endpoint
    - AZURE_OPENAI_GPT_MODEL: GPT model deployment name
    - AZURE_OPENAI_GPT_IMAGE_ENDPOINT: (Optional) Endpoint for images
-   - AZURE_OPENAI_IMAGE_MODEL: Image model name (e.g., gpt-image-1)
+   - AZURE_OPENAI_IMAGE_MODEL: Image model name (e.g., gpt-image-1-mini)
    - AZURE_COSMOS_ENDPOINT: Your CosmosDB endpoint
    - AZURE_COSMOS_DATABASE_NAME: content-generation
    - AZURE_COSMOS_CONVERSATIONS_CONTAINER: conversations

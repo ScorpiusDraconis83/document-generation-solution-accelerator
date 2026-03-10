@@ -113,7 +113,7 @@ class TestImageGenerationEnabled:
 
         with patch.dict(os.environ, {
             "AZURE_OPENAI_ENDPOINT": "https://test.openai.azure.com",
-            "AZURE_OPENAI_IMAGE_MODEL": "gpt-image-1"
+            "AZURE_OPENAI_IMAGE_MODEL": "gpt-image-1-mini"
         }, clear=False):
             settings = _AzureOpenAISettings()
             assert settings.image_generation_enabled is True
