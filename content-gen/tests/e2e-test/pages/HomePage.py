@@ -1,6 +1,5 @@
 """Home page object module for Fabric SQL automation tests."""
 import logging
-import json
 import os
 import re
 import math
@@ -9,7 +8,6 @@ from collections import Counter
 
 from PIL import Image
 from base.base import BasePage
-from config.constants import HELLO_PROMPT, GOOD_MORNING_PROMPT, RAI_PROMPT, OUT_OF_SCOPE_PROMPT
 
 from playwright.sync_api import expect
 
@@ -47,7 +45,6 @@ class HomePage(BasePage):
     CHAT_HISTORY = "(//div[@style='padding: 8px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 8px; background-color: transparent; border: 1px solid transparent; border-radius: 6px; margin-left: -8px; margin-right: -8px; transition: background-color 0.15s, border-color 0.15s; opacity: 1; pointer-events: auto;'])[1]"
     MORE_OPTIONS  = "(//button[@style='min-width: 24px; height: 24px; padding: 2px; color: var(--colorNeutralForeground3);'])[2]"
     MORE_OPTIONS_DELETE  = "(//button[@style='min-width: 24px; height: 24px; padding: 2px; color: var(--colorNeutralForeground3);'])[3]"
-    RENAME_OPTION = "//span[normalize-space()='Rename']"
     RENAME_OPTION = "//span[normalize-space()='Rename']"
     DELETE_CHAT = "//span[normalize-space()='Delete']"
     DELETE_BUTTON = "//button[normalize-space()='Delete']"
