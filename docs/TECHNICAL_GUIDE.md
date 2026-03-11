@@ -110,7 +110,7 @@ Using Azure Developer CLI (`azd`):
 ```bash
 # Clone the repository
 git clone <repository-url>
-cd content-gen
+cd content-generation-solution-accelerator
 
 # Deploy everything with one command
 azd up
@@ -125,7 +125,7 @@ For more control over individual resources:
 ```bash
 # Clone the repository
 git clone <repository-url>
-cd content-gen
+cd content-generation-solution-accelerator
 
 # Run deployment script
 ./scripts/deploy.sh
@@ -137,7 +137,7 @@ See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed manual deployment instructions
 
 ```bash
 # Backend
-cd src
+cd src/backend
 pip install -r requirements.txt
 python app.py
 

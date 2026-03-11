@@ -67,7 +67,6 @@ az login --use-device-code
 ### 2. Initialize Environment
 
 ```bash
-cd content-gen
 
 # Create a new environment
 azd env new <environment-name>
