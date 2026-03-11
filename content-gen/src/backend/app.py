@@ -66,7 +66,7 @@ if appinsights_connection_string:
     app.asgi_app = OpenTelemetryMiddleware(
         app.asgi_app,
         exclude_spans=["receive", "send"],
-        excluded_urls="health,api/generate/status",
+        excluded_urls="health,api/admin,api/generate/status",
     )
     logger.info("Application Insights configured with the provided connection string")
 else:
