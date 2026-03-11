@@ -48,21 +48,25 @@ app = cors(app, allow_origin="*")
 appinsights_connection_string = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")
 if appinsights_connection_string:
     # Configure Application Insights if the connection string is found
-    # logging_level=WARNING sends only WARNING/ERROR/CRITICAL to App Insights
-    # (INFO traces like "Loaded product", "Uploaded image", workflow steps stay in container logs only)
     configure_azure_monitor(
         connection_string=appinsights_connection_string,
         enable_live_metrics=False,
         enable_performance_counters=False,
-        logging_level=logging.WARNING,
     )
+    # Suppress verbose Azure SDK INFO logs from App Insights
+    # WARNING/ERROR/CRITICAL from these loggers still come through
+    logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.WARNING)
+    logging.getLogger("azure.monitor.opentelemetry.exporter").setLevel(logging.WARNING)
+    logging.getLogger("azure.identity").setLevel(logging.WARNING)
+    logging.getLogger("azure.cosmos").setLevel(logging.WARNING)
     # Disable Azure SDK native span creation (ContainerProxy.*, BlobClient.* InProc spans)
     azure_settings.tracing_implementation = None
     # Apply ASGI middleware for request tracing (Quart is not auto-instrumented by configure_azure_monitor)
+    # Exclude health probes, post-deploy admin calls, and polling endpoints from telemetry
     app.asgi_app = OpenTelemetryMiddleware(
         app.asgi_app,
         exclude_spans=["receive", "send"],
-        excluded_urls="api/generate/status",
+        excluded_urls="health,api/generate/status",
     )
     logger.info("Application Insights configured with the provided connection string")
 else:
