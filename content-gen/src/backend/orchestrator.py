@@ -1269,7 +1269,7 @@ Important:
                     "response_format": "b64_json",
                 }
             else:
-                # gpt-image-1 / gpt-image-1.5: quality is low/medium/high/auto; no response_format
+                # gpt-image-1-mini / gpt-image-1.5: quality is low/medium/high/auto; no response_format
                 api_version = app_settings.azure_openai.image_api_version or "2025-04-01-preview"
                 payload = {
                     "prompt": image_prompt,

@@ -64,10 +64,10 @@ class _AzureOpenAISettings(BaseSettings):
     model: str = "gpt-5"
 
     # Image generation model settings
-    # Supported models: "gpt-image-1" or "gpt-image-1.5"
-    image_model: str = Field(default="gpt-image-1", alias="AZURE_OPENAI_IMAGE_MODEL")
+    # Supported models: "gpt-image-1-mini" or "gpt-image-1.5"
+    image_model: str = Field(default="gpt-image-1-mini", alias="AZURE_OPENAI_IMAGE_MODEL")
 
-    # gpt-image-1 or gpt-image-1.5 specific endpoint
+    # gpt-image-1-mini or gpt-image-1.5 specific endpoint
     gpt_image_endpoint: Optional[str] = Field(default=None, alias="AZURE_OPENAI_GPT_IMAGE_ENDPOINT")
 
     resource: Optional[str] = None
@@ -81,9 +81,9 @@ class _AzureOpenAISettings(BaseSettings):
     image_api_version: str = Field(default="2025-04-01-preview", alias="AZURE_OPENAI_IMAGE_API_VERSION")
 
     # Image generation settings
-    # For gpt-image-1: 1024x1024, 1536x1024, 1024x1536, auto
+    # For gpt-image-1-mini: 1024x1024, 1536x1024, 1024x1536, auto
     image_size: str = "1024x1024"
-    image_quality: str = "medium"   # gpt-image-1/1.5: low/medium/high/auto
+    image_quality: str = "medium"   # gpt-image-1-mini/1.5: low/medium/high/auto
 
     @property
     def effective_image_model(self) -> str:
@@ -100,7 +100,7 @@ class _AzureOpenAISettings(BaseSettings):
         """Check if image generation is available.
 
         Image generation requires either:
-        - A gpt-image-1 or gpt-image-1.5 endpoint configured, OR
+        - A gpt-image-1-mini or gpt-image-1.5 endpoint configured, OR
         - Using the main OpenAI endpoint with an image model configured
 
         Returns False if image_model is explicitly set to empty string or "none".
@@ -173,7 +173,7 @@ class _AIFoundrySettings(BaseSettings):
 
     # Model deployment names in Foundry
     model_deployment: Optional[str] = Field(default=None, alias="AZURE_AI_MODEL_DEPLOYMENT_NAME")
-    image_deployment: str = Field(default="gpt-image-1", alias="AZURE_AI_IMAGE_MODEL_DEPLOYMENT")
+    image_deployment: str = Field(default="gpt-image-1-mini", alias="AZURE_AI_IMAGE_MODEL_DEPLOYMENT")
 
 
 class _SearchSettings(BaseSettings):

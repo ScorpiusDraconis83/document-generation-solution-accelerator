@@ -908,7 +908,7 @@ async def test_generate_foundry_image_no_credential():
         mock_settings.ai_foundry.use_foundry = True
         mock_settings.azure_openai.endpoint = "https://test.openai.azure.com"
         mock_settings.azure_openai.image_endpoint = "https://test.openai.azure.com"
-        mock_settings.ai_foundry.image_deployment = "gpt-image-1"
+        mock_settings.ai_foundry.image_deployment = "gpt-image-1-mini"
         mock_settings.base_settings.azure_client_id = None
 
         orchestrator = ContentGenerationOrchestrator()
@@ -932,7 +932,7 @@ async def test_generate_foundry_image_no_endpoint():
         mock_settings.ai_foundry.use_foundry = True
         mock_settings.azure_openai.endpoint = None
         mock_settings.azure_openai.image_endpoint = None
-        mock_settings.ai_foundry.image_deployment = "gpt-image-1"
+        mock_settings.ai_foundry.image_deployment = "gpt-image-1-mini"
         mock_settings.base_settings.azure_client_id = None
 
         mock_credential = MagicMock()
@@ -1831,9 +1831,9 @@ async def test_generate_foundry_image_success():
          patch("httpx.AsyncClient") as mock_httpx:
 
         mock_settings.ai_foundry.use_foundry = True
-        mock_settings.ai_foundry.image_deployment = "gpt-image-1"
+        mock_settings.ai_foundry.image_deployment = "gpt-image-1-mini"
         mock_settings.azure_openai.endpoint = "https://test.openai.azure.com"
-        mock_settings.azure_openai.image_model = "gpt-image-1"
+        mock_settings.azure_openai.image_model = "gpt-image-1-mini"
         mock_settings.azure_openai.image_api_version = "2025-04-01-preview"
         mock_settings.azure_openai.image_size = "1024x1024"
         mock_settings.azure_openai.image_quality = "medium"
@@ -1931,9 +1931,9 @@ async def test_generate_foundry_image_api_error():
          patch("httpx.AsyncClient") as mock_httpx:
 
         mock_settings.ai_foundry.use_foundry = True
-        mock_settings.ai_foundry.image_deployment = "gpt-image-1"
+        mock_settings.ai_foundry.image_deployment = "gpt-image-1-mini"
         mock_settings.azure_openai.endpoint = "https://test.openai.azure.com"
-        mock_settings.azure_openai.image_model = "gpt-image-1"
+        mock_settings.azure_openai.image_model = "gpt-image-1-mini"
         mock_settings.azure_openai.image_api_version = "2025-04-01-preview"
         mock_settings.azure_openai.image_size = "1024x1024"
         mock_settings.azure_openai.image_quality = "medium"
@@ -1972,9 +1972,9 @@ async def test_generate_foundry_image_timeout():
          patch("httpx.AsyncClient") as mock_httpx:
 
         mock_settings.ai_foundry.use_foundry = True
-        mock_settings.ai_foundry.image_deployment = "gpt-image-1"
+        mock_settings.ai_foundry.image_deployment = "gpt-image-1-mini"
         mock_settings.azure_openai.endpoint = "https://test.openai.azure.com"
-        mock_settings.azure_openai.image_model = "gpt-image-1"
+        mock_settings.azure_openai.image_model = "gpt-image-1-mini"
         mock_settings.azure_openai.image_api_version = "2025-04-01-preview"
         mock_settings.azure_openai.image_size = "1024x1024"
         mock_settings.azure_openai.image_quality = "medium"
@@ -2010,9 +2010,9 @@ async def test_generate_foundry_image_url_fallback():
          patch("httpx.AsyncClient") as mock_httpx:
 
         mock_settings.ai_foundry.use_foundry = True
-        mock_settings.ai_foundry.image_deployment = "gpt-image-1"
+        mock_settings.ai_foundry.image_deployment = "gpt-image-1-mini"
         mock_settings.azure_openai.endpoint = "https://test.openai.azure.com"
-        mock_settings.azure_openai.image_model = "gpt-image-1"
+        mock_settings.azure_openai.image_model = "gpt-image-1-mini"
         mock_settings.azure_openai.image_api_version = "2025-04-01-preview"
         mock_settings.azure_openai.image_size = "1024x1024"
         mock_settings.azure_openai.image_quality = "medium"
