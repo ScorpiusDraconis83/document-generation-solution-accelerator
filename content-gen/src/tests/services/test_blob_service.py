@@ -196,7 +196,9 @@ async def test_upload_product_image_png(mock_blob_service_with_containers):
             "image/png"
         )
 
-        assert ".png" in mock_blob_client.url or "image.png" in mock_blob_client.url
+        assert ".png" in url or "image.png" in url
+        assert description == "PNG image description"
+        mock_blob_client.upload_blob.assert_called_once()
 
 
 @pytest.mark.asyncio

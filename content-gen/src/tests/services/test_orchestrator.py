@@ -3,6 +3,7 @@ import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+import orchestrator as orch_module
 from orchestrator import (_HARMFUL_PATTERNS_COMPILED,
                           _SYSTEM_PROMPT_PATTERNS_COMPILED,
                           PLANNING_INSTRUCTIONS, RAI_HARMFUL_CONTENT_RESPONSE,
@@ -838,8 +839,6 @@ def test_get_orchestrator_singleton():
         mock_builder_instance.build.return_value = mock_workflow
         mock_builder.return_value = mock_builder_instance
 
-        import orchestrator as orch_module
-
         # Reset the singleton
         orch_module._orchestrator = None
 
@@ -1517,8 +1516,6 @@ async def test_get_chat_client_foundry_mode():
 
 def test_foundry_not_available():
     """Test when Foundry SDK is not available."""
-    import orchestrator as orch_module
-
     # Check that FOUNDRY_AVAILABLE is defined
     assert hasattr(orch_module, 'FOUNDRY_AVAILABLE')
 
