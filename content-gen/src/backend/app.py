@@ -25,7 +25,6 @@ from services.cosmos_service import get_cosmos_service
 from services.blob_service import get_blob_service
 from services.title_service import get_title_service
 from api.admin import admin_bp
-from azure.core.settings import settings as azure_settings
 from azure.monitor.opentelemetry import configure_azure_monitor
 from opentelemetry.instrumentation.asgi import OpenTelemetryMiddleware
 
@@ -59,8 +58,7 @@ if appinsights_connection_string:
     logging.getLogger("azure.monitor.opentelemetry.exporter").setLevel(logging.WARNING)
     logging.getLogger("azure.identity").setLevel(logging.WARNING)
     logging.getLogger("azure.cosmos").setLevel(logging.WARNING)
-    # Disable Azure SDK native span creation (ContainerProxy.*, BlobClient.* InProc spans)
-    azure_settings.tracing_implementation = None
+    logging.getLogger("api.admin").setLevel(logging.WARNING)
     # Apply ASGI middleware for request tracing (Quart is not auto-instrumented by configure_azure_monitor)
     # Exclude health probes, post-deploy admin calls, and polling endpoints from telemetry
     app.asgi_app = OpenTelemetryMiddleware(
