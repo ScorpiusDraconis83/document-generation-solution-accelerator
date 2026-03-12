@@ -200,12 +200,12 @@ async def test_generate_dalle_image_error_handling():
 
 @pytest.mark.asyncio
 async def test_generate_gpt_image_success():
-    """Test successful gpt-image-1 generation."""
+    """Test successful gpt-image-1-mini generation."""
     with patch("agents.image_content_agent.app_settings") as mock_settings, \
          patch("agents.image_content_agent.DefaultAzureCredential") as mock_cred, \
          patch("agents.image_content_agent.AsyncAzureOpenAI") as mock_client:
 
-        mock_settings.azure_openai.effective_image_model = "gpt-image-1"
+        mock_settings.azure_openai.effective_image_model = "gpt-image-1-mini"
         mock_settings.azure_openai.gpt_image_endpoint = "https://test.openai.azure.com"
         mock_settings.azure_openai.dalle_endpoint = "https://test.openai.azure.com"
         mock_settings.azure_openai.endpoint = "https://test.openai.azure.com"
@@ -240,7 +240,7 @@ async def test_generate_gpt_image_success():
 
         assert result["success"] is True
         assert "image_base64" in result
-        assert result["model"] == "gpt-image-1"
+        assert result["model"] == "gpt-image-1-mini"
 
 
 @pytest.mark.asyncio
@@ -250,7 +250,7 @@ async def test_generate_gpt_image_quality_passthrough():
          patch("agents.image_content_agent.DefaultAzureCredential") as mock_cred, \
          patch("agents.image_content_agent.AsyncAzureOpenAI") as mock_client:
 
-        mock_settings.azure_openai.effective_image_model = "gpt-image-1"
+        mock_settings.azure_openai.effective_image_model = "gpt-image-1-mini"
         mock_settings.azure_openai.gpt_image_endpoint = "https://test.openai.azure.com"
         mock_settings.azure_openai.dalle_endpoint = None
         mock_settings.azure_openai.endpoint = "https://test.openai.azure.com"
@@ -291,7 +291,7 @@ async def test_generate_gpt_image_no_b64_falls_back_to_url():
          patch("agents.image_content_agent.AsyncAzureOpenAI") as mock_client, \
          patch("aiohttp.ClientSession") as mock_session:
 
-        mock_settings.azure_openai.effective_image_model = "gpt-image-1"
+        mock_settings.azure_openai.effective_image_model = "gpt-image-1-mini"
         mock_settings.azure_openai.gpt_image_endpoint = "https://test.openai.azure.com"
         mock_settings.azure_openai.dalle_endpoint = None
         mock_settings.azure_openai.endpoint = "https://test.openai.azure.com"
@@ -341,7 +341,7 @@ async def test_generate_gpt_image_error_handling():
     with patch("agents.image_content_agent.app_settings") as mock_settings, \
          patch("agents.image_content_agent.DefaultAzureCredential") as mock_cred:
 
-        mock_settings.azure_openai.effective_image_model = "gpt-image-1"
+        mock_settings.azure_openai.effective_image_model = "gpt-image-1-mini"
         mock_settings.azure_openai.gpt_image_endpoint = "https://test.openai.azure.com"
         mock_settings.azure_openai.dalle_endpoint = None
         mock_settings.azure_openai.endpoint = "https://test.openai.azure.com"
@@ -370,7 +370,7 @@ async def test_routes_to_dalle_for_dalle_model():
 
         mock_settings.azure_openai.effective_image_model = "dall-e-3"
         mock_dalle.return_value = {"success": True, "model": "dall-e-3"}
-        mock_gpt.return_value = {"success": True, "model": "gpt-image-1"}
+        mock_gpt.return_value = {"success": True, "model": "gpt-image-1-mini"}
 
         result = await generate_dalle_image(prompt="Test")
 
@@ -381,20 +381,20 @@ async def test_routes_to_dalle_for_dalle_model():
 
 @pytest.mark.asyncio
 async def test_routes_to_gpt_image_for_gpt_model():
-    """Test that gpt-image-1 model routes to gpt-image generator."""
+    """Test that gpt-image-1-mini model routes to gpt-image generator."""
     with patch("agents.image_content_agent.app_settings") as mock_settings, \
          patch("agents.image_content_agent._generate_dalle_image") as mock_dalle, \
          patch("agents.image_content_agent._generate_gpt_image") as mock_gpt:
 
-        mock_settings.azure_openai.effective_image_model = "gpt-image-1"
+        mock_settings.azure_openai.effective_image_model = "gpt-image-1-mini"
         mock_dalle.return_value = {"success": True, "model": "dall-e-3"}
-        mock_gpt.return_value = {"success": True, "model": "gpt-image-1"}
+        mock_gpt.return_value = {"success": True, "model": "gpt-image-1-mini"}
 
         result = await generate_dalle_image(prompt="Test")
 
         mock_gpt.assert_called_once()
         mock_dalle.assert_not_called()
-        assert result["model"] == "gpt-image-1"
+        assert result["model"] == "gpt-image-1-mini"
 
 
 @pytest.mark.asyncio

@@ -15,7 +15,7 @@ By default this template will use the environment name as the prefix to prevent 
 | `gptModelVersion`                      | string  | `2025-11-13`               | Sets the GPT model version.                                                   |
 | `gptModelDeploymentType`               | string  | `GlobalStandard`           | Defines the model deployment type (allowed: `Standard`, `GlobalStandard`).    |
 | `gptModelCapacity`                     | integer | `150`                      | Sets the GPT model token capacity (minimum: `10`).                            |
-| `imageModelChoice`                     | string  | `gpt-image-1`             | Image model to deploy (allowed: `gpt-image-1`, `gpt-image-1.5`, `none`). |
+| `imageModelChoice`                     | string  | `gpt-image-1-mini`             | Image model to deploy (allowed: `gpt-image-1-mini`, `gpt-image-1.5`, `none`). |
 | `imageModelCapacity`                   | integer | `1`                        | Sets the image model deployment capacity in RPM (minimum: `1`).               |
 | `azureOpenaiAPIVersion`                | string  | `2025-01-01-preview`       | Specifies the API version for Azure OpenAI service.                           |
 | `AZURE_ENV_OPENAI_LOCATION`           | string  | `<User selects during deployment>` | Sets the Azure region for OpenAI resource deployment.                         |
@@ -38,6 +38,6 @@ azd env set <PARAMETER_NAME> <VALUE>
 azd env set AZURE_LOCATION westus2
 azd env set gptModelName gpt-5.1
 azd env set gptModelDeploymentType Standard
-azd env set imageModelChoice gpt-image-1
+azd env set imageModelChoice gpt-image-1-mini
 azd env set ACR_NAME contentgencontainerreg
 ```
