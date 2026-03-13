@@ -146,8 +146,7 @@ async def check_admin_api_health(config: ResourceConfig) -> bool:
         try:
             response = await client.get(f"{config.app_url}/api/admin/health")
             if response.status_code == 200:
-                data = response.json()
-                print_success(f"Admin API healthy (API key required: {data.get('api_key_required', False)})")
+                print_success("Admin API is healthy")
                 return True
             else:
                 print_error(f"Admin API returned {response.status_code}")
@@ -391,28 +390,23 @@ async def run_application_tests(config: ResourceConfig, dry_run: bool = False) -
             print_warning(f"Health check failed: {e}")
             results["health"] = False
         
-        # Test 3: Brief Parsing (POST /api/brief/parse)
-        print_step("Testing Brief Parsing (POST /api/brief/parse)")
+        # Test 3: Chat API (POST /api/chat)
+        print_step("Testing Chat API (POST /api/chat)")
         try:
             response = await client.post(
-                f"{app_url}/api/brief/parse",
-                json={"brief_text": "Create an ad for calm interior paint for homeowners."},
+                f"{app_url}/api/chat",
+                json={"message": "Hello", "conversation_id": "test-post-deploy"},
                 headers={"Content-Type": "application/json"}
             )
             if response.status_code == 200:
-                data = response.json()
-                if "brief" in data:
-                    print_success(f"Brief parsed: {data['brief'].get('overview', '')[:60]}...")
-                    results["brief_parse"] = True
-                else:
-                    print_error(f"Unexpected response: {data}")
-                    results["brief_parse"] = False
+                print_success("Chat API responding")
+                results["chat_api"] = True
             else:
-                print_error(f"Failed: {response.status_code} - {response.text[:200]}")
-                results["brief_parse"] = False
+                print_error(f"Failed: {response.status_code}")
+                results["chat_api"] = False
         except Exception as e:
             print_error(f"Failed: {e}")
-            results["brief_parse"] = False
+            results["chat_api"] = False
         
         # Test 4: Product Search (GET /api/products)
         print_step("Testing Product Search (GET /api/products?search=blue)")
