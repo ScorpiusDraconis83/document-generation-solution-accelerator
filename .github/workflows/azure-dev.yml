@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - psl-bug-36267
  
 permissions:
   contents: read
@@ -51,4 +50,3 @@ jobs:
       # Step 4: Print the result of the validation
       - name: Print result
         run: cat ${{ steps.validation.outputs.resultFile }}
-  
