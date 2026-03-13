@@ -72,7 +72,7 @@ async def generate_image(
     quality: str = None
 ) -> dict:
     """
-    Generate a marketing image using DALL-E 3, gpt-image-1, or gpt-image-1.5.
+    Generate a marketing image using DALL-E 3, gpt-image-1-mini, or gpt-image-1.5.
 
     The model used is determined by AZURE_OPENAI_IMAGE_MODEL setting.
 
@@ -82,10 +82,10 @@ async def generate_image(
         scene_description: Scene/setting description from creative brief
         size: Image size (model-specific, uses settings default if not provided)
               - dall-e-3: 1024x1024, 1024x1792, 1792x1024
-              - gpt-image-1/1.5: 1024x1024, 1536x1024, 1024x1536, auto
+              - gpt-image-1-mini/1.5: 1024x1024, 1536x1024, 1024x1536, auto
         quality: Image quality (model-specific, uses settings default if not provided)
               - dall-e-3: standard, hd
-              - gpt-image-1/1.5: low, medium, high, auto
+              - gpt-image-1-mini/1.5: low, medium, high, auto
 
     Returns:
         Dictionary containing generated image data and metadata
@@ -258,7 +258,7 @@ async def _generate_gpt_image(
     quality: str = None
 ) -> dict:
     """
-    Generate a marketing image using gpt-image-1 or gpt-image-1.5.
+    Generate a marketing image using gpt-image-1-mini or gpt-image-1.5.
 
     gpt-image models:
     - Supports larger prompt sizes
@@ -282,7 +282,7 @@ async def _generate_gpt_image(
     size = size or app_settings.azure_openai.image_size
     quality = quality or app_settings.azure_openai.image_quality
 
-    # gpt-image-1 can handle larger prompts, so we can include more context
+    # gpt-image-1-mini can handle larger prompts, so we can include more context
     truncated_product_desc = _truncate_for_image(product_description, max_chars=3000)
 
     main_prompt = prompt[:2000] if len(prompt) > 2000 else prompt
@@ -328,12 +328,12 @@ MANDATORY FINAL CHECKLIST:
         # Get token for Azure OpenAI
         token = await credential.get_token("https://cognitiveservices.azure.com/.default")
 
-        # Use gpt-image-1 specific endpoint if configured, otherwise main endpoint
+        # Use gpt-image-1-mini specific endpoint if configured, otherwise main endpoint
         image_endpoint = (app_settings.azure_openai.gpt_image_endpoint
                           or app_settings.azure_openai.endpoint)
-        logger.info(f"Using gpt-image-1 endpoint: {image_endpoint}")
+        logger.info(f"Using gpt-image-1-mini endpoint: {image_endpoint}")
 
-        # Use the image-specific API version for gpt-image-1 (requires 2025-04-01-preview or newer)
+        # Use the image-specific API version for gpt-image-1-mini (requires 2025-04-01-preview or newer)
         client = AsyncAzureOpenAI(
             azure_endpoint=image_endpoint,
             azure_ad_token=token.token,
@@ -341,7 +341,7 @@ MANDATORY FINAL CHECKLIST:
         )
 
         try:
-            # gpt-image-1/1.5 API call - note: gpt-image doesn't support response_format parameter
+            # gpt-image-1-mini/1.5 API call - note: gpt-image doesn't support response_format parameter
             # It returns base64 data directly in the response
             response = await client.images.generate(
                 model=app_settings.azure_openai.effective_image_model,
@@ -353,7 +353,7 @@ MANDATORY FINAL CHECKLIST:
 
             image_data = response.data[0]
 
-            # gpt-image-1 returns b64_json directly without needing response_format parameter
+            # gpt-image-1-mini returns b64_json directly without needing response_format parameter
             image_base64 = getattr(image_data, 'b64_json', None)
 
             # If no b64_json, try to get URL and fetch the image
@@ -369,9 +369,9 @@ MANDATORY FINAL CHECKLIST:
             if not image_base64:
                 return {
                     "success": False,
-                    "error": "No image data returned from gpt-image-1",
+                    "error": "No image data returned from gpt-image-1-mini",
                     "prompt_used": full_prompt,
-                    "model": "gpt-image-1",
+                    "model": "gpt-image-1-mini",
                 }
 
             return {
@@ -379,19 +379,19 @@ MANDATORY FINAL CHECKLIST:
                 "image_base64": image_base64,
                 "prompt_used": full_prompt,
                 "revised_prompt": getattr(image_data, 'revised_prompt', None),
-                "model": "gpt-image-1",
+                "model": "gpt-image-1-mini",
             }
         finally:
             # Properly close the async client to avoid unclosed session warnings
             await client.close()
 
     except Exception as e:
-        logger.exception(f"Error generating gpt-image-1 image: {e}")
+        logger.exception(f"Error generating gpt-image-1-mini image: {e}")
         return {
             "success": False,
             "error": str(e),
             "prompt_used": full_prompt,
-            "model": "gpt-image-1",
+            "model": "gpt-image-1-mini",
         }
 
 

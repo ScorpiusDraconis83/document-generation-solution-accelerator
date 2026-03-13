@@ -3,13 +3,13 @@
 Sample Image Generation Script
 
 This script demonstrates how to generate marketing images using the
-content-gen image generation capabilities (gpt-image-1 or gpt-image-1.5).
+content-gen image generation capabilities (gpt-image-1-mini or gpt-image-1.5).
 
 Prerequisites:
 1. Set up environment variables (or use a .env file):
    - AZURE_OPENAI_ENDPOINT: Your Azure OpenAI endpoint
     - AZURE_OPENAI_GPT_IMAGE_ENDPOINT: (Optional) Dedicated GPT image endpoint
-    - AZURE_OPENAI_IMAGE_MODEL: Use "gpt-image-1" or "gpt-image-1.5"
+    - AZURE_OPENAI_IMAGE_MODEL: Use "gpt-image-1-mini" or "gpt-image-1.5"
    
 2. Ensure you have RBAC access:
    - "Cognitive Services OpenAI User" role on the Azure OpenAI resource
@@ -128,7 +128,7 @@ async def generate_sample_image(
 async def main():
     """Main entry point for the sample script."""
     parser = argparse.ArgumentParser(
-        description="Generate marketing images using gpt-image-1 or gpt-image-1.5"
+        description="Generate marketing images using gpt-image-1-mini or gpt-image-1.5"
     )
     parser.add_argument(
         "--prompt", "-p",
@@ -175,7 +175,7 @@ async def main():
     if not app_settings.azure_openai.image_generation_enabled:
         print("❌ Image generation is not configured.")
         print("   Please set AZURE_OPENAI_GPT_IMAGE_ENDPOINT or AZURE_OPENAI_ENDPOINT")
-        print("   and ensure you have access to a gpt-image-1 or gpt-image-1.5 model.")
+        print("   and ensure you have access to a gpt-image-1-mini or gpt-image-1.5 model.")
         sys.exit(1)
     
     # Generate the image

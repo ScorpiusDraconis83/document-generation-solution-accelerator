@@ -66,8 +66,10 @@ class TestAzureOpenAIImageProperties:
 
         with patch.dict(os.environ, {
             "AZURE_OPENAI_ENDPOINT": "https://test.openai.azure.com",
-        }, clear=False):
-            settings = _AzureOpenAISettings()
+            "AZURE_OPENAI_GPT_IMAGE_ENDPOINT": "",  # Explicitly clear to test fallback
+        }, clear=True):
+            settings = _AzureOpenAISettings(_env_file=None)
+            # When no GPT endpoint is set, falls back to main endpoint
             assert settings.image_endpoint == "https://test.openai.azure.com"
 
     def test_effective_image_model_returns_image_model(self):
@@ -113,7 +115,7 @@ class TestImageGenerationEnabled:
 
         with patch.dict(os.environ, {
             "AZURE_OPENAI_ENDPOINT": "https://test.openai.azure.com",
-            "AZURE_OPENAI_IMAGE_MODEL": "gpt-image-1"
+            "AZURE_OPENAI_IMAGE_MODEL": "gpt-image-1-mini"
         }, clear=False):
             settings = _AzureOpenAISettings()
             assert settings.image_generation_enabled is True
@@ -126,21 +128,24 @@ class TestAzureOpenAIEndpointValidator:
         """Test ValueError raised when neither endpoint nor resource provided."""
         from settings import _AzureOpenAISettings
 
+        # Use _env_file=None to disable .env file loading for this instance
         with patch.dict(os.environ, {
             "AZURE_OPENAI_ENDPOINT": "",
             "AZURE_OPENAI_RESOURCE": "",
         }, clear=True):
             with pytest.raises(ValueError, match="AZURE_OPENAI_ENDPOINT or AZURE_OPENAI_RESOURCE is required"):
-                _AzureOpenAISettings()
+                _AzureOpenAISettings(_env_file=None)
 
     def test_derives_endpoint_from_resource(self):
         """Test endpoint is derived from resource when endpoint not provided."""
         from settings import _AzureOpenAISettings
 
+        # Use _env_file=None to disable .env file loading for this instance
         with patch.dict(os.environ, {
             "AZURE_OPENAI_RESOURCE": "my-openai-resource",
+            "AZURE_OPENAI_ENDPOINT": "",  # Clear endpoint so it derives from resource
         }, clear=True):
-            settings = _AzureOpenAISettings()
+            settings = _AzureOpenAISettings(_env_file=None)
             assert settings.endpoint == "https://my-openai-resource.openai.azure.com"
 
 
