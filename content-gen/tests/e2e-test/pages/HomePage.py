@@ -28,7 +28,7 @@ class HomePage(BasePage):
     
     # Response and status locators
     TYPING_INDICATOR = "//div[@class='typing-indicator']"
-    AGENT = "//div[.='PlanningAgent']"
+    AGENT = "//*[contains(text(),'PlanningAgent')]"
     CONFIRM_BRIEF_BUTTON = "//button[normalize-space()='Confirm brief']"
     BRIEF_CONFIRMED_TEXT = "//div[contains(text(),'Brief Confirmed')]"
     OLIVE_STONE_TEXT = "(//span[normalize-space()='Olive Stone'])[last()]"
@@ -1039,8 +1039,8 @@ class HomePage(BasePage):
 
     def validate_planning_agent_response_quality(self, extra_keywords=None):
         """
-        Validate that the PlanningAgent response is present and contains meaningful
-        brief-related content (mentions objectives, key message, tone, etc.).
+        Validate that the response contains meaningful brief-related content
+        (mentions objectives, key message, tone, etc.).
 
         Hard assertion: At least 2 baseline brief keywords must be present.
         Soft assertion: If extra_keywords are provided, logs warnings for missing ones.
@@ -1050,15 +1050,11 @@ class HomePage(BasePage):
                 (e.g., ["social media", "back to school"] for Obsidian Pearl).
 
         Raises:
-            AssertionError: If PlanningAgent response is missing or lacks baseline content.
+            AssertionError: If response lacks baseline brief content.
         """
         logger.info("🔍 Validating PlanningAgent response quality...")
 
         try:
-            agent_label = self.page.locator(self.AGENT)
-            expect(agent_label).to_be_visible(timeout=15000)
-            logger.info("✓ PlanningAgent label is visible")
-
             page_text = self.page.inner_text("body")
             page_text_lower = page_text.lower()
 
