@@ -1,10 +1,10 @@
-# Image Generation (gpt-image-1 / gpt-image-1.5)
+# Image Generation (gpt-image-1-mini / gpt-image-1.5)
 
 ## Overview
 
 The accelerator supports image generation through Azure OpenAI image models:
 
-- `gpt-image-1`
+- `gpt-image-1-mini`
 - `gpt-image-1.5`
 
 Both models are used through `images.generate()` in the backend image agent. The selected model is controlled by `AZURE_OPENAI_IMAGE_MODEL`.
@@ -15,7 +15,7 @@ Both models are used through `images.generate()` in the backend image agent. The
 
 | Model | Status | Primary Use |
 |-------|--------|-------------|
-| `gpt-image-1` | Supported | General marketing image generation |
+| `gpt-image-1-mini` | Supported | General marketing image generation |
 | `gpt-image-1.5` | Supported | Higher-quality marketing image generation |
 
 ### Prompting Strategy
@@ -39,7 +39,7 @@ The agent enforces no-text-in-image constraints and color fidelity requirements 
                                                         │
                                                         ▼
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│ Marketing Image │◀────│ gpt-image-1/1.5 │◀────│ Combined Prompt │
+│ Marketing Image │◀────│ gpt-image-1-mini/1.5 │◀────│ Combined Prompt │
 │    (Output)     │     │   (Generate)    │     │ (Desc + Brief)  │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
 ```
@@ -140,7 +140,7 @@ async def generate_marketing_image(
 
 - `AZURE_OPENAI_ENDPOINT`
 - `AZURE_OPENAI_GPT_MODEL`
-- `AZURE_OPENAI_IMAGE_MODEL` (`gpt-image-1`, `gpt-image-1.5`, or `none`)
+- `AZURE_OPENAI_IMAGE_MODEL` (`gpt-image-1-mini`, `gpt-image-1.5`, or `none`)
 - `AZURE_OPENAI_GPT_IMAGE_ENDPOINT` (optional if same as main endpoint)
 - `AZURE_OPENAI_API_VERSION`
 - `AZURE_OPENAI_IMAGE_API_VERSION`
@@ -183,7 +183,7 @@ The backend image generator calls Azure OpenAI with:
 
 ### Model Availability Notes
 
-1. Deploy either `gpt-image-1` or `gpt-image-1.5` based on quota and regional availability.
+1. Deploy either `gpt-image-1-mini` or `gpt-image-1.5` based on quota and regional availability.
 2. Set `AZURE_OPENAI_IMAGE_MODEL` to the deployed model name.
 3. If using a separate image endpoint, set `AZURE_OPENAI_GPT_IMAGE_ENDPOINT`.
 4. Keep `AZURE_OPENAI_IMAGE_API_VERSION` aligned with the image model API version required by your deployment.

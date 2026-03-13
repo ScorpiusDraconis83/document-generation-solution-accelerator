@@ -4,7 +4,7 @@ Before deploying the Content Generation Solution Accelerator, **ensure sufficien
 
 > **For Global Standard | GPT-5.1 - ensure capacity to at least 150 tokens post-deployment for optimal performance.**
 
-> **For Global Standard | GPT-Image-1 - ensure capacity to at least 1 RPM (Requests Per Minute) for image generation.**
+> **For Global Standard | GPT-Image-1-mini - ensure capacity to at least 1 RPM (Requests Per Minute) for image generation.**
 
 
 ### Login if you have not done so already
@@ -15,9 +15,9 @@ az login
 
 ### 📌 Default Models & Capacities:
 ```
-gpt-5.1:150,gpt-image-1:1
+gpt-5.1:150,gpt-image-1-mini:1
 ```
-**Note:** GPT-5.1 capacity is in tokens, GPT-Image-1 capacity is in RPM (Requests Per Minute).
+**Note:** GPT-5.1 capacity is in tokens, GPT-Image-1-mini capacity is in RPM (Requests Per Minute).
 ### 📌 Default Regions:
 ```
 australiaeast, centralus, eastasia, eastus, eastus2, japaneast, northeurope, southeastasia, swedencentral, uksouth, westus, westus3
@@ -42,7 +42,7 @@ australiaeast, centralus, eastasia, eastus, eastus2, japaneast, northeurope, sou
    ```
 ✔️ Check specific model(s) in default regions:
   ```
-  ./quota_check_params.sh --models gpt-5.1:150,gpt-image-1:1
+  ./quota_check_params.sh --models gpt-5.1:150,gpt-image-1-mini:1
   ```
 ✔️ Check default models in specific region(s):
   ```
@@ -50,11 +50,11 @@ australiaeast, centralus, eastasia, eastus, eastus2, japaneast, northeurope, sou
   ```
 ✔️ Passing Both models and regions:
   ```
-  ./quota_check_params.sh --models gpt-5.1:150,gpt-image-1:1 --regions eastus,swedencentral
+  ./quota_check_params.sh --models gpt-5.1:150,gpt-image-1-mini:1 --regions eastus,swedencentral
   ```
 ✔️ All parameters combined:
   ```
- ./quota_check_params.sh --models gpt-5.1:150,gpt-image-1:1 --regions eastus,swedencentral --verbose
+ ./quota_check_params.sh --models gpt-5.1:150,gpt-image-1-mini:1 --regions eastus,swedencentral --verbose
   ```
 
 ### **Sample Output**

@@ -137,7 +137,7 @@ When you start the deployment, most parameters will have **default values**, but
 | **GPT Model Version**                       | The version of the selected GPT model.                                                                    | 2025-11-13            |
 | **OpenAI API Version**                      | The Azure OpenAI API version to use.                                                                      | 2025-01-01-preview     |
 | **GPT Model Deployment Capacity**           | Configure capacity for **GPT models** (in thousands).                                                     | 150k                    |
-| **Image Model**                            | Choose from **gpt-image-1, gpt-image-1.5**                                                                          | gpt-image-1             |
+| **Image Model**                            | Choose from **gpt-image-1-mini, gpt-image-1.5**                                                                          | gpt-image-1-mini             |
 | **Image Tag**                               | Docker image tag to deploy. Common values: `latest`, `dev`, `hotfix`.                                     | latest                 |
 | **Existing Log Analytics Workspace**        | To reuse an existing Log Analytics Workspace ID.                                                          | *(empty)*              |
 | **Existing Azure AI Foundry Project**       | To reuse an existing Azure AI Foundry Project ID instead of creating a new one.                           | *(empty)*              |
@@ -151,7 +151,7 @@ By default, the **GPT-5.1 model capacity** in deployment is set to **150k tokens
 
 > **For GPT-5.1 - increase the capacity post-deployment for optimal performance if required.**
 
-> **For GPT-Image-1 - ensure you have sufficient capacity for image generation requests.**
+> **For GPT-Image-1-mini - ensure you have sufficient capacity for image generation requests.**
 
 Depending on your subscription quota and capacity, you can adjust quota settings to better meet your specific needs.
 
@@ -217,7 +217,7 @@ az webapp config set -g $RESOURCE_GROUP -n <app-name> --http20-enabled false
 **Cause**: Missing GPT-Image model deployment or incorrect endpoint
 
 **Solution**: 
-1. Verify GPT-Image-1 or GPT-Image-1.5 deployment exists in Azure OpenAI resource
+1. Verify GPT-Image-1-mini or GPT-Image-1.5 deployment exists in Azure OpenAI resource
 2. Check `AZURE_OPENAI_IMAGE_MODEL` and `AZURE_OPENAI_GPT_IMAGE_ENDPOINT` environment variables
 
 </details>
