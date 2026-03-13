@@ -158,7 +158,6 @@ async def handle_chat():
     payload = data.get("payload", {})
 
     selected_products = data.get("selected_products", [])
-    track_event_if_configured("Error_Chat_Message_Empty", {"conversation_id": conversation_id, "user_id": user_id})
     brief_data = data.get("brief", {})
 
     track_event_if_configured("Chat_Request_Received", {"conversation_id": conversation_id, "user_id": user_id})
@@ -277,6 +276,7 @@ async def handle_chat():
 
     except Exception as e:
         logger.exception(f"Error handling message: {e}")
+        track_event_if_configured("Error_Chat_Handler", {"conversation_id": conversation_id, "user_id": user_id, "error": str(e)})
         return jsonify({
             "action_type": "error",
             "message": f"An error occurred: {str(e)}",
@@ -294,6 +294,8 @@ async def _handle_parse_brief(
     orchestrator
 ) -> Response:
     """Handle parsing a new brief from user message."""
+
+    track_event_if_configured("Brief_Parse_Request", {"conversation_id": conversation_id, "user_id": user_id})
 
     generated_title = None
 
@@ -486,6 +488,8 @@ async def _handle_refine_brief(
 ) -> Response:
     """Handle brief refinement based on user feedback."""
 
+    track_event_if_configured("Brief_Refine_Request", {"conversation_id": conversation_id, "user_id": user_id})
+
     # Get existing brief if available
     existing_brief = conversation.get("brief") if conversation else None
 
@@ -508,6 +512,7 @@ async def _handle_refine_brief(
     brief, questions, blocked = await orchestrator.parse_brief(message)
 
     if blocked:
+        track_event_if_configured("Error_RAI_Check_Failed", {"conversation_id": conversation_id, "user_id": user_id, "status": "Brief refinement blocked by RAI"})
         return jsonify({
             "action_type": "rai_blocked",
             "message": questions,
@@ -697,6 +702,7 @@ async def _handle_generate_content(
     try:
         brief = CreativeBrief(**brief_data)
     except Exception as e:
+        track_event_if_configured("Error_Generation_Invalid_Brief", {"conversation_id": conversation_id, "user_id": user_id, "error": str(e)})
         return jsonify({
             "action_type": "error",
             "message": f"Invalid brief format: {str(e)}",
@@ -715,6 +721,8 @@ async def _handle_generate_content(
         "result": None,
         "error": None
     }
+
+    track_event_if_configured("Generation_Started", {"task_id": task_id, "conversation_id": conversation_id, "user_id": user_id, "generate_images": str(generate_images)})
 
     # Save user request
     try:
@@ -765,6 +773,9 @@ async def _handle_modify_image(
     selected_products: list = None
 ) -> Response:
     """Handle image modification requests."""
+
+    track_event_if_configured("Regeneration_Request", {"conversation_id": conversation_id, "user_id": user_id})
+
     # Get products from frontend (frontend handles product detection)
     # This matches the original implementation where frontend detected product changes
     frontend_products = selected_products or []
@@ -800,6 +811,7 @@ async def _handle_modify_image(
     generated_content = conversation.get("generated_content") if conversation else None
 
     if not generated_content:
+        track_event_if_configured("Error_Regeneration_No_Content", {"conversation_id": conversation_id, "user_id": user_id})
         return jsonify({
             "action_type": "error",
             "message": "No generated content found. Please generate content first.",
@@ -827,6 +839,7 @@ async def _handle_modify_image(
         brief = None
 
     if not brief:
+        track_event_if_configured("Error_Regeneration_No_Brief", {"conversation_id": conversation_id, "user_id": user_id})
         return jsonify({
             "action_type": "error",
             "message": "No brief found. Please create and confirm a brief first.",
@@ -907,6 +920,7 @@ async def _run_regeneration_task(
 
         # Check for RAI block
         if response.get("rai_blocked"):
+            track_event_if_configured("Error_RAI_Check_Failed", {"conversation_id": conversation_id, "user_id": user_id, "status": "Regeneration blocked by RAI"})
             _generation_tasks[task_id]["status"] = "failed"
             _generation_tasks[task_id]["error"] = response.get("error", "Request blocked by content safety")
             return
@@ -1029,6 +1043,7 @@ async def _run_regeneration_task(
             "selected_products": products_data,
             "updated_brief": updated_brief_dict,  # Include updated brief for frontend
         }
+        track_event_if_configured("Regeneration_Completed", {"task_id": task_id, "conversation_id": conversation_id, "user_id": user_id})
 
         # Clear active regeneration marker (only if it's still our task)
         active_info = _active_regenerations.get(conversation_id, {})
@@ -1040,6 +1055,7 @@ async def _run_regeneration_task(
         logger.exception(f"Error in regeneration task {task_id}: {e}")
         _generation_tasks[task_id]["status"] = "failed"
         _generation_tasks[task_id]["error"] = str(e)
+        track_event_if_configured("Error_Regeneration_Failed", {"task_id": task_id, "conversation_id": conversation_id, "user_id": user_id, "error": str(e)})
         # Clear active regeneration marker on error too
         active_info = _active_regenerations.get(conversation_id, {})
         if active_info.get("task_id") == task_id:
@@ -1051,6 +1067,8 @@ async def _handle_start_over(
     user_id: str
 ) -> Response:
     """Handle start over request - clears the current session."""
+
+    track_event_if_configured("Session_Reset", {"conversation_id": conversation_id, "user_id": user_id})
 
     # For start over, we create a new conversation
     new_conversation_id = str(uuid.uuid4())
@@ -1072,6 +1090,8 @@ async def _handle_general_chat(
     orchestrator
 ) -> Response:
     """Handle general chat messages."""
+
+    track_event_if_configured("General_Chat_Request", {"conversation_id": conversation_id, "user_id": user_id})
 
     # Save user message
     try:
@@ -1350,408 +1370,6 @@ async def get_generation_status(task_id: str):
         response["message"] = "Generation in progress..."
 
     return jsonify(response)
-
-
-@app.route("/api/generate", methods=["POST"])
-async def generate_content():
-    """
-    Generate content from a confirmed creative brief.
-
-    Request body:
-    {
-        "brief": { ... CreativeBrief fields ... },
-        "products": [ ... Product list (optional) ... ],
-        "generate_images": true/false,
-        "conversation_id": "uuid"
-    }
-
-    Returns streaming response with generated content.
-    """
-    data = await request.get_json()
-
-    brief_data = data.get("brief", {})
-    products_data = data.get("products", [])
-    generate_images = data.get("generate_images", True)
-    conversation_id = data.get("conversation_id") or str(uuid.uuid4())
-    user_id = data.get("user_id", "anonymous")
-
-    try:
-        brief = CreativeBrief(**brief_data)
-    except Exception as e:
-        return jsonify({"error": f"Invalid brief format: {str(e)}"}), 400
-
-    # Save user request for content generation
-    try:
-        cosmos_service = await get_cosmos_service()
-        product_names = [p.get("product_name", "product") for p in products_data[:3]]
-        await cosmos_service.add_message_to_conversation(
-            conversation_id=conversation_id,
-            user_id=user_id,
-            message={
-                "role": "user",
-                "content": f"Generate content for: {', '.join(product_names) if product_names else 'the campaign'}",
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            }
-        )
-    except Exception as e:
-        logger.warning(f"Failed to save generation request to CosmosDB: {e}")
-
-    orchestrator = get_orchestrator()
-
-    async def generate():
-        """Stream content generation responses with keepalive heartbeats."""
-        logger.info(f"Starting SSE generator for conversation {conversation_id}")
-        generation_task = None
-
-        try:
-            # Create a task for the long-running generation
-            generation_task = asyncio.create_task(
-                orchestrator.generate_content(
-                    brief=brief,
-                    products=products_data,
-                    generate_images=generate_images
-                )
-            )
-            logger.info("Generation task created")
-
-            # Send keepalive heartbeats every 15 seconds while generation is running
-            heartbeat_count = 0
-
-            while not generation_task.done():
-                # Check every 0.5 seconds (faster response to completion)
-                for _ in range(30):  # 30 * 0.5s = 15 seconds
-                    if generation_task.done():
-                        logger.info("Task completed during heartbeat wait (iteration)")
-                        break
-                    await asyncio.sleep(0.5)
-
-                if not generation_task.done():
-                    heartbeat_count += 1
-                    logger.info(f"Sending heartbeat {heartbeat_count}")
-                    yield f"data: {json.dumps({'type': 'heartbeat', 'count': heartbeat_count, 'message': 'Generating content...'})}\n\n"
-
-            logger.info(f"Generation task completed after {heartbeat_count} heartbeats")
-        except asyncio.CancelledError:
-            logger.warning(f"SSE generator cancelled for conversation {conversation_id}")
-            if generation_task and not generation_task.done():
-                generation_task.cancel()
-            raise
-        except GeneratorExit:
-            logger.warning(f"SSE generator closed by client for conversation {conversation_id}")
-            if generation_task and not generation_task.done():
-                generation_task.cancel()
-            return
-        except Exception as e:
-            logger.exception(f"Unexpected error in SSE generator heartbeat loop: {e}")
-            if generation_task and not generation_task.done():
-                generation_task.cancel()
-            raise
-
-        # Get the result
-        try:
-            response = generation_task.result()
-            logger.info(f"Generation complete. Response keys: {list(response.keys()) if response else 'None'}")
-            has_image_base64 = bool(response.get("image_base64")) if response else False
-            has_image_blob = bool(response.get("image_blob_url")) if response else False
-            image_size = len(response.get("image_base64", "")) if response else 0
-            logger.info(f"Has image_base64: {has_image_base64}, has_image_blob_url: {has_image_blob}, base64_size: {image_size} bytes")
-
-            # Handle image URL from orchestrator's blob save
-            if response.get("image_blob_url"):
-                blob_url = response["image_blob_url"]
-                logger.info(f"Image already saved to blob by orchestrator: {blob_url}")
-                # Convert blob URL to proxy URL for frontend access
-                parts = blob_url.split("/")
-                filename = parts[-1]  # e.g., "20251202222126.png"
-                conv_folder = parts[-2]  # e.g., "gen_20251209225131"
-                response["image_url"] = f"/api/images/{conv_folder}/{filename}"
-                del response["image_blob_url"]
-                logger.info(f"Converted to proxy URL: {response['image_url']}")
-            # Fallback: save image_base64 to blob if orchestrator didn't do it
-            elif response.get("image_base64"):
-                try:
-                    logger.info("Getting blob service for fallback save...")
-                    blob_service = await get_blob_service()
-                    logger.info(f"Saving image to blob storage for conversation {conversation_id}...")
-                    blob_url = await blob_service.save_generated_image(
-                        conversation_id=conversation_id,
-                        image_base64=response["image_base64"]
-                    )
-                    logger.info(f"Blob save returned: {blob_url}")
-                    if blob_url:
-                        parts = blob_url.split("/")
-                        filename = parts[-1]
-                        response["image_url"] = f"/api/images/{conversation_id}/{filename}"
-                        del response["image_base64"]
-                        logger.info(f"Image saved to blob storage, URL: {response['image_url']}")
-                except Exception as e:
-                    logger.warning(f"Failed to save image to blob storage: {e}", exc_info=True)
-                    # Keep image_base64 in response as fallback if blob storage fails
-            else:
-                logger.info("No image in response")
-
-            # Save generated content to conversation
-            try:
-                cosmos_service = await get_cosmos_service()
-
-                # Save the message
-                await cosmos_service.add_message_to_conversation(
-                    conversation_id=conversation_id,
-                    user_id=user_id,
-                    message={
-                        "role": "assistant",
-                        "content": "Content generated successfully.",
-                        "agent": "ContentAgent",
-                        "timestamp": datetime.now(timezone.utc).isoformat()
-                    }
-                )
-
-                # Save the full generated content for restoration
-                # Note: image_base64 is NOT saved to CosmosDB as it exceeds document size limits
-                # Images will only persist if blob storage is working
-                generated_content_to_save = {
-                    "text_content": response.get("text_content"),
-                    "image_url": response.get("image_url"),
-                    "image_prompt": response.get("image_prompt"),
-                    "image_revised_prompt": response.get("image_revised_prompt"),
-                    "violations": response.get("violations", []),
-                    "requires_modification": response.get("requires_modification", False),
-                    "selected_products": products_data  # Save the selected products
-                }
-                await cosmos_service.save_generated_content(
-                    conversation_id=conversation_id,
-                    user_id=user_id,
-                    generated_content=generated_content_to_save
-                )
-            except Exception as e:
-                logger.warning(f"Failed to save generated content to CosmosDB: {e}")
-
-            # Format response to match what frontend expects
-            yield f"data: {json.dumps({'type': 'agent_response', 'content': json.dumps(response), 'is_final': True})}\n\n"
-        except Exception as e:
-            logger.exception(f"Error generating content: {e}")
-            yield f"data: {json.dumps({'type': 'error', 'content': str(e), 'is_final': True})}\n\n"
-
-        yield "data: [DONE]\n\n"
-
-    return Response(
-        generate(),
-        mimetype="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-            "X-Accel-Buffering": "no",
-            "Connection": "keep-alive",
-            "Content-Type": "text/event-stream; charset=utf-8",
-        }
-    )
-
-
-@app.route("/api/regenerate", methods=["POST"])
-async def regenerate_content():
-    """
-    Regenerate image based on user modification request.
-
-    This endpoint is called when the user wants to modify the generated image
-    after initial content generation (e.g., "show a kitchen instead of dining room").
-
-    Request body:
-    {
-        "modification_request": "User's modification request",
-        "brief": { ... CreativeBrief fields ... },
-        "products": [ ... Product list ... ],
-        "previous_image_prompt": "Previous image prompt (optional)",
-        "conversation_id": "uuid"
-    }
-
-    Returns regenerated image with the modification applied.
-    """
-    data = await request.get_json()
-
-    modification_request = data.get("modification_request", "")
-    brief_data = data.get("brief", {})
-    products_data = data.get("products", [])
-    previous_image_prompt = data.get("previous_image_prompt")
-    conversation_id = data.get("conversation_id") or str(uuid.uuid4())
-    user_id = data.get("user_id", "anonymous")
-
-    if not modification_request:
-        track_event_if_configured("Error_Regeneration_Request_Empty", {"conversation_id": conversation_id, "user_id": user_id})
-        return jsonify({"error": "modification_request is required"}), 400
-
-    try:
-        brief = CreativeBrief(**brief_data)
-    except Exception as e:
-        track_event_if_configured("Error_Regeneration_Invalid_Brief", {"conversation_id": conversation_id, "user_id": user_id, "error": str(e)})
-        return jsonify({"error": f"Invalid brief format: {str(e)}"}), 400
-
-    track_event_if_configured("Regeneration_Request", {"conversation_id": conversation_id, "user_id": user_id})
-
-    # Save user request for regeneration
-    try:
-        cosmos_service = await get_cosmos_service()
-        await cosmos_service.add_message_to_conversation(
-            conversation_id=conversation_id,
-            user_id=user_id,
-            message={
-                "role": "user",
-                "content": f"Modify image: {modification_request}",
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            }
-        )
-    except Exception as e:
-        logger.warning(f"Failed to save regeneration request to CosmosDB: {e}")
-
-    orchestrator = get_orchestrator()
-
-    async def generate():
-        """Stream regeneration responses with keepalive heartbeats."""
-        logger.info(f"Starting image regeneration for conversation {conversation_id}")
-        regeneration_task = None
-
-        try:
-            # Create a task for the regeneration
-            regeneration_task = asyncio.create_task(
-                orchestrator.regenerate_image(
-                    modification_request=modification_request,
-                    brief=brief,
-                    products=products_data,
-                    previous_image_prompt=previous_image_prompt
-                )
-            )
-
-            # Send keepalive heartbeats while regeneration is running
-            heartbeat_count = 0
-            while not regeneration_task.done():
-                for _ in range(30):  # 15 seconds
-                    if regeneration_task.done():
-                        break
-                    await asyncio.sleep(0.5)
-
-                if not regeneration_task.done():
-                    heartbeat_count += 1
-                    yield f"data: {json.dumps({'type': 'heartbeat', 'count': heartbeat_count, 'message': 'Regenerating image...'})}\n\n"
-
-        except asyncio.CancelledError:
-            logger.warning(f"Regeneration cancelled for conversation {conversation_id}")
-            if regeneration_task and not regeneration_task.done():
-                regeneration_task.cancel()
-            raise
-        except GeneratorExit:
-            logger.warning(f"Regeneration closed by client for conversation {conversation_id}")
-            if regeneration_task and not regeneration_task.done():
-                regeneration_task.cancel()
-            return
-
-        # Get the result
-        try:
-            response = regeneration_task.result()
-            logger.info(f"Regeneration complete. Response keys: {list(response.keys()) if response else 'None'}")
-
-            # Check for RAI block
-            if response.get("rai_blocked"):
-                track_event_if_configured("Error_RAI_Check_Failed", {"conversation_id": conversation_id, "user_id": user_id, "status": "Regeneration blocked by RAI"})
-                yield f"data: {json.dumps({'type': 'error', 'content': response.get('error', 'Request blocked by content safety'), 'rai_blocked': True, 'is_final': True})}\n\n"
-                yield "data: [DONE]\n\n"
-                return
-
-            # Handle image URL from orchestrator's blob save
-            if response.get("image_blob_url"):
-                blob_url = response["image_blob_url"]
-                parts = blob_url.split("/")
-                filename = parts[-1]
-                conv_folder = parts[-2]
-                response["image_url"] = f"/api/images/{conv_folder}/{filename}"
-                del response["image_blob_url"]
-            elif response.get("image_base64"):
-                # Save to blob storage
-                try:
-                    blob_service = await get_blob_service()
-                    blob_url = await blob_service.save_generated_image(
-                        conversation_id=conversation_id,
-                        image_base64=response["image_base64"]
-                    )
-                    if blob_url:
-                        parts = blob_url.split("/")
-                        filename = parts[-1]
-                        response["image_url"] = f"/api/images/{conversation_id}/{filename}"
-                        del response["image_base64"]
-                except Exception as e:
-                    logger.warning(f"Failed to save regenerated image to blob: {e}")
-
-            # Save assistant response and update persisted generated_content
-            try:
-                cosmos_service = await get_cosmos_service()
-                await cosmos_service.add_message_to_conversation(
-                    conversation_id=conversation_id,
-                    user_id=user_id,
-                    message={
-                        "role": "assistant",
-                        "content": response.get("message", "Image regenerated based on your request."),
-                        "agent": "ImageAgent",
-                        "timestamp": datetime.now(timezone.utc).isoformat()
-                    }
-                )
-
-                # Persist the regenerated image and updated products to generated_content
-                # so the latest image and color/product name are restored on conversation reload
-                new_image_url = response.get("image_url")
-                new_image_prompt = response.get("image_prompt")
-                new_image_revised_prompt = response.get("image_revised_prompt")
-
-                existing_conversation = await cosmos_service.get_conversation(conversation_id, user_id)
-                raw_content = (existing_conversation or {}).get("generated_content")
-                existing_content = raw_content if isinstance(raw_content, dict) else {}
-                old_image_url = existing_content.get("image_url")
-
-                # Replace old color/product name in text_content when product changes
-                old_products = existing_content.get("selected_products", [])
-                old_name = old_products[0].get("product_name", "") if old_products else ""
-                new_name = products_data[0].get("product_name", "") if products_data else ""
-                existing_text = existing_content.get("text_content")
-                if existing_text and old_name and new_name and old_name != new_name:
-                    pat = re.compile(re.escape(old_name), re.IGNORECASE)
-                    if isinstance(existing_text, dict):
-                        existing_text = {
-                            k: pat.sub(lambda _m: new_name, v) if isinstance(v, str) else v
-                            for k, v in existing_text.items()
-                        }
-                    elif isinstance(existing_text, str):
-                        existing_text = pat.sub(lambda _m: new_name, existing_text)
-
-                updated_content = {
-                    **existing_content,
-                    "image_url": new_image_url if new_image_url else old_image_url,
-                    "image_prompt": new_image_prompt if new_image_prompt else existing_content.get("image_prompt"),
-                    "image_revised_prompt": new_image_revised_prompt if new_image_revised_prompt else existing_content.get("image_revised_prompt"),
-                    "selected_products": products_data if products_data else existing_content.get("selected_products", []),
-                    **(({"text_content": existing_text} if existing_text is not None else {})),
-                }
-
-                await cosmos_service.save_generated_content(
-                    conversation_id=conversation_id,
-                    user_id=user_id,
-                    generated_content=updated_content
-                )
-            except Exception as e:
-                logger.warning(f"Failed to save regeneration response to CosmosDB: {e}")
-
-            yield f"data: {json.dumps({'type': 'agent_response', 'content': json.dumps(response), 'is_final': True})}\n\n"
-        except Exception as e:
-            logger.exception(f"Error in regeneration: {e}")
-            yield f"data: {json.dumps({'type': 'error', 'content': str(e), 'is_final': True})}\n\n"
-
-        yield "data: [DONE]\n\n"
-
-    return Response(
-        generate(),
-        mimetype="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-            "X-Accel-Buffering": "no",
-            "Connection": "keep-alive",
-            "Content-Type": "text/event-stream; charset=utf-8",
-        }
-    )
 
 
 # ==================== Image Proxy Endpoints ====================
@@ -2065,6 +1683,7 @@ async def update_conversation(conversation_id: str):
         cosmos_service = await get_cosmos_service()
         result = await cosmos_service.rename_conversation(conversation_id, user_id, new_title)
         if result:
+            track_event_if_configured("Conversation_Renamed", {"conversation_id": conversation_id, "user_id": user_id})
             return jsonify({"success": True, "message": "Conversation renamed", "title": new_title})
         return jsonify({"error": "Conversation not found"}), 404
     except Exception as e:
