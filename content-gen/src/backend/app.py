@@ -158,7 +158,7 @@ async def handle_chat():
     payload = data.get("payload", {})
 
     selected_products = data.get("selected_products", [])
-        track_event_if_configured("Error_Chat_Message_Empty", {"conversation_id": conversation_id, "user_id": user_id})
+    track_event_if_configured("Error_Chat_Message_Empty", {"conversation_id": conversation_id, "user_id": user_id})
     brief_data = data.get("brief", {})
 
     track_event_if_configured("Chat_Request_Received", {"conversation_id": conversation_id, "user_id": user_id})
