@@ -27,6 +27,7 @@ from services.title_service import get_title_service
 from api.admin import admin_bp
 from azure.monitor.opentelemetry import configure_azure_monitor
 from opentelemetry.instrumentation.asgi import OpenTelemetryMiddleware
+from event_utils import track_event_if_configured
 
 # In-memory task storage for generation tasks
 # In production, this should be replaced with Redis or similar
@@ -59,6 +60,7 @@ if appinsights_connection_string:
     logging.getLogger("azure.identity").setLevel(logging.WARNING)
     logging.getLogger("azure.cosmos").setLevel(logging.WARNING)
     logging.getLogger("api.admin").setLevel(logging.WARNING)
+    logging.getLogger("httpx").setLevel(logging.WARNING)
     # Apply ASGI middleware for request tracing (Quart is not auto-instrumented by configure_azure_monitor)
     # Exclude health probes, post-deploy admin calls, and polling endpoints from telemetry
     app.asgi_app = OpenTelemetryMiddleware(
@@ -162,7 +164,10 @@ async def chat():
     user_id = data.get("user_id", "anonymous")
 
     if not message:
+        track_event_if_configured("Error_Chat_Message_Empty", {"conversation_id": conversation_id, "user_id": user_id})
         return jsonify({"error": "Message is required"}), 400
+
+    track_event_if_configured("Chat_Request_Received", {"conversation_id": conversation_id, "user_id": user_id})
 
     orchestrator = get_orchestrator()
 
@@ -259,7 +264,10 @@ async def parse_brief():
     user_id = data.get("user_id", "anonymous")
 
     if not brief_text:
+        track_event_if_configured("Error_Brief_Text_Empty", {"conversation_id": conversation_id, "user_id": user_id})
         return jsonify({"error": "Brief text is required"}), 400
+
+    track_event_if_configured("Brief_Parse_Request", {"conversation_id": conversation_id, "user_id": user_id})
 
     orchestrator = get_orchestrator()
     generated_title = None
@@ -294,6 +302,7 @@ async def parse_brief():
 
     # Check if request was blocked due to harmful content
     if rai_blocked:
+        track_event_if_configured("Error_RAI_Check_Failed", {"conversation_id": conversation_id, "user_id": user_id, "status": "Brief parse blocked by RAI"})
         # Save the refusal as assistant response
         try:
             cosmos_service = await get_cosmos_service()
@@ -396,7 +405,10 @@ async def confirm_brief():
     try:
         brief = CreativeBrief(**brief_data)
     except Exception as e:
+        track_event_if_configured("Error_Brief_Invalid_Format", {"conversation_id": conversation_id, "user_id": user_id, "error": str(e)})
         return jsonify({"error": f"Invalid brief format: {str(e)}"}), 400
+
+    track_event_if_configured("Brief_Confirmed", {"conversation_id": conversation_id, "user_id": user_id})
 
     # Try to save the confirmed brief to CosmosDB, preserving existing messages
     try:
@@ -458,7 +470,10 @@ async def select_products():
     user_id = data.get("user_id", "anonymous")
 
     if not request_text:
+        track_event_if_configured("Error_Product_Request_Empty", {"conversation_id": conversation_id, "user_id": user_id})
         return jsonify({"error": "Request text is required"}), 400
+
+    track_event_if_configured("Product_Selection_Request", {"conversation_id": conversation_id, "user_id": user_id})
 
     # Save user message
     try:
@@ -605,6 +620,7 @@ async def _run_generation_task(task_id: str, brief: CreativeBrief, products_data
         _generation_tasks[task_id]["status"] = "completed"
         _generation_tasks[task_id]["result"] = response
         _generation_tasks[task_id]["completed_at"] = datetime.now(timezone.utc).isoformat()
+        track_event_if_configured("Generation_Completed", {"task_id": task_id, "conversation_id": conversation_id, "user_id": user_id})
         logger.info(f"Task {task_id} marked as completed")
 
     except Exception as e:
@@ -612,6 +628,7 @@ async def _run_generation_task(task_id: str, brief: CreativeBrief, products_data
         _generation_tasks[task_id]["status"] = "failed"
         _generation_tasks[task_id]["error"] = str(e)
         _generation_tasks[task_id]["completed_at"] = datetime.now(timezone.utc).isoformat()
+        track_event_if_configured("Error_Generation_Failed", {"task_id": task_id, "conversation_id": conversation_id, "user_id": user_id, "error": str(e)})
 
 
 @app.route("/api/generate/start", methods=["POST"])
@@ -647,6 +664,7 @@ async def start_generation():
     try:
         brief = CreativeBrief(**brief_data)
     except Exception as e:
+        track_event_if_configured("Error_Generation_Invalid_Brief", {"conversation_id": conversation_id, "user_id": user_id, "error": str(e)})
         return jsonify({"error": f"Invalid brief format: {str(e)}"}), 400
 
     # Create task ID
@@ -688,6 +706,8 @@ async def start_generation():
     ))
 
     logger.info(f"Started generation task {task_id} for conversation {conversation_id}")
+
+    track_event_if_configured("Generation_Started", {"task_id": task_id, "conversation_id": conversation_id, "user_id": user_id, "generate_images": str(generate_images)})
 
     return jsonify({
         "task_id": task_id,
@@ -959,12 +979,16 @@ async def regenerate_content():
     user_id = data.get("user_id", "anonymous")
 
     if not modification_request:
+        track_event_if_configured("Error_Regeneration_Request_Empty", {"conversation_id": conversation_id, "user_id": user_id})
         return jsonify({"error": "modification_request is required"}), 400
 
     try:
         brief = CreativeBrief(**brief_data)
     except Exception as e:
+        track_event_if_configured("Error_Regeneration_Invalid_Brief", {"conversation_id": conversation_id, "user_id": user_id, "error": str(e)})
         return jsonify({"error": f"Invalid brief format: {str(e)}"}), 400
+
+    track_event_if_configured("Regeneration_Request", {"conversation_id": conversation_id, "user_id": user_id})
 
     # Save user request for regeneration
     try:
@@ -1029,6 +1053,7 @@ async def regenerate_content():
 
             # Check for RAI block
             if response.get("rai_blocked"):
+                track_event_if_configured("Error_RAI_Check_Failed", {"conversation_id": conversation_id, "user_id": user_id, "status": "Regeneration blocked by RAI"})
                 yield f"data: {json.dumps({'type': 'error', 'content': response.get('error', 'Request blocked by content safety'), 'rai_blocked': True, 'is_final': True})}\n\n"
                 yield "data: [DONE]\n\n"
                 return
@@ -1412,6 +1437,7 @@ async def delete_conversation(conversation_id: str):
     try:
         cosmos_service = await get_cosmos_service()
         await cosmos_service.delete_conversation(conversation_id, user_id)
+        track_event_if_configured("Conversation_Deleted", {"conversation_id": conversation_id, "user_id": user_id})
         return jsonify({"success": True, "message": "Conversation deleted"})
     except Exception as e:
         logger.warning(f"Failed to delete conversation: {e}")
@@ -1463,6 +1489,7 @@ async def delete_all_conversations():
     try:
         cosmos_service = await get_cosmos_service()
         deleted_count = await cosmos_service.delete_all_conversations(user_id)
+        track_event_if_configured("Conversations_All_Deleted", {"user_id": user_id, "deleted_count": str(deleted_count)})
         return jsonify({
             "success": True,
             "message": f"Deleted {deleted_count} conversations",

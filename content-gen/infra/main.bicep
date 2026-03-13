@@ -344,7 +344,6 @@ module applicationInsights 'br/public:avm/res/insights/component:0.7.1' = if (en
     disableIpMasking: false
     flowType: 'Bluefield'
     workspaceResourceId: logAnalyticsWorkspaceResourceId
-    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }]
   }
 }
 
