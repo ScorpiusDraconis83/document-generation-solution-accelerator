@@ -4,12 +4,12 @@ on:
     branches:
       - main
     paths:
-      - 'content-gen/src/**'
-      - '!content-gen/src/tests/**'
-      - 'content-gen/infra/**/*.bicep'
-      - 'content-gen/infra/**/*.json'
-      - 'content-gen/*.yaml'
-      - 'content-gen/scripts/**'
+      - 'src/**'
+      - '!src/tests/**'
+      - 'infra/**/*.bicep'
+      - 'infra/**/*.json'
+      - '*.yaml'
+      - 'scripts/**'
       - '.github/workflows/deploy-*.yml'
   workflow_run:
     workflows: ["Build Docker and Optional Push"]
