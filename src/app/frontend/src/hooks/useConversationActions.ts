@@ -130,7 +130,7 @@ export function useConversationActions() {
   /*  Start a new conversation                                     */
   /* ------------------------------------------------------------ */
   const newConversation = useCallback(() => {
-    dispatch(resetChat());
+    dispatch(resetChat(undefined));
     dispatch(resetContent());
   }, [dispatch]);
 
