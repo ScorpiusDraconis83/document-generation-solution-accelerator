@@ -3,14 +3,34 @@
  */
 
 import type {
-  CreativeBrief,
-  Product,
   AgentResponse,
-  ParsedBriefResponse,
   AppConfig,
+  MessageRequest,
+  MessageResponse,
 } from '../types';
 
 const API_BASE = '/api';
+
+/**
+ * Send a message or action to the /api/chat endpoint
+ */
+export async function sendMessage(
+  request: MessageRequest,
+  signal?: AbortSignal
+): Promise<MessageResponse> {
+  const response = await fetch(`${API_BASE}/chat`, {
+    signal,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Message request failed: ${response.statusText}`);
+  }
+
+  return response.json();
+}
 
 /**
  * Get application configuration including feature flags
@@ -26,151 +46,21 @@ export async function getAppConfig(): Promise<AppConfig> {
 }
 
 /**
- * Parse a free-text creative brief into structured format
+ * Request for content generation
  */
-export async function parseBrief(
-  briefText: string,
-  conversationId?: string,
-  userId?: string,
-  signal?: AbortSignal
-): Promise<ParsedBriefResponse> {
-  const response = await fetch(`${API_BASE}/brief/parse`, {
-    signal,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      brief_text: briefText,
-      conversation_id: conversationId,
-      user_id: userId || 'anonymous',
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to parse brief: ${response.statusText}`);
-  }
-
-  return response.json();
-}
-
-/**
- * Confirm a parsed creative brief
- */
-export async function confirmBrief(
-  brief: CreativeBrief,
-  conversationId?: string,
-  userId?: string
-): Promise<{ status: string; conversation_id: string; brief: CreativeBrief }> {
-  const response = await fetch(`${API_BASE}/brief/confirm`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      brief,
-      conversation_id: conversationId,
-      user_id: userId || 'anonymous',
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to confirm brief: ${response.statusText}`);
-  }
-
-  return response.json();
-}
-
-/**
- * Select or modify products via natural language
- */
-export async function selectProducts(
-  request: string,
-  currentProducts: Product[],
-  conversationId?: string,
-  userId?: string,
-  signal?: AbortSignal
-): Promise<{ products: Product[]; action: string; message: string; conversation_id: string }> {
-  const response = await fetch(`${API_BASE}/products/select`, {
-    signal,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      request,
-      current_products: currentProducts,
-      conversation_id: conversationId,
-      user_id: userId || 'anonymous',
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to select products: ${response.statusText}`);
-  }
-
-  return response.json();
-}
-
-/**
- * Stream chat messages from the agent orchestration
- */
-export async function* streamChat(
-  message: string,
-  conversationId?: string,
-  userId?: string,
-  signal?: AbortSignal
-): AsyncGenerator<AgentResponse> {
-  const response = await fetch(`${API_BASE}/chat`, {
-    signal,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      message,
-      conversation_id: conversationId,
-      user_id: userId || 'anonymous',
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Chat request failed: ${response.statusText}`);
-  }
-
-  const reader = response.body?.getReader();
-  if (!reader) {
-    throw new Error('No response body');
-  }
-
-  const decoder = new TextDecoder();
-  let buffer = '';
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n\n');
-    buffer = lines.pop() || '';
-
-    for (const line of lines) {
-      if (line.startsWith('data: ')) {
-        const data = line.slice(6);
-        if (data === '[DONE]') {
-          return;
-        }
-        try {
-          yield JSON.parse(data) as AgentResponse;
-        } catch {
-          console.error('Failed to parse SSE data:', data);
-        }
-      }
-    }
-  }
+export interface GenerateRequest {
+  conversation_id: string;
+  user_id: string;
+  brief: Record<string, unknown>;
+  products: Array<Record<string, unknown>>;
+  generate_images: boolean;
 }
 
 /**
  * Generate content from a confirmed brief
  */
 export async function* streamGenerateContent(
-  brief: CreativeBrief,
-  products?: Product[],
-  generateImages: boolean = true,
-  conversationId?: string,
-  userId?: string,
+  request: GenerateRequest,
   signal?: AbortSignal
 ): AsyncGenerator<AgentResponse> {
   // Use polling-based approach for reliability with long-running tasks
@@ -179,11 +69,11 @@ export async function* streamGenerateContent(
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      brief,
-      products: products || [],
-      generate_images: generateImages,
-      conversation_id: conversationId,
-      user_id: userId || 'anonymous',
+      brief: request.brief,
+      products: request.products || [],
+      generate_images: request.generate_images,
+      conversation_id: request.conversation_id,
+      user_id: request.user_id || 'anonymous',
     }),
   });
 
@@ -287,65 +177,76 @@ export async function* streamGenerateContent(
   
   throw new Error('Generation timed out after 10 minutes');
 }
+
 /**
- * Regenerate image with a modification request
- * Used when user wants to change the generated image after initial content generation
+ * Poll for task completion using task_id
+ * Used for both content generation and image regeneration
  */
-export async function* streamRegenerateImage(
-  modificationRequest: string,
-  brief: CreativeBrief,
-  products?: Product[],
-  previousImagePrompt?: string,
-  conversationId?: string,
-  userId?: string,
+export async function* pollTaskStatus(
+  taskId: string,
   signal?: AbortSignal
 ): AsyncGenerator<AgentResponse> {
-  const response = await fetch(`${API_BASE}/regenerate`, {
-    signal,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      modification_request: modificationRequest,
-      brief,
-      products: products || [],
-      previous_image_prompt: previousImagePrompt,
-      conversation_id: conversationId,
-      user_id: userId || 'anonymous',
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Regeneration request failed: ${response.statusText}`);
-  }
-
-  const reader = response.body?.getReader();
-  if (!reader) {
-    throw new Error('No response body');
-  }
-
-  const decoder = new TextDecoder();
-  let buffer = '';
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n\n');
-    buffer = lines.pop() || '';
-
-    for (const line of lines) {
-      if (line.startsWith('data: ')) {
-        const data = line.slice(6);
-        if (data === '[DONE]') {
-          return;
+  let attempts = 0;
+  const maxAttempts = 600; // 10 minutes max with 1-second polling
+  const pollInterval = 1000; // 1 second
+  
+  while (attempts < maxAttempts) {
+    if (signal?.aborted) {
+      throw new DOMException('Operation cancelled by user', 'AbortError');
+    }
+    
+    await new Promise(resolve => setTimeout(resolve, pollInterval));
+    attempts++;
+    
+    if (signal?.aborted) {
+      throw new DOMException('Operation cancelled by user', 'AbortError');
+    }
+    
+    try {
+      const statusResponse = await fetch(`${API_BASE}/generate/status/${taskId}`, { signal });
+      if (!statusResponse.ok) {
+        throw new Error(`Failed to get task status: ${statusResponse.statusText}`);
+      }
+      
+      const statusData = await statusResponse.json();
+      
+      if (statusData.status === 'completed') {
+        yield {
+          type: 'agent_response',
+          content: JSON.stringify(statusData.result),
+          is_final: true,
+        } as AgentResponse;
+        return;
+      } else if (statusData.status === 'failed') {
+        throw new Error(statusData.error || 'Task failed');
+      } else {
+        // Yield heartbeat with progress
+        const elapsedSeconds = attempts;
+        let stageMessage: string;
+        
+        if (elapsedSeconds < 10) {
+          stageMessage = 'Starting regeneration...';
+        } else if (elapsedSeconds < 30) {
+          stageMessage = 'Generating new image...';
+        } else if (elapsedSeconds < 50) {
+          stageMessage = 'Processing image...';
+        } else {
+          stageMessage = 'Finalizing...';
         }
-        try {
-          yield JSON.parse(data) as AgentResponse;
-        } catch {
-          console.error('Failed to parse SSE data:', data);
-        }
+        
+        yield {
+          type: 'heartbeat',
+          content: stageMessage,
+          elapsed: elapsedSeconds,
+          is_final: false,
+        } as AgentResponse;
+      }
+    } catch (error) {
+      if (attempts >= maxAttempts) {
+        throw error;
       }
     }
   }
+  
+  throw new Error('Task timed out after 10 minutes');
 }

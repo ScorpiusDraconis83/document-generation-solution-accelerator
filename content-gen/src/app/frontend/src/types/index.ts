@@ -124,3 +124,26 @@ export interface AppConfig {
   enable_compliance_check: boolean;
   max_file_size_mb: number;
 }
+
+/**
+ * Request payload for /api/chat endpoint
+ */
+export interface MessageRequest {
+  conversation_id: string;
+  user_id: string;
+  message?: string;
+  action?: string;
+  selected_products?: Product[];
+  brief?: CreativeBrief;
+  has_generated_content?: boolean;
+}
+
+/**
+ * Response from /api/chat endpoint
+ */
+export interface MessageResponse {
+  action_type: string;
+  message: string;
+  data?: Record<string, unknown>;
+  conversation_id: string;
+}

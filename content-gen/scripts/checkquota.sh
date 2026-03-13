@@ -10,16 +10,16 @@
 #
 # Usage (local):
 #   bash checkquota.sh [image_model_choice]
-#   bash checkquota.sh gpt-image-1
+#   bash checkquota.sh gpt-image-1-mini
 #   bash checkquota.sh none
 #
 # Usage (CI - via env vars):
-#   Set AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID,
-#   AZURE_SUBSCRIPTION_ID, GPT_MIN_CAPACITY, AZURE_REGIONS, IMAGE_MODEL_CHOICE
+#   Set AZURE_SUBSCRIPTION_ID, GPT_MIN_CAPACITY, AZURE_REGIONS, IMAGE_MODEL_CHOICE
+#   Authentication is handled externally via OIDC (az login already done before this script runs)
 # =============================================================================
 
-# ---- Determine run mode: CI (service principal) or Local (existing session) ----
-if [[ -n "$AZURE_CLIENT_ID" && -n "$AZURE_CLIENT_SECRET" && -n "$AZURE_TENANT_ID" ]]; then
+# ---- Determine run mode: CI (pre-authenticated) or Local (existing session) ----
+if [[ -n "$AZURE_SUBSCRIPTION_ID" ]] && az account show &>/dev/null; then
     RUN_MODE="ci"
 else
     RUN_MODE="local"
@@ -28,9 +28,9 @@ fi
 # ---- Configuration ----
 # In local mode, image model can be passed as first argument
 if [[ "$RUN_MODE" == "local" ]]; then
-    IMAGE_MODEL_CHOICE="${1:-${IMAGE_MODEL_CHOICE:-gpt-image-1}}"
+    IMAGE_MODEL_CHOICE="${1:-${IMAGE_MODEL_CHOICE:-gpt-image-1-mini}}"
 else
-    IMAGE_MODEL_CHOICE="${IMAGE_MODEL_CHOICE:-gpt-image-1}"
+    IMAGE_MODEL_CHOICE="${IMAGE_MODEL_CHOICE:-gpt-image-1-mini}"
 fi
 
 GPT_MIN_CAPACITY="${GPT_MIN_CAPACITY:-150}"
@@ -46,13 +46,13 @@ fi
 # Map image model choice to Azure quota model name
 declare -A IMAGE_MODEL_QUOTA_NAME
 IMAGE_MODEL_QUOTA_NAME=(
-  ["gpt-image-1"]="OpenAI.GlobalStandard.gpt-image-1"
+  ["gpt-image-1-mini"]="OpenAI.GlobalStandard.gpt-image-1-mini"
   ["gpt-image-1.5"]="OpenAI.GlobalStandard.gpt-image-1.5"
   ["none"]=""
 )
 
 # ---- Validate image model choice ----
-ALLOWED_MODELS=("gpt-image-1" "gpt-image-1.5" "none")
+ALLOWED_MODELS=("gpt-image-1-mini" "gpt-image-1.5" "none")
 if [[ ! " ${ALLOWED_MODELS[@]} " =~ " ${IMAGE_MODEL_CHOICE} " ]]; then
     echo "❌ ERROR: Invalid image model choice: '$IMAGE_MODEL_CHOICE'"
     echo "   Allowed values: ${ALLOWED_MODELS[*]}"
@@ -61,11 +61,7 @@ fi
 
 # ---- Authentication ----
 if [[ "$RUN_MODE" == "ci" ]]; then
-    echo "🔑 Authenticating using Service Principal (CI mode)..."
-    if ! az login --service-principal -u "$AZURE_CLIENT_ID" -p "$AZURE_CLIENT_SECRET" --tenant "$AZURE_TENANT_ID"; then
-        echo "❌ Error: Failed to login using Service Principal."
-        exit 1
-    fi
+    echo "🔑 Using pre-authenticated Azure CLI session (CI mode via OIDC)..."
 
     SUBSCRIPTION_ID="${AZURE_SUBSCRIPTION_ID}"
     if [[ -z "$SUBSCRIPTION_ID" || -z "$GPT_MIN_CAPACITY" ]]; then

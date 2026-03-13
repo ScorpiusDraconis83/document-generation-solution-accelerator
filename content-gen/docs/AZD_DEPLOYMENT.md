@@ -38,14 +38,14 @@ This guide covers deploying the Content Generation Solution Accelerator using Az
 
 - An Azure subscription with the following permissions:
   - Create Resource Groups
-  - Deploy Azure AI Services (GPT-5.1, GPT-Image-1)
+  - Deploy Azure AI Services (GPT-5.1, GPT-Image-1-mini)
   - Create Container Registry, Container Instances, App Service
   - Create Cosmos DB, Storage Account, AI Search
   - Assign RBAC roles
 
 - **Quota**: Ensure you have sufficient quota for:
   - GPT-5.1 (or your chosen model)
-  - GPT-Image-1 (or GPT-Image-1.5 - for image generation)
+  - GPT-Image-1-mini (or GPT-Image-1.5 - for image generation)
 
 ## Quick Start
 
@@ -300,7 +300,7 @@ When `enablePrivateNetworking` is enabled:
 │          │                                                      │
 │  ┌───────▼──────────┐      ┌───────────────────────────────┐   │
 │  │  Storage Account │      │      Azure AI Services        │   │
-│  └──────────────────┘      │  (GPT-5.1, GPT-Image-1) │   │
+│  └──────────────────┘      │  (GPT-5.1, GPT-Image-1-mini) │   │
 │                            └───────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
 ```

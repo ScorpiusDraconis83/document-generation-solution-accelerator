@@ -60,6 +60,7 @@ def pytest_sessionfinish(session, exitstatus):  # noqa: ARG001
         if not loop.is_closed():
             loop.close()
     except Exception:
+        # Ignore exceptions during event loop cleanup (loop may already be closed)
         pass
 
 

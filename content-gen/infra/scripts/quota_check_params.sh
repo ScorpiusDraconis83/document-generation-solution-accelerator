@@ -37,8 +37,8 @@ log_verbose() {
 }
 
 # Default Models and Capacities for Content Generation
-# GPT-5.1: 150 tokens, GPT-Image-1: 1 RPM (Requests Per Minute)
-DEFAULT_MODEL_CAPACITY="gpt-5.1:150,gpt-image-1:1"
+# GPT-5.1: 150 tokens, GPT-Image-1-mini: 1 RPM (Requests Per Minute)
+DEFAULT_MODEL_CAPACITY="gpt-5.1:150,gpt-image-1-mini:1"
 
 # Convert the comma-separated string into an array
 IFS=',' read -r -a MODEL_CAPACITY_PAIRS <<< "$DEFAULT_MODEL_CAPACITY"
@@ -83,7 +83,7 @@ fi
 az account set --subscription "$AZURE_SUBSCRIPTION_ID"
 echo "🎯 Active Subscription: $(az account show --query '[name, id]' --output tsv)"
 
-# Default Regions supporting GPT-5.1 and GPT-Image-1 with GlobalStandard SKU
+# Default Regions supporting GPT-5.1 and GPT-Image-1-mini with GlobalStandard SKU
 DEFAULT_REGIONS="australiaeast,canadaeast,eastus2,japaneast,koreacentral,swedencentral,switzerlandnorth,uksouth"
 IFS=',' read -r -a DEFAULT_REGION_ARRAY <<< "$DEFAULT_REGIONS"
 
@@ -190,7 +190,7 @@ for REGION in "${REGIONS[@]}"; do
 
                 if [ "$AVAILABLE" -ge "$REQUIRED_CAPACITY" ]; then
                     FOUND=true
-                    if [ "$MODEL_NAME" = "gpt-image-1" ]; then
+                    if [ "$MODEL_NAME" = "gpt-image-1-mini" ]; then
                         IMAGE_MODEL_AVAILABLE=true
                     fi
                     AT_LEAST_ONE_MODEL_AVAILABLE=true

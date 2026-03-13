@@ -38,7 +38,7 @@ param secondaryLocation string = 'uksouth'
 
 // NOTE: Metadata must be compile-time constants. Update usageName manually if you change model parameters.
 // Format: 'OpenAI.<DeploymentType>.<ModelName>,<Capacity>'
-// Allowed regions: Union of GPT-5.1, gpt-image-1, and gpt-image-1.5 GlobalStandard availability
+// Allowed regions: Union of GPT-5.1, gpt-image-1-mini, and gpt-image-1.5 GlobalStandard availability
 @allowed([
   'australiaeast'
   'canadaeast'
@@ -57,7 +57,7 @@ param secondaryLocation string = 'uksouth'
     type: 'location'
     usageName: [
       'OpenAI.GlobalStandard.gpt-5.1,150'
-      'OpenAI.GlobalStandard.gpt-image-1,1'
+      'OpenAI.GlobalStandard.gpt-image-1-mini,1'
     ]
   }
 })
@@ -79,13 +79,13 @@ param gptModelName string = 'gpt-5.1'
 @description('Optional. Version of the GPT model to deploy.')
 param gptModelVersion string = '2025-11-13'
 
-@description('Optional. Image model to deploy: gpt-image-1, gpt-image-1.5, or none to skip.')
+@description('Optional. Image model to deploy: gpt-image-1-mini, gpt-image-1.5, or none to skip.')
 @allowed([
-  'gpt-image-1'
+  'gpt-image-1-mini'
   'gpt-image-1.5'
   'none'
 ])
-param imageModelChoice string = 'gpt-image-1'
+param imageModelChoice string = 'gpt-image-1-mini'
 
 @description('Optional. API version for Azure OpenAI service.')
 param azureOpenaiAPIVersion string = '2025-01-01-preview'
@@ -225,9 +225,9 @@ var baseModelDeployments = [
 
 // Image model configuration based on choice
 var imageModelConfig = {
-  'gpt-image-1': {
-    name: 'gpt-image-1'
-    version: '2025-04-15'
+  'gpt-image-1-mini': {
+    name: 'gpt-image-1-mini'
+    version: '2025-10-06'
     sku: 'GlobalStandard'
   }
   'gpt-image-1.5': {

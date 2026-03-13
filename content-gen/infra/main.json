@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.40.2.10011",
-      "templateHash": "16421359956200067368"
+      "templateHash": "853680001925966400"
     },
     "name": "Intelligent Content Generation Accelerator",
     "description": "Solution Accelerator for multimodal marketing content generation using Microsoft Agent Framework.\n"
@@ -80,7 +80,7 @@
           "type": "location",
           "usageName": [
             "OpenAI.GlobalStandard.gpt-5.1,150",
-            "OpenAI.GlobalStandard.gpt-image-1,1"
+            "OpenAI.GlobalStandard.gpt-image-1-mini,1"
           ]
         },
         "description": "Required. Location for AI deployments."
@@ -115,14 +115,14 @@
     },
     "imageModelChoice": {
       "type": "string",
-      "defaultValue": "gpt-image-1",
+      "defaultValue": "gpt-image-1-mini",
       "allowedValues": [
-        "gpt-image-1",
+        "gpt-image-1-mini",
         "gpt-image-1.5",
         "none"
       ],
       "metadata": {
-        "description": "Optional. Image model to deploy: gpt-image-1, gpt-image-1.5, or none to skip."
+        "description": "Optional. Image model to deploy: gpt-image-1-mini, gpt-image-1.5, or none to skip."
       }
     },
     "azureOpenaiAPIVersion": {
@@ -302,9 +302,9 @@
       }
     ],
     "imageModelConfig": {
-      "gpt-image-1": {
-        "name": "gpt-image-1",
-        "version": "2025-04-15",
+      "gpt-image-1-mini": {
+        "name": "gpt-image-1-mini",
+        "version": "2025-10-06",
         "sku": "GlobalStandard"
       },
       "gpt-image-1.5": {
