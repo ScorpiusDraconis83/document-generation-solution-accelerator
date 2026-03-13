@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useCallback } from 'react';
 import {
   Text,
   Badge,
@@ -26,6 +26,7 @@ export interface MessageBubbleProps {
 export const MessageBubble = memo(function MessageBubble({ message }: MessageBubbleProps) {
   const isUser = message.role === 'user';
   const { copied, copy } = useCopyToClipboard();
+  const handleCopy = useCallback(() => copy(message.content), [copy, message.content]);
 
   return (
     <div
@@ -101,7 +102,7 @@ export const MessageBubble = memo(function MessageBubble({ message }: MessageBub
                   appearance="subtle"
                   icon={<Copy20Regular />}
                   size="small"
-                  onClick={() => copy(message.content)}
+                  onClick={handleCopy}
                   style={{
                     minWidth: '28px',
                     height: '28px',
