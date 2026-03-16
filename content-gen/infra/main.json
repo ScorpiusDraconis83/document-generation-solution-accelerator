@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.41.2.15936",
-      "templateHash": "11360056711318509175"
+      "templateHash": "1650354659075455837"
     },
     "name": "Intelligent Content Generation Accelerator",
     "description": "Solution Accelerator for multimodal marketing content generation using Microsoft Agent Framework.\n"
@@ -33357,6 +33357,18 @@
               {
                 "name": "AZURE_AI_IMAGE_MODEL_DEPLOYMENT",
                 "value": "[variables('imageModelConfig')[parameters('imageModelChoice')].name]"
+              },
+              {
+                "name": "AZURE_BASIC_LOGGING_LEVEL",
+                "value": "INFO"
+              },
+              {
+                "name": "AZURE_PACKAGE_LOGGING_LEVEL",
+                "value": "WARNING"
+              },
+              {
+                "name": "AZURE_LOGGING_PACKAGES",
+                "value": ""
               },
               {
                 "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",

@@ -35,11 +35,22 @@ _generation_tasks: Dict[str, Dict[str, Any]] = {}
 
 _active_regenerations: Dict[str, Dict[str, Any]] = {}
 
-# Configure logging
+logging_settings = app_settings.logging
+# Configure logging based on environment variables
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging_settings.get_basic_log_level(),
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    force=True
 )
+azure_log_level = logging_settings.get_package_log_level()
+for logger_name in logging_settings.logging_packages or []:
+    logging.getLogger(logger_name).setLevel(azure_log_level)
+logging.info(
+    f"Logging configured - Basic: {logging_settings.basic_logging_level}, "
+    f"Azure packages: {logging_settings.package_logging_level}, "
+    f"Packages: {logging_settings.logging_packages}"
+)
+
 logger = logging.getLogger(__name__)
 
 # Create Quart app
