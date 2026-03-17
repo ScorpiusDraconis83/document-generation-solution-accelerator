@@ -102,6 +102,14 @@ var coreSubnets = [
 ]
 
 // Optional Bastion and Jumpbox subnets (only deployed when needed for VM administration)
+// VM Size Notes:
+// 1 B-series VMs (like Standard_B2ms) do not support accelerated networking.
+// 2 Pick a VM size that supports accelerated networking + Premium SSD (the usual jump-box candidates):
+//   Standard_D2s_v5  (2 vCPU, 8 GiB RAM, Premium SSD/v2/Ultra)  // DEFAULT - current-gen Intel, broad regional availability.
+//   Standard_D2as_v5 (2 vCPU, 8 GiB RAM, Premium SSD/Ultra)     // AMD alternative, typically ~15% cheaper.
+//   Standard_D2s_v4  (2 vCPU, 8 GiB RAM, Premium SSD)           // Previous gen, also broadly available.
+//   Standard_DS2_v2  (2 vCPU, 7 GiB RAM, Premium SSD)           // Legacy SKU, being retired from some regions - avoid for new deployments.
+// 3 A-series (Av2) is NOT suitable: no Premium SSD support, no accelerated networking.
 var bastionSubnets = deployBastionAndJumpbox ? [
   {
     name: 'AzureBastionSubnet'

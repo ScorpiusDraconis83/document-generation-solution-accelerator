@@ -110,6 +110,16 @@ param azureExistingAIProjectResourceId string = ''
 @description('Optional. Deploy Azure Bastion and Jumpbox VM for private network administration.')
 param deployBastionAndJumpbox bool = false
 
+@description('Optional. Jumpbox VM size. Must support accelerated networking and Premium SSD.')
+param vmSize string = ''
+
+@description('Optional. Jumpbox VM admin username.')
+param vmAdminUsername string = ''
+
+@description('Optional. Jumpbox VM admin password.')
+@secure()
+param vmAdminPassword string = ''
+
 @description('Optional. The tags to apply to all deployed Azure resources.')
 param tags object = {}
 
@@ -870,6 +880,54 @@ module containerInstance 'modules/container-instance.bicep' = {
       { name: 'AZURE_AI_MODEL_DEPLOYMENT_NAME', value: gptModelName }
       { name: 'AZURE_AI_IMAGE_MODEL_DEPLOYMENT', value: imageModelConfig[imageModelChoice].name }
     ]
+  }
+}
+
+// ========== Jumpbox VM ========== //
+var jumpboxVmName = 'vm-jumpbox-${solutionSuffix}'
+module jumpboxVM 'br/public:avm/res/compute/virtual-machine:0.20.0' = if (enablePrivateNetworking && deployBastionAndJumpbox) {
+  name: take('avm.res.compute.virtual-machine.${jumpboxVmName}', 64)
+  params: {
+    name: take(jumpboxVmName, 15)
+    enableTelemetry: enableTelemetry
+    computerName: take(jumpboxVmName, 15)
+    osType: 'Windows'
+    vmSize: empty(vmSize) ? 'Standard_D2s_v5' : vmSize
+    adminUsername: empty(vmAdminUsername) ? 'JumpboxAdminUser' : vmAdminUsername
+    adminPassword: empty(vmAdminPassword) ? 'JumpboxAdminP@ssw0rd1234!' : vmAdminPassword
+    managedIdentities: {
+      userAssignedResourceIds: [
+        userAssignedIdentity.outputs.resourceId
+      ]
+    }
+    availabilityZone: 1
+    imageReference: {
+      publisher: 'MicrosoftWindowsDesktop'
+      offer: 'windows-11'
+      sku: 'win11-24h2-pro'
+      version: 'latest'
+    }
+    nicConfigurations: [
+      {
+        name: 'nic-${jumpboxVmName}'
+        enableAcceleratedNetworking: true
+        ipConfigurations: [
+          {
+            name: 'ipconfig01'
+            subnetResourceId: virtualNetwork!.outputs.jumpboxSubnetResourceId
+          }
+        ]
+      }
+    ]
+    osDisk: {
+      caching: 'ReadWrite'
+      diskSizeGB: 128
+      managedDisk: {
+        storageAccountType: 'Premium_LRS'
+      }
+    }
+    location: solutionLocation
+    tags: tags
   }
 }
 

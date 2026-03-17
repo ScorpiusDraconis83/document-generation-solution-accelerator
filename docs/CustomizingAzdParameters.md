@@ -21,6 +21,9 @@ By default this template will use the environment name as the prefix to prevent 
 | `AZURE_ENV_OPENAI_LOCATION`           | string  | `<User selects during deployment>` | Sets the Azure region for OpenAI resource deployment.                         |
 | `AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID` | string  | `""`                       | Reuses an existing Log Analytics Workspace instead of creating a new one.     |
 | `AZURE_EXISTING_AI_PROJECT_RESOURCE_ID`| string  | `""`                       | Reuses an existing AI Foundry Project instead of creating a new one.          |
+| `AZURE_ENV_VM_SIZE`                    | string  | `Standard_D2s_v5`          | Overrides the jumpbox VM size (private networking only). Must support accelerated networking. |
+| `AZURE_ENV_VM_ADMIN_USERNAME`          | string  | `JumpboxAdminUser`         | Sets the jumpbox VM admin username (private networking only).                 |
+| `AZURE_ENV_VM_ADMIN_PASSWORD`          | string  | *(generated)*              | Sets the jumpbox VM admin password (private networking only).                 |
 | `ACR_NAME`                             | string  | `contentgencontainerreg`   | Sets the existing Azure Container Registry name (without `.azurecr.io`).      |
 | `IMAGE_TAG`                            | string  | `latest`                   | Sets the container image tag (e.g., `latest`, `dev`, `hotfix`).               |
 
