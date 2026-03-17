@@ -161,8 +161,9 @@ def get_values_from_az_deployment(resource_group: str) -> Optional[Dict[str, str
         
         outputs = json.loads(result.stdout)
         
-        # Build a case-insensitive lookup map for output keys
-        # ARM/Bicep auto-camelCases output names (e.g. APP_SERVICE_NAME -> apP_SERVICE_NAME)
+        # Build a case-insensitive lookup map for output keys.
+        # ARM/Bicep preserve output names as authored in the template; this map lets
+        # us perform lookups without worrying about casing in our code.
         outputs_lower = {k.lower(): v for k, v in outputs.items()}
         
         # Extract values from deployment outputs

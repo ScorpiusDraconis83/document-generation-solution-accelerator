@@ -380,7 +380,7 @@ module virtualNetwork 'modules/virtualNetwork.bicep' = if (enablePrivateNetworki
     resourceSuffix: solutionSuffix
     deployBastionAndJumpbox: deployBastionAndJumpbox
   }
-  dependsOn: enableMonitoring ? [logAnalyticsWorkspace] : []
+  dependsOn: (enableMonitoring && !useExistingLogAnalytics) ? [logAnalyticsWorkspace] : []
 }
 
 // ========== Private DNS Zones ========== //
