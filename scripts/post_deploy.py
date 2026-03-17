@@ -38,11 +38,17 @@ import asyncio
 import base64
 import json
 import os
+import platform
 import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Optional
+
+# shell=True is required on Windows so the shell can resolve az.cmd/az.ps1;
+# on Linux/macOS az is a real executable so shell=True must NOT be used with
+# a list argument (it would cause only the first token to be executed).
+_SHELL = platform.system() == "Windows"
 
 try:
     import httpx
@@ -116,7 +122,7 @@ def get_values_from_az_deployment(resource_group: str) -> Optional[Dict[str, str
             capture_output=True,
             text=True,
             check=True,
-            shell=True  # Required on Windows to find az.cmd
+            shell=_SHELL
         )
         deployment_name = result.stdout.strip()
         
@@ -133,7 +139,7 @@ def get_values_from_az_deployment(resource_group: str) -> Optional[Dict[str, str
                 capture_output=True,
                 text=True,
                 check=True,
-                shell=True
+                shell=_SHELL
             )
             deployment_name = result.stdout.strip()
             
@@ -156,7 +162,7 @@ def get_values_from_az_deployment(resource_group: str) -> Optional[Dict[str, str
             capture_output=True,
             text=True,
             check=True,
-            shell=True  # Required on Windows to find az.cmd
+            shell=_SHELL
         )
         
         outputs = json.loads(result.stdout)
