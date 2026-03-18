@@ -186,7 +186,7 @@ async def handle_chat():
         if conversation:
             state = routing_service.derive_state_from_conversation(conversation)
     except Exception as e:
-        logger.warning(f"Failed to get conversation state: {e}")
+        logger.exception(f"Failed to get conversation state: {e}")
 
     has_generated_content_flag = data.get("has_generated_content", False)
     if has_generated_content_flag:
@@ -333,7 +333,7 @@ async def _handle_parse_brief(
             generated_title=generated_title
         )
     except Exception as e:
-        logger.warning(f"Failed to save message to CosmosDB: {e}")
+        logger.exception(f"Failed to save message to CosmosDB: {e}")
 
     # Parse the brief
     brief, questions, blocked = await orchestrator.parse_brief(message)
@@ -354,7 +354,7 @@ async def _handle_parse_brief(
                 }
             )
         except Exception as e:
-            logger.warning(f"Failed to save RAI response to CosmosDB: {e}")
+            logger.exception(f"Failed to save RAI response to CosmosDB: {e}")
 
         return jsonify({
             "action_type": "rai_blocked",
@@ -381,7 +381,7 @@ async def _handle_parse_brief(
                 }
             )
         except Exception as e:
-            logger.warning(f"Failed to save clarification to CosmosDB: {e}")
+            logger.exception(f"Failed to save clarification to CosmosDB: {e}")
 
         # Save partial brief to conversation so it can be confirmed later
         try:
@@ -393,7 +393,7 @@ async def _handle_parse_brief(
                 brief=brief
             )
         except Exception as e:
-            logger.warning(f"Failed to save partial brief: {e}")
+            logger.exception(f"Failed to save partial brief: {e}")
 
         return jsonify({
             "action_type": "clarification_needed",
@@ -427,7 +427,7 @@ async def _handle_parse_brief(
             }
         )
     except Exception as e:
-        logger.warning(f"Failed to save brief to CosmosDB: {e}")
+        logger.exception(f"Failed to save brief to CosmosDB: {e}")
 
     return jsonify({
         "action_type": "brief_parsed",
@@ -478,7 +478,7 @@ async def _handle_confirm_brief(
             metadata={"status": "brief_confirmed", "brief_confirmed": True}
         )
     except Exception as e:
-        logger.warning(f"Failed to save confirmed brief: {e}")
+        logger.exception(f"Failed to save confirmed brief: {e}")
 
     return jsonify({
         "action_type": "brief_confirmed",
@@ -517,7 +517,7 @@ async def _handle_refine_brief(
             }
         )
     except Exception as e:
-        logger.warning(f"Failed to save refinement message: {e}")
+        logger.exception(f"Failed to save refinement message: {e}")
 
     # Use orchestrator to refine the brief
     brief, questions, blocked = await orchestrator.parse_brief(message)
@@ -547,7 +547,7 @@ async def _handle_refine_brief(
                 }
             )
         except Exception as e:
-            logger.warning(f"Failed to save clarification: {e}")
+            logger.exception(f"Failed to save clarification: {e}")
 
         # Merge partial brief with existing brief for confirmation option
         merged_brief = brief.model_dump() if brief else {}
@@ -568,7 +568,7 @@ async def _handle_refine_brief(
                 brief=CreativeBrief(**merged_brief) if merged_brief else None
             )
         except Exception as e:
-            logger.warning(f"Failed to save merged brief: {e}")
+            logger.exception(f"Failed to save merged brief: {e}")
 
         return jsonify({
             "action_type": "clarification_needed",
@@ -611,7 +611,7 @@ async def _handle_refine_brief(
             }
         )
     except Exception as e:
-        logger.warning(f"Failed to save refined brief: {e}")
+        logger.exception(f"Failed to save refined brief: {e}")
 
     return jsonify({
         "action_type": "brief_parsed",
@@ -647,7 +647,7 @@ async def _handle_search_products(
             }
         )
     except Exception as e:
-        logger.warning(f"Failed to save search message: {e}")
+        logger.exception(f"Failed to save search message: {e}")
 
     # Get available products from catalog
     try:
@@ -663,7 +663,7 @@ async def _handle_search_products(
                 filename = original_url.split("/")[-1] if "/" in original_url else original_url
                 p["image_url"] = f"/api/product-images/{filename}"
     except Exception as e:
-        logger.warning(f"Failed to get products from CosmosDB: {e}")
+        logger.exception(f"Failed to get products from CosmosDB: {e}")
         available_products = []
 
     # Use orchestrator to process the selection request
@@ -687,7 +687,7 @@ async def _handle_search_products(
             }
         )
     except Exception as e:
-        logger.warning(f"Failed to save search response: {e}")
+        logger.exception(f"Failed to save search response: {e}")
 
     return jsonify({
         "action_type": "products_found",
@@ -749,7 +749,7 @@ async def _handle_generate_content(
             }
         )
     except Exception as e:
-        logger.warning(f"Failed to save generation request: {e}")
+        logger.exception(f"Failed to save generation request: {e}")
 
     # Start background task
     asyncio.create_task(_run_generation_task(
@@ -801,7 +801,7 @@ async def _handle_modify_image(
             conversation = fresh_conversation
             logger.info(f"Fetched fresh conversation data for {conversation_id}")
     except Exception as e:
-        logger.warning(f"Failed to fetch fresh conversation, using stale data: {e}")
+        logger.exception(f"Failed to fetch fresh conversation, using stale data: {e}")
 
     # Save user message
     try:
@@ -816,7 +816,7 @@ async def _handle_modify_image(
             }
         )
     except Exception as e:
-        logger.warning(f"Failed to save image modification request: {e}")
+        logger.exception(f"Failed to save image modification request: {e}")
 
     # Get existing generated content
     generated_content = conversation.get("generated_content") if conversation else None
@@ -958,7 +958,7 @@ async def _run_regeneration_task(
                     response["image_url"] = f"/api/images/{conversation_id}/{filename}"
                     del response["image_base64"]
             except Exception as e:
-                logger.warning(f"Failed to save regenerated image to blob: {e}")
+                logger.exception(f"Failed to save regenerated image to blob: {e}")
 
         # Save assistant response
         existing_content = {}
@@ -1041,7 +1041,7 @@ async def _run_regeneration_task(
                 )
                 logger.info(f"Updated brief visual_guidelines with modification: {modification_request}")
         except Exception as e:
-            logger.warning(f"Failed to save regeneration response to CosmosDB: {e}")
+            logger.exception(f"Failed to save regeneration response to CosmosDB: {e}")
 
         # Store result (use updated text_content if we replaced product name)
         _generation_tasks[task_id]["status"] = "completed"
@@ -1128,7 +1128,7 @@ async def _handle_general_chat(
             generated_title=generated_title
         )
     except Exception as e:
-        logger.warning(f"Failed to save message: {e}")
+        logger.exception(f"Failed to save message: {e}")
 
     # For non-streaming response, collect orchestrator output
     response_content = ""
@@ -1156,7 +1156,7 @@ async def _handle_general_chat(
             }
         )
     except Exception as e:
-        logger.warning(f"Failed to save response: {e}")
+        logger.exception(f"Failed to save response: {e}")
 
     return jsonify({
         "action_type": "chat_response",
@@ -1210,7 +1210,7 @@ async def _run_generation_task(task_id: str, brief: CreativeBrief, products_data
                     response["image_blob_url"] = blob_url  # Include the original blob URL
                     del response["image_base64"]
             except Exception as e:
-                logger.warning(f"Failed to save image to blob: {e}")
+                logger.exception(f"Failed to save image to blob: {e}")
 
         # Save to CosmosDB
         try:
@@ -1242,7 +1242,7 @@ async def _run_generation_task(task_id: str, brief: CreativeBrief, products_data
                 generated_content=generated_content_to_save
             )
         except Exception as e:
-            logger.warning(f"Failed to save generated content to CosmosDB: {e}")
+            logger.exception(f"Failed to save generated content to CosmosDB: {e}")
 
         _generation_tasks[task_id]["status"] = "completed"
         _generation_tasks[task_id]["result"] = response
@@ -1320,7 +1320,7 @@ async def start_generation():
             }
         )
     except Exception as e:
-        logger.warning(f"Failed to save generation request to CosmosDB: {e}")
+        logger.exception(f"Failed to save generation request to CosmosDB: {e}")
 
     # Start background task
     asyncio.create_task(_run_generation_task(
@@ -1665,7 +1665,7 @@ async def delete_conversation(conversation_id: str):
         track_event_if_configured("Conversation_Deleted", {"conversation_id": conversation_id, "user_id": user_id})
         return jsonify({"success": True, "message": "Conversation deleted"})
     except Exception as e:
-        logger.warning(f"Failed to delete conversation: {e}")
+        logger.exception(f"Failed to delete conversation: {e}")
         return jsonify({"error": "Failed to delete conversation"}), 500
 
 
@@ -1698,7 +1698,7 @@ async def update_conversation(conversation_id: str):
             return jsonify({"success": True, "message": "Conversation renamed", "title": new_title})
         return jsonify({"error": "Conversation not found"}), 404
     except Exception as e:
-        logger.warning(f"Failed to rename conversation: {e}")
+        logger.exception(f"Failed to rename conversation: {e}")
         return jsonify({"error": "Failed to rename conversation"}), 500
 
 
@@ -1722,7 +1722,7 @@ async def delete_all_conversations():
             "deleted_count": deleted_count
         })
     except Exception as e:
-        logger.warning(f"Failed to delete all conversations: {e}")
+        logger.exception(f"Failed to delete all conversations: {e}")
         return jsonify({"error": "Failed to delete conversations"}), 500
 
 
@@ -1775,13 +1775,13 @@ async def startup():
         await get_cosmos_service()
         logger.info("CosmosDB service initialized")
     except Exception as e:
-        logger.warning(f"CosmosDB service initialization failed (may be firewall): {e}")
+        logger.exception(f"CosmosDB service initialization failed (may be firewall): {e}")
 
     try:
         await get_blob_service()
         logger.info("Blob storage service initialized")
     except Exception as e:
-        logger.warning(f"Blob storage service initialization failed: {e}")
+        logger.exception(f"Blob storage service initialization failed: {e}")
 
     logger.info("Application startup complete")
 
