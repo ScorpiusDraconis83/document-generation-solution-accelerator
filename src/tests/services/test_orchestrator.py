@@ -3,6 +3,7 @@ import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
 import orchestrator
 from orchestrator import (_HARMFUL_PATTERNS_COMPILED,
                           _SYSTEM_PROMPT_PATTERNS_COMPILED,
