@@ -255,8 +255,7 @@ async def check_admin_api_health(config: ResourceConfig) -> bool:
                 headers=get_api_headers(config)
             )
             if response.status_code == 200:
-                data = response.json()
-                print_success(f"Admin API healthy (API key required: {data.get('api_key_required', False)})")
+                print_success("Admin API is healthy")
                 return True
             else:
                 print_error(f"Admin API returned {response.status_code}")
