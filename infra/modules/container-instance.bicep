@@ -31,8 +31,8 @@ param environmentVariables array
 @description('Optional. Enable telemetry.')
 param enableTelemetry bool = true
 
-@description('Optional. User-assigned managed identity resource ID for ACR pull.')
-param userAssignedIdentityResourceId string = ''
+@description('Required. User-assigned managed identity resource ID for ACR pull.')
+param userAssignedIdentityResourceId string
 
 var isPrivateNetworking = !empty(subnetResourceId)
 
