@@ -100,6 +100,11 @@ Before running `azd up`, copy the contents from the production configuration fil
 
 ### 4. Deploy
 
+**NOTE:** If you are running the latest azd version (version 1.23.9), please run the following command. 
+```bash 
+azd config set provision.preflight off
+```
+
 ```bash
 azd up
 ```
