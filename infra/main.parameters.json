@@ -29,12 +29,6 @@
     "imageModelCapacity": {
       "value": "${imageModelCapacity}"
     },
-    "embeddingModel": {
-      "value": "${embeddingModel}"
-    },
-    "embeddingDeploymentCapacity": {
-      "value": "${embeddingDeploymentCapacity}"
-    },
     "azureOpenaiAPIVersion": {
       "value": "${azureOpenaiAPIVersion}"
     },
