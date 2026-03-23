@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.41.2.15936",
-      "templateHash": "15058520269193157842"
+      "templateHash": "18140035795753819765"
     },
     "name": "Intelligent Content Generation Accelerator",
     "description": "Solution Accelerator for multimodal marketing content generation using Microsoft Agent Framework.\n"
@@ -167,13 +167,6 @@
       "defaultValue": "",
       "metadata": {
         "description": "Optional. Resource ID of an existing Foundry project."
-      }
-    },
-    "deployBastionAndJumpbox": {
-      "type": "bool",
-      "defaultValue": false,
-      "metadata": {
-        "description": "Optional. Deploy Azure Bastion and Jumpbox VM for private network administration."
       }
     },
     "vmSize": {
@@ -4841,29 +4834,26 @@
         },
         "mode": "Incremental",
         "parameters": {
-          "vnetName": {
+          "name": {
             "value": "[format('vnet-{0}', variables('solutionSuffix'))]"
           },
-          "vnetLocation": {
-            "value": "[variables('solutionLocation')]"
-          },
-          "vnetAddressPrefixes": {
+          "addressPrefixes": {
             "value": [
               "10.0.0.0/20"
             ]
+          },
+          "location": {
+            "value": "[parameters('location')]"
           },
           "tags": {
             "value": "[parameters('tags')]"
           },
           "logAnalyticsWorkspaceId": "[if(variables('useExistingLogAnalytics'), createObject('value', parameters('existingLogAnalyticsWorkspaceId')), if(parameters('enableMonitoring'), createObject('value', reference('logAnalyticsWorkspace').outputs.resourceId.value), createObject('value', '')))]",
-          "enableTelemetry": {
-            "value": "[parameters('enableTelemetry')]"
-          },
           "resourceSuffix": {
             "value": "[variables('solutionSuffix')]"
           },
-          "deployBastionAndJumpbox": {
-            "value": "[parameters('deployBastionAndJumpbox')]"
+          "enableTelemetry": {
+            "value": "[parameters('enableTelemetry')]"
           }
         },
         "template": {
@@ -4872,38 +4862,31 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.39.26.7824",
-              "templateHash": "16294706585455769047"
+              "version": "0.41.2.15936",
+              "templateHash": "1152564857842534701"
             }
           },
           "parameters": {
-            "vnetName": {
+            "name": {
               "type": "string",
               "metadata": {
                 "description": "Name of the virtual network."
               }
             },
-            "vnetLocation": {
+            "location": {
               "type": "string",
               "defaultValue": "[resourceGroup().location]",
               "metadata": {
                 "description": "Azure region to deploy resources."
               }
             },
-            "vnetAddressPrefixes": {
+            "addressPrefixes": {
               "type": "array",
               "defaultValue": [
                 "10.0.0.0/20"
               ],
               "metadata": {
                 "description": "Required. An Array of 1 or more IP Address Prefixes for the Virtual Network."
-              }
-            },
-            "deployBastionAndJumpbox": {
-              "type": "bool",
-              "defaultValue": false,
-              "metadata": {
-                "description": "Optional. Deploy Azure Bastion and Jumpbox subnets for VM-based administration."
               }
             },
             "tags": {
@@ -5037,7 +5020,102 @@
                 }
               }
             ],
-            "bastionSubnets": "[if(parameters('deployBastionAndJumpbox'), createArray(createObject('name', 'AzureBastionSubnet', 'addressPrefixes', createArray('10.0.10.0/26'), 'networkSecurityGroup', createObject('name', 'nsg-bastion', 'securityRules', createArray(createObject('name', 'AllowGatewayManager', 'properties', createObject('access', 'Allow', 'direction', 'Inbound', 'priority', 2702, 'protocol', '*', 'sourcePortRange', '*', 'destinationPortRange', '443', 'sourceAddressPrefix', 'GatewayManager', 'destinationAddressPrefix', '*')), createObject('name', 'AllowHttpsInBound', 'properties', createObject('access', 'Allow', 'direction', 'Inbound', 'priority', 2703, 'protocol', '*', 'sourcePortRange', '*', 'destinationPortRange', '443', 'sourceAddressPrefix', 'Internet', 'destinationAddressPrefix', '*')), createObject('name', 'AllowSshRdpOutbound', 'properties', createObject('access', 'Allow', 'direction', 'Outbound', 'priority', 100, 'protocol', '*', 'sourcePortRange', '*', 'destinationPortRanges', createArray('22', '3389'), 'sourceAddressPrefix', '*', 'destinationAddressPrefix', 'VirtualNetwork')), createObject('name', 'AllowAzureCloudOutbound', 'properties', createObject('access', 'Allow', 'direction', 'Outbound', 'priority', 110, 'protocol', 'Tcp', 'sourcePortRange', '*', 'destinationPortRange', '443', 'sourceAddressPrefix', '*', 'destinationAddressPrefix', 'AzureCloud'))))), createObject('name', 'jumpbox', 'addressPrefixes', createArray('10.0.12.0/23'), 'networkSecurityGroup', createObject('name', 'nsg-jumpbox', 'securityRules', createArray(createObject('name', 'AllowRdpFromBastion', 'properties', createObject('access', 'Allow', 'direction', 'Inbound', 'priority', 100, 'protocol', 'Tcp', 'sourcePortRange', '*', 'destinationPortRange', '3389', 'sourceAddressPrefixes', createArray('10.0.10.0/26'), 'destinationAddressPrefixes', createArray('10.0.12.0/23'))))))), createArray())]",
+            "bastionSubnets": [
+              {
+                "name": "AzureBastionSubnet",
+                "addressPrefixes": [
+                  "10.0.10.0/26"
+                ],
+                "networkSecurityGroup": {
+                  "name": "nsg-bastion",
+                  "securityRules": [
+                    {
+                      "name": "AllowGatewayManager",
+                      "properties": {
+                        "access": "Allow",
+                        "direction": "Inbound",
+                        "priority": 2702,
+                        "protocol": "*",
+                        "sourcePortRange": "*",
+                        "destinationPortRange": "443",
+                        "sourceAddressPrefix": "GatewayManager",
+                        "destinationAddressPrefix": "*"
+                      }
+                    },
+                    {
+                      "name": "AllowHttpsInBound",
+                      "properties": {
+                        "access": "Allow",
+                        "direction": "Inbound",
+                        "priority": 2703,
+                        "protocol": "*",
+                        "sourcePortRange": "*",
+                        "destinationPortRange": "443",
+                        "sourceAddressPrefix": "Internet",
+                        "destinationAddressPrefix": "*"
+                      }
+                    },
+                    {
+                      "name": "AllowSshRdpOutbound",
+                      "properties": {
+                        "access": "Allow",
+                        "direction": "Outbound",
+                        "priority": 100,
+                        "protocol": "*",
+                        "sourcePortRange": "*",
+                        "destinationPortRanges": [
+                          "22",
+                          "3389"
+                        ],
+                        "sourceAddressPrefix": "*",
+                        "destinationAddressPrefix": "VirtualNetwork"
+                      }
+                    },
+                    {
+                      "name": "AllowAzureCloudOutbound",
+                      "properties": {
+                        "access": "Allow",
+                        "direction": "Outbound",
+                        "priority": 110,
+                        "protocol": "Tcp",
+                        "sourcePortRange": "*",
+                        "destinationPortRange": "443",
+                        "sourceAddressPrefix": "*",
+                        "destinationAddressPrefix": "AzureCloud"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "jumpbox",
+                "addressPrefixes": [
+                  "10.0.12.0/23"
+                ],
+                "networkSecurityGroup": {
+                  "name": "nsg-jumpbox",
+                  "securityRules": [
+                    {
+                      "name": "AllowRdpFromBastion",
+                      "properties": {
+                        "access": "Allow",
+                        "direction": "Inbound",
+                        "priority": 100,
+                        "protocol": "Tcp",
+                        "sourcePortRange": "*",
+                        "destinationPortRange": "3389",
+                        "sourceAddressPrefixes": [
+                          "10.0.10.0/26"
+                        ],
+                        "destinationAddressPrefixes": [
+                          "10.0.12.0/23"
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            ],
             "vnetSubnets": "[concat(variables('coreSubnets'), variables('bastionSubnets'))]"
           },
           "resources": [
@@ -5062,7 +5140,7 @@
                     "value": "[format('{0}-{1}', tryGet(variables('vnetSubnets')[copyIndex()], 'networkSecurityGroup', 'name'), parameters('resourceSuffix'))]"
                   },
                   "location": {
-                    "value": "[parameters('vnetLocation')]"
+                    "value": "[parameters('location')]"
                   },
                   "securityRules": {
                     "value": "[tryGet(variables('vnetSubnets')[copyIndex()], 'networkSecurityGroup', 'securityRules')]"
@@ -5713,7 +5791,7 @@
             {
               "type": "Microsoft.Resources/deployments",
               "apiVersion": "2025-04-01",
-              "name": "[take(format('avm.res.network.virtual-network.{0}', parameters('vnetName')), 64)]",
+              "name": "[take(format('avm.res.network.virtual-network.{0}', parameters('name')), 64)]",
               "properties": {
                 "expressionEvaluationOptions": {
                   "scope": "inner"
@@ -5721,13 +5799,13 @@
                 "mode": "Incremental",
                 "parameters": {
                   "name": {
-                    "value": "[parameters('vnetName')]"
+                    "value": "[parameters('name')]"
                   },
                   "location": {
-                    "value": "[parameters('vnetLocation')]"
+                    "value": "[parameters('location')]"
                   },
                   "addressPrefixes": {
-                    "value": "[parameters('vnetAddressPrefixes')]"
+                    "value": "[parameters('addressPrefixes')]"
                   },
                   "subnets": {
                     "copy": [
@@ -7386,31 +7464,31 @@
           "outputs": {
             "name": {
               "type": "string",
-              "value": "[reference(resourceId('Microsoft.Resources/deployments', take(format('avm.res.network.virtual-network.{0}', parameters('vnetName')), 64)), '2025-04-01').outputs.name.value]"
+              "value": "[reference(resourceId('Microsoft.Resources/deployments', take(format('avm.res.network.virtual-network.{0}', parameters('name')), 64)), '2025-04-01').outputs.name.value]"
             },
             "resourceId": {
               "type": "string",
-              "value": "[reference(resourceId('Microsoft.Resources/deployments', take(format('avm.res.network.virtual-network.{0}', parameters('vnetName')), 64)), '2025-04-01').outputs.resourceId.value]"
+              "value": "[reference(resourceId('Microsoft.Resources/deployments', take(format('avm.res.network.virtual-network.{0}', parameters('name')), 64)), '2025-04-01').outputs.resourceId.value]"
             },
             "webSubnetResourceId": {
               "type": "string",
-              "value": "[if(contains(map(variables('vnetSubnets'), lambda('subnet', lambdaVariables('subnet').name)), 'web'), reference(resourceId('Microsoft.Resources/deployments', take(format('avm.res.network.virtual-network.{0}', parameters('vnetName')), 64)), '2025-04-01').outputs.subnetResourceIds.value[indexOf(map(variables('vnetSubnets'), lambda('subnet', lambdaVariables('subnet').name)), 'web')], '')]"
+              "value": "[if(contains(map(variables('vnetSubnets'), lambda('subnet', lambdaVariables('subnet').name)), 'web'), reference(resourceId('Microsoft.Resources/deployments', take(format('avm.res.network.virtual-network.{0}', parameters('name')), 64)), '2025-04-01').outputs.subnetResourceIds.value[indexOf(map(variables('vnetSubnets'), lambda('subnet', lambdaVariables('subnet').name)), 'web')], '')]"
             },
             "pepsSubnetResourceId": {
               "type": "string",
-              "value": "[if(contains(map(variables('vnetSubnets'), lambda('subnet', lambdaVariables('subnet').name)), 'peps'), reference(resourceId('Microsoft.Resources/deployments', take(format('avm.res.network.virtual-network.{0}', parameters('vnetName')), 64)), '2025-04-01').outputs.subnetResourceIds.value[indexOf(map(variables('vnetSubnets'), lambda('subnet', lambdaVariables('subnet').name)), 'peps')], '')]"
+              "value": "[if(contains(map(variables('vnetSubnets'), lambda('subnet', lambdaVariables('subnet').name)), 'peps'), reference(resourceId('Microsoft.Resources/deployments', take(format('avm.res.network.virtual-network.{0}', parameters('name')), 64)), '2025-04-01').outputs.subnetResourceIds.value[indexOf(map(variables('vnetSubnets'), lambda('subnet', lambdaVariables('subnet').name)), 'peps')], '')]"
             },
             "aciSubnetResourceId": {
               "type": "string",
-              "value": "[if(contains(map(variables('vnetSubnets'), lambda('subnet', lambdaVariables('subnet').name)), 'aci'), reference(resourceId('Microsoft.Resources/deployments', take(format('avm.res.network.virtual-network.{0}', parameters('vnetName')), 64)), '2025-04-01').outputs.subnetResourceIds.value[indexOf(map(variables('vnetSubnets'), lambda('subnet', lambdaVariables('subnet').name)), 'aci')], '')]"
+              "value": "[if(contains(map(variables('vnetSubnets'), lambda('subnet', lambdaVariables('subnet').name)), 'aci'), reference(resourceId('Microsoft.Resources/deployments', take(format('avm.res.network.virtual-network.{0}', parameters('name')), 64)), '2025-04-01').outputs.subnetResourceIds.value[indexOf(map(variables('vnetSubnets'), lambda('subnet', lambdaVariables('subnet').name)), 'aci')], '')]"
             },
             "bastionSubnetResourceId": {
               "type": "string",
-              "value": "[if(and(parameters('deployBastionAndJumpbox'), contains(map(variables('vnetSubnets'), lambda('subnet', lambdaVariables('subnet').name)), 'AzureBastionSubnet')), reference(resourceId('Microsoft.Resources/deployments', take(format('avm.res.network.virtual-network.{0}', parameters('vnetName')), 64)), '2025-04-01').outputs.subnetResourceIds.value[indexOf(map(variables('vnetSubnets'), lambda('subnet', lambdaVariables('subnet').name)), 'AzureBastionSubnet')], '')]"
+              "value": "[if(contains(map(variables('vnetSubnets'), lambda('subnet', lambdaVariables('subnet').name)), 'AzureBastionSubnet'), reference(resourceId('Microsoft.Resources/deployments', take(format('avm.res.network.virtual-network.{0}', parameters('name')), 64)), '2025-04-01').outputs.subnetResourceIds.value[indexOf(map(variables('vnetSubnets'), lambda('subnet', lambdaVariables('subnet').name)), 'AzureBastionSubnet')], '')]"
             },
             "jumpboxSubnetResourceId": {
               "type": "string",
-              "value": "[if(and(parameters('deployBastionAndJumpbox'), contains(map(variables('vnetSubnets'), lambda('subnet', lambdaVariables('subnet').name)), 'jumpbox')), reference(resourceId('Microsoft.Resources/deployments', take(format('avm.res.network.virtual-network.{0}', parameters('vnetName')), 64)), '2025-04-01').outputs.subnetResourceIds.value[indexOf(map(variables('vnetSubnets'), lambda('subnet', lambdaVariables('subnet').name)), 'jumpbox')], '')]"
+              "value": "[if(contains(map(variables('vnetSubnets'), lambda('subnet', lambdaVariables('subnet').name)), 'jumpbox'), reference(resourceId('Microsoft.Resources/deployments', take(format('avm.res.network.virtual-network.{0}', parameters('name')), 64)), '2025-04-01').outputs.subnetResourceIds.value[indexOf(map(variables('vnetSubnets'), lambda('subnet', lambdaVariables('subnet').name)), 'jumpbox')], '')]"
             }
           }
         }
@@ -9174,23 +9252,27 @@
           "name": {
             "value": "[take(variables('jumpboxVmName'), 15)]"
           },
-          "vmSize": {
-            "value": "[coalesce(parameters('vmSize'), 'Standard_D2s_v5')]"
+          "enableTelemetry": {
+            "value": "[parameters('enableTelemetry')]"
           },
-          "location": {
-            "value": "[parameters('location')]"
+          "computerName": {
+            "value": "[take(variables('jumpboxVmName'), 15)]"
           },
-          "adminUsername": {
-            "value": "[coalesce(parameters('vmAdminUsername'), 'JumpboxAdminUser')]"
+          "osType": {
+            "value": "Windows"
           },
-          "adminPassword": {
-            "value": "[coalesce(parameters('vmAdminPassword'), 'JumpboxAdminP@ssw0rd1234!')]"
-          },
-          "tags": {
-            "value": "[parameters('tags')]"
+          "vmSize": "[if(empty(parameters('vmSize')), createObject('value', 'Standard_D2s_v5'), createObject('value', parameters('vmSize')))]",
+          "adminUsername": "[if(empty(parameters('vmAdminUsername')), createObject('value', 'JumpboxAdminUser'), createObject('value', parameters('vmAdminUsername')))]",
+          "adminPassword": "[if(empty(parameters('vmAdminPassword')), createObject('value', 'JumpboxAdminP@ssw0rd1234!'), createObject('value', parameters('vmAdminPassword')))]",
+          "managedIdentities": {
+            "value": {
+              "userAssignedResourceIds": [
+                "[reference('userAssignedIdentity').outputs.resourceId.value]"
+              ]
+            }
           },
           "availabilityZone": {
-            "value": -1
+            "value": 1
           },
           "imageReference": {
             "value": {
@@ -9200,53 +9282,37 @@
               "version": "latest"
             }
           },
-          "osType": {
-            "value": "Windows"
+          "nicConfigurations": {
+            "value": [
+              {
+                "name": "[format('nic-{0}', variables('jumpboxVmName'))]",
+                "enableAcceleratedNetworking": true,
+                "ipConfigurations": [
+                  {
+                    "name": "ipconfig01",
+                    "subnetResourceId": "[reference('virtualNetwork').outputs.jumpboxSubnetResourceId.value]"
+                  }
+                ]
+              }
+            ]
           },
           "osDisk": {
             "value": {
-              "name": "[format('osdisk-{0}', variables('jumpboxVmName'))]",
+              "caching": "ReadWrite",
+              "diskSizeGB": 128,
               "managedDisk": {
-                "storageAccountType": "Standard_LRS"
+                "storageAccountType": "Premium_LRS"
               }
             }
           },
           "encryptionAtHost": {
             "value": false
           },
-          "nicConfigurations": {
-            "value": [
-              {
-                "name": "[format('nic-{0}', variables('jumpboxVmName'))]",
-                "ipConfigurations": [
-                  {
-                    "name": "ipconfig1",
-                    "subnetResourceId": "[reference('virtualNetwork').outputs.jumpboxSubnetResourceId.value]"
-                  }
-                ],
-                "diagnosticSettings": [
-                  {
-                    "name": "jumpboxDiagnostics",
-                    "workspaceResourceId": "[if(variables('useExistingLogAnalytics'), parameters('existingLogAnalyticsWorkspaceId'), if(parameters('enableMonitoring'), reference('logAnalyticsWorkspace').outputs.resourceId.value, ''))]",
-                    "logCategoriesAndGroups": [
-                      {
-                        "categoryGroup": "allLogs",
-                        "enabled": true
-                      }
-                    ],
-                    "metricCategories": [
-                      {
-                        "category": "AllMetrics",
-                        "enabled": true
-                      }
-                    ]
-                  }
-                ]
-              }
-            ]
+          "location": {
+            "value": "[variables('solutionLocation')]"
           },
-          "enableTelemetry": {
-            "value": "[parameters('enableTelemetry')]"
+          "tags": {
+            "value": "[parameters('tags')]"
           }
         },
         "template": {
@@ -18293,6 +18359,7 @@
       },
       "dependsOn": [
         "logAnalyticsWorkspace",
+        "userAssignedIdentity",
         "virtualNetwork"
       ]
     },
@@ -24920,7 +24987,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.41.2.15936",
-              "templateHash": "14729448306021818204"
+              "templateHash": "5579055444657114163"
             }
           },
           "parameters": {
@@ -25058,7 +25125,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.41.2.15936",
-              "templateHash": "9237732984597233866"
+              "templateHash": "4896504561894393634"
             }
           },
           "parameters": {
@@ -25100,7 +25167,7 @@
             {
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
-              "scope": "[format('Microsoft.CognitiveServices/accounts/{0}', parameters('aiServicesName'))]",
+              "scope": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('aiServicesName'))]",
               "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('aiServicesName')), parameters('principalId'), resourceId('Microsoft.Authorization/roleDefinitions', '53ca6127-db72-4b80-b1b0-d745d6d5456d'))]",
               "properties": {
                 "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', '53ca6127-db72-4b80-b1b0-d745d6d5456d')]",
@@ -25111,7 +25178,7 @@
             {
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
-              "scope": "[format('Microsoft.CognitiveServices/accounts/{0}', parameters('aiServicesName'))]",
+              "scope": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('aiServicesName'))]",
               "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('aiServicesName')), parameters('principalId'), resourceId('Microsoft.Authorization/roleDefinitions', '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd'))]",
               "properties": {
                 "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd')]",
@@ -42026,7 +42093,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.41.2.15936",
-              "templateHash": "17215033518306564965"
+              "templateHash": "8373975196748337393"
             }
           },
           "definitions": {
@@ -42976,7 +43043,7 @@
               },
               "type": "Microsoft.Insights/diagnosticSettings",
               "apiVersion": "2021-05-01-preview",
-              "scope": "[format('Microsoft.Web/sites/{0}', parameters('name'))]",
+              "scope": "[resourceId('Microsoft.Web/sites', parameters('name'))]",
               "name": "[coalesce(tryGet(coalesce(parameters('diagnosticSettings'), createArray())[copyIndex()], 'name'), format('{0}-diagnosticSettings', parameters('name')))]",
               "properties": {
                 "copy": [
@@ -43055,7 +43122,7 @@
                     "_generator": {
                       "name": "bicep",
                       "version": "0.41.2.15936",
-                      "templateHash": "26032048033705967"
+                      "templateHash": "5518029515589119726"
                     },
                     "name": "Site App Settings",
                     "description": "This module deploys a Site App Setting."
@@ -44076,7 +44143,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.41.2.15936",
-              "templateHash": "5828006773867864982"
+              "templateHash": "11066122245438821615"
             }
           },
           "parameters": {
@@ -44148,9 +44215,8 @@
             },
             "userAssignedIdentityResourceId": {
               "type": "string",
-              "defaultValue": "",
               "metadata": {
-                "description": "Optional. User-assigned managed identity resource ID for ACR pull."
+                "description": "Required. User-assigned managed identity resource ID for ACR pull."
               }
             }
           },
