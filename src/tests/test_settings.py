@@ -78,7 +78,7 @@ class TestAzureOpenAIImageProperties:
 
         with patch.dict(os.environ, {
             "AZURE_OPENAI_ENDPOINT": "https://test.openai.azure.com",
-            "AZURE_OPENAI_IMAGE_MODEL": "gpt-image-1.5"
+            "AZURE_ENV_IMAGE_MODEL_NAME": "gpt-image-1.5"
         }, clear=False):
             settings = _AzureOpenAISettings()
             assert settings.effective_image_model == "gpt-image-1.5"
@@ -93,7 +93,7 @@ class TestImageGenerationEnabled:
 
         with patch.dict(os.environ, {
             "AZURE_OPENAI_ENDPOINT": "https://test.openai.azure.com",
-            "AZURE_OPENAI_IMAGE_MODEL": "none"
+            "AZURE_ENV_IMAGE_MODEL_NAME": "none"
         }, clear=False):
             settings = _AzureOpenAISettings()
             assert settings.image_generation_enabled is False
@@ -104,7 +104,7 @@ class TestImageGenerationEnabled:
 
         with patch.dict(os.environ, {
             "AZURE_OPENAI_ENDPOINT": "https://test.openai.azure.com",
-            "AZURE_OPENAI_IMAGE_MODEL": "disabled"
+            "AZURE_ENV_IMAGE_MODEL_NAME": "disabled"
         }, clear=False):
             settings = _AzureOpenAISettings()
             assert settings.image_generation_enabled is False
@@ -115,7 +115,7 @@ class TestImageGenerationEnabled:
 
         with patch.dict(os.environ, {
             "AZURE_OPENAI_ENDPOINT": "https://test.openai.azure.com",
-            "AZURE_OPENAI_IMAGE_MODEL": "gpt-image-1-mini"
+            "AZURE_ENV_IMAGE_MODEL_NAME": "gpt-image-1-mini"
         }, clear=False):
             settings = _AzureOpenAISettings()
             assert settings.image_generation_enabled is True

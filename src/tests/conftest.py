@@ -74,7 +74,7 @@ def mock_environment(monkeypatch):
     env_vars = {
         # Azure OpenAI (required - _AzureOpenAISettings)
         "AZURE_OPENAI_ENDPOINT": "https://test-openai.openai.azure.com/",
-        "AZURE_OPENAI_API_VERSION": "2024-08-01-preview",
+        "AZURE_ENV_OPENAI_API_VERSION": "2024-08-01-preview",
 
         # Azure Cosmos DB (_CosmosSettings uses AZURE_COSMOS_ prefix)
         "AZURE_COSMOS_ENDPOINT": "https://test-cosmos.documents.azure.com:443/",
