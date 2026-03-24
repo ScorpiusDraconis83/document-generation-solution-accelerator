@@ -95,7 +95,7 @@ jobs:
         if: always()
         shell: bash
         run: |
-          AZURE_ENV_CONTAINER_REGISTRY_NAME=$(echo "${{ secrets.ACR_TEST_LOGIN_SERVER }}")
+          AZURE_ENV_CONTAINER_REGISTRY_SERVER=$(echo "${{ secrets.ACR_TEST_LOGIN_SERVER }}")
           echo "## 🐳 Docker Build Job Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
@@ -109,8 +109,8 @@ jobs:
             echo "Successfully built and pushed Docker images to ACR:" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "**Built Images:**" >> $GITHUB_STEP_SUMMARY
-            echo "- \`${AZURE_ENV_CONTAINER_REGISTRY_NAME}/content-gen-app:${{ steps.generate_docker_tag.outputs.AZURE_ENV_IMAGE_TAG }}\`" >> $GITHUB_STEP_SUMMARY
-            echo "- \`${AZURE_ENV_CONTAINER_REGISTRY_NAME}/content-gen-api:${{ steps.generate_docker_tag.outputs.AZURE_ENV_IMAGE_TAG }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "- \`${AZURE_ENV_CONTAINER_REGISTRY_SERVER}/content-gen-app:${{ steps.generate_docker_tag.outputs.AZURE_ENV_IMAGE_TAG }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "- \`${AZURE_ENV_CONTAINER_REGISTRY_SERVER}/content-gen-api:${{ steps.generate_docker_tag.outputs.AZURE_ENV_IMAGE_TAG }}\`" >> $GITHUB_STEP_SUMMARY
           else
             echo "### ❌ Build Failed" >> $GITHUB_STEP_SUMMARY
             echo "- Docker build process encountered an error" >> $GITHUB_STEP_SUMMARY
