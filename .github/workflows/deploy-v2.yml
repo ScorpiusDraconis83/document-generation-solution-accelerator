@@ -100,7 +100,7 @@ on:
         required: false
         default: ''
         type: string
-      image_model_choice:
+      AZURE_ENV_IMAGE_MODEL_NAME:
         description: 'Image Model to Deploy'
         required: false
         default: 'gpt-image-1-mini'
@@ -133,7 +133,7 @@ jobs:
       AZURE_ENV_LOG_ANALYTICS_WORKSPACE_RID: ${{ steps.validate.outputs.AZURE_ENV_LOG_ANALYTICS_WORKSPACE_RID }}
       AZURE_ENV_FOUNDRY_PROJECT_RID: ${{ steps.validate.outputs.AZURE_ENV_FOUNDRY_PROJECT_RID }}
       existing_webapp_url: ${{ steps.validate.outputs.existing_webapp_url }}
-      image_model_choice: ${{ steps.validate.outputs.image_model_choice }}
+      AZURE_ENV_IMAGE_MODEL_NAME: ${{ steps.validate.outputs.AZURE_ENV_IMAGE_MODEL_NAME }}
     steps:
       - name: Validate Workflow Input Parameters
         id: validate
@@ -150,7 +150,7 @@ jobs:
           INPUT_AZURE_ENV_LOG_ANALYTICS_WORKSPACE_RID: ${{ github.event.inputs.AZURE_ENV_LOG_ANALYTICS_WORKSPACE_RID }}
           INPUT_AZURE_ENV_FOUNDRY_PROJECT_RID: ${{ github.event.inputs.AZURE_ENV_FOUNDRY_PROJECT_RID }}
           INPUT_EXISTING_WEBAPP_URL: ${{ github.event.inputs.existing_webapp_url }}
-          INPUT_IMAGE_MODEL_CHOICE: ${{ github.event.inputs.image_model_choice }}
+          INPUT_IMAGE_MODEL_CHOICE: ${{ github.event.inputs.AZURE_ENV_IMAGE_MODEL_NAME }}
         run: |
           echo "🔍 Validating workflow input parameters..."
           VALIDATION_FAILED=false
@@ -306,15 +306,15 @@ jobs:
           echo "AZURE_ENV_FOUNDRY_PROJECT_RID=$INPUT_AZURE_ENV_FOUNDRY_PROJECT_RID" >> $GITHUB_OUTPUT
           echo "existing_webapp_url=$INPUT_EXISTING_WEBAPP_URL" >> $GITHUB_OUTPUT
           
-          # Validate and output image_model_choice
+          # Validate and output AZURE_ENV_IMAGE_MODEL_NAME
           IMAGE_MODEL="${INPUT_IMAGE_MODEL_CHOICE:-gpt-image-1-mini}"
           ALLOWED_MODELS=("gpt-image-1-mini" "gpt-image-1.5" "none")
           if [[ ! " ${ALLOWED_MODELS[@]} " =~ " ${IMAGE_MODEL} " ]]; then
-            echo "❌ ERROR: image_model_choice '$IMAGE_MODEL' is invalid. Allowed: ${ALLOWED_MODELS[*]}"
+            echo "❌ ERROR: AZURE_ENV_IMAGE_MODEL_NAME '$IMAGE_MODEL' is invalid. Allowed: ${ALLOWED_MODELS[*]}"
             exit 1
           fi
-          echo "✅ image_model_choice: '$IMAGE_MODEL' is valid"
-          echo "image_model_choice=$IMAGE_MODEL" >> $GITHUB_OUTPUT
+          echo "✅ AZURE_ENV_IMAGE_MODEL_NAME: '$IMAGE_MODEL' is valid"
+          echo "AZURE_ENV_IMAGE_MODEL_NAME=$IMAGE_MODEL" >> $GITHUB_OUTPUT
 
   Run:
     needs: validate-inputs
@@ -333,5 +333,5 @@ jobs:
       AZURE_ENV_FOUNDRY_PROJECT_RID: ${{ needs.validate-inputs.outputs.AZURE_ENV_FOUNDRY_PROJECT_RID || '' }}
       existing_webapp_url: ${{ needs.validate-inputs.outputs.existing_webapp_url || '' }}
       trigger_type: ${{ github.event_name }}
-      image_model_choice: ${{ needs.validate-inputs.outputs.image_model_choice || 'gpt-image-1-mini' }}
+      AZURE_ENV_IMAGE_MODEL_NAME: ${{ needs.validate-inputs.outputs.AZURE_ENV_IMAGE_MODEL_NAME || 'gpt-image-1-mini' }}
     secrets: inherit

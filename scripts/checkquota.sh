@@ -9,7 +9,7 @@
 # Auto-detects mode based on environment variables.
 #
 # Usage (local):
-#   bash checkquota.sh [image_model_choice]
+#   bash checkquota.sh [AZURE_ENV_IMAGE_MODEL_NAME]
 #   bash checkquota.sh gpt-image-1-mini
 #   bash checkquota.sh none
 #
