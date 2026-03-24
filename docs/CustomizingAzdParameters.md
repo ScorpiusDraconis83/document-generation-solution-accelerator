@@ -17,12 +17,12 @@ By default this template will use the environment name as the prefix to prevent 
 | `AZURE_ENV_GPT_MODEL_CAPACITY`                   | integer | `150`                      | Sets the GPT model token capacity (minimum: `10`).                            |
 | `AZURE_ENV_IMAGE_MODEL_NAME`           | string  | `gpt-image-1-mini`         | Image model to deploy (allowed: `gpt-image-1-mini`, `gpt-image-1.5`, `none`). |
 | `AZURE_ENV_IMAGE_MODEL_CAPACITY`       | integer | `1`                        | Sets the image model deployment capacity in RPM (minimum: `1`).               |
-| `AZURE_ENV_OPENAI_API_VERSION`             | string  | `2025-01-01-preview`       | Specifies the API version for Azure OpenAI service.                           |
+| `AZURE_ENV_OPENAI_API_VERSION`            | string  | `2025-01-01-preview`       | Specifies the API version for Azure OpenAI service.                           |
 | `AZURE_ENV_AI_SERVICE_LOCATION`           | string  | `<User selects during deployment>` | Sets the Azure region for OpenAI resource deployment.                         |
-| `AZURE_ENV_LOG_ANALYTICS_WORKSPACE_RID` | string  | `""`                       | Reuses an existing Log Analytics Workspace instead of creating a new one.     |
-| `AZURE_ENV_FOUNDRY_PROJECT_RID`| string  | `""`                       | Reuses an existing AI Foundry Project instead of creating a new one.          |
-| `AZURE_ENV_CONTAINER_REGISTRY_NAME`   | string  | `contentgencontainerreg`   | Sets the existing Azure Container Registry name (without `.azurecr.io`).      |
-| `AZURE_ENV_IMAGE_TAG`                   | string  | `latest`                   | Sets the container image tag (e.g., `latest`, `dev`, `hotfix`).               |
+| `AZURE_ENV_LOG_ANALYTICS_WORKSPACE_RID`   | string  | `""`                       | Reuses an existing Log Analytics Workspace instead of creating a new one.     |
+| `AZURE_ENV_FOUNDRY_PROJECT_RID`           | string  | `""`                       | Reuses an existing AI Foundry Project instead of creating a new one.          |
+| `AZURE_ENV_CONTAINER_REGISTRY_NAME`       | string  | `contentgencontainerreg`   | Sets the existing Azure Container Registry name (without `.azurecr.io`).      |
+| `AZURE_ENV_IMAGE_TAG`                     | string  | `latest`                   | Sets the container image tag (e.g., `latest`, `dev`, `hotfix`).               |
 
 ## How to Set a Parameter
 
