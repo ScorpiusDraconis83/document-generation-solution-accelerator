@@ -9,7 +9,6 @@ metadata:
 requiredVersions:
   azd: '>= 1.18.0 != 1.23.9'
 
-
 parameters:
   solutionPrefix:
     type: string
