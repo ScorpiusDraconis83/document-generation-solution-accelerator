@@ -547,6 +547,31 @@ module existingAiServicesRoleAssignments 'modules/deploy_foundry_role_assignment
   }
 }
 
+// ========== Model Deployments for Existing AI Services ========== //
+module existingAiServicesModelDeployments 'modules/deploy_ai_model.bicep' = if (useExistingAiFoundryAiProject) {
+  name: take('module.model-deployments-existing.${aiFoundryAiServicesResourceName}', 64)
+  scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
+  params: {
+    aiServicesName: aiFoundryAiServicesResourceName
+    deployments: [
+      for deployment in aiFoundryAiServicesModelDeployment: {
+        name: deployment.name
+        format: deployment.format
+        model: deployment.model
+        sku: {
+          name: deployment.sku.name
+          capacity: deployment.sku.capacity
+        }
+        version: deployment.version
+        raiPolicyName: deployment.raiPolicyName
+      }
+    ]
+  }
+  dependsOn: [
+    existingAiServicesRoleAssignments
+  ]
+}
+
 // ========== AI Search ========== //
 module aiSearch 'br/public:avm/res/search/search-service:0.12.0' = {
   name: take('avm.res.search.search-service.${aiSearchName}', 64)

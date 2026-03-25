@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.41.2.15936",
-      "templateHash": "14392918201193616164"
+      "templateHash": "15389484880957971429"
     },
     "name": "Intelligent Content Generation Accelerator",
     "description": "Solution Accelerator for multimodal marketing content generation using Microsoft Agent Framework.\n"
@@ -14240,6 +14240,100 @@
       },
       "dependsOn": [
         "userAssignedIdentity"
+      ]
+    },
+    "existingAiServicesModelDeployments": {
+      "condition": "[variables('useExistingAiFoundryAiProject')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[take(format('module.model-deployments-existing.{0}', variables('aiFoundryAiServicesResourceName')), 64)]",
+      "subscriptionId": "[variables('aiFoundryAiServicesSubscriptionId')]",
+      "resourceGroup": "[variables('aiFoundryAiServicesResourceGroupName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "aiServicesName": {
+            "value": "[variables('aiFoundryAiServicesResourceName')]"
+          },
+          "deployments": {
+            "copy": [
+              {
+                "name": "value",
+                "count": "[length(variables('aiFoundryAiServicesModelDeployment'))]",
+                "input": "[createObject('name', variables('aiFoundryAiServicesModelDeployment')[copyIndex('value')].name, 'format', variables('aiFoundryAiServicesModelDeployment')[copyIndex('value')].format, 'model', variables('aiFoundryAiServicesModelDeployment')[copyIndex('value')].model, 'sku', createObject('name', variables('aiFoundryAiServicesModelDeployment')[copyIndex('value')].sku.name, 'capacity', variables('aiFoundryAiServicesModelDeployment')[copyIndex('value')].sku.capacity), 'version', variables('aiFoundryAiServicesModelDeployment')[copyIndex('value')].version, 'raiPolicyName', variables('aiFoundryAiServicesModelDeployment')[copyIndex('value')].raiPolicyName)]"
+              }
+            ]
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.41.2.15936",
+              "templateHash": "12449348145632794739"
+            }
+          },
+          "parameters": {
+            "aiServicesName": {
+              "type": "string",
+              "metadata": {
+                "description": "Required. Name of the AI Services account."
+              }
+            },
+            "deployments": {
+              "type": "array",
+              "defaultValue": [],
+              "metadata": {
+                "description": "Required. Array of model deployments to create."
+              }
+            }
+          },
+          "resources": [
+            {
+              "copy": {
+                "name": "modelDeployments",
+                "count": "[length(parameters('deployments'))]",
+                "mode": "serial",
+                "batchSize": 1
+              },
+              "type": "Microsoft.CognitiveServices/accounts/deployments",
+              "apiVersion": "2024-10-01",
+              "name": "[format('{0}/{1}', parameters('aiServicesName'), parameters('deployments')[copyIndex()].name)]",
+              "properties": {
+                "model": {
+                  "format": "[parameters('deployments')[copyIndex()].format]",
+                  "name": "[parameters('deployments')[copyIndex()].model]",
+                  "version": "[parameters('deployments')[copyIndex()].version]"
+                },
+                "raiPolicyName": "[parameters('deployments')[copyIndex()].raiPolicyName]"
+              },
+              "sku": {
+                "name": "[parameters('deployments')[copyIndex()].sku.name]",
+                "capacity": "[parameters('deployments')[copyIndex()].sku.capacity]"
+              }
+            }
+          ],
+          "outputs": {
+            "deployedModelNames": {
+              "type": "array",
+              "metadata": {
+                "description": "The names of the deployed models."
+              },
+              "copy": {
+                "count": "[length(parameters('deployments'))]",
+                "input": "[parameters('deployments')[copyIndex()].name]"
+              }
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "existingAiServicesRoleAssignments"
       ]
     },
     "aiSearch": {
@@ -33185,7 +33279,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.41.2.15936",
-              "templateHash": "4952237836308528733"
+              "templateHash": "11066122245438821615"
             }
           },
           "parameters": {
@@ -33257,9 +33351,8 @@
             },
             "userAssignedIdentityResourceId": {
               "type": "string",
-              "defaultValue": "",
               "metadata": {
-                "description": "Optional. User-assigned managed identity resource ID for ACR pull."
+                "description": "Required. User-assigned managed identity resource ID for ACR pull."
               }
             }
           },
