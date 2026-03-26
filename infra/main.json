@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.41.2.15936",
-      "templateHash": "876801466335750099"
+      "templateHash": "690774053853233065"
     },
     "name": "Intelligent Content Generation Accelerator",
     "description": "Solution Accelerator for multimodal marketing content generation using Microsoft Agent Framework.\n"
@@ -358,8 +358,9 @@
       "uksouth",
       "westus3"
     ],
-    "deployAdminAccessResources": "[and(parameters('enablePrivateNetworking'), parameters('deployBastionAndJumpbox'))]",
-    "jumpboxVmName": "[take(format('vm-jumpbox-{0}', variables('solutionSuffix')), 15)]",
+    "deployAdminAccessResources": "[and(and(parameters('enablePrivateNetworking'), parameters('deployBastionAndJumpbox')), not(empty(parameters('vmAdminPassword'))))]",
+    "jumpboxUniqueToken": "[take(uniqueString(resourceGroup().id, variables('solutionSuffix')), 10)]",
+    "jumpboxVmName": "[take(format('vm-{0}', variables('jumpboxUniqueToken')), 15)]",
     "privateDnsZones": [
       "privatelink.cognitiveservices.azure.com",
       "privatelink.openai.azure.com",
@@ -4856,7 +4857,7 @@
             ]
           },
           "location": {
-            "value": "[parameters('location')]"
+            "value": "[variables('solutionLocation')]"
           },
           "deployBastionAndJumpbox": {
             "value": "[and(parameters('enablePrivateNetworking'), parameters('deployBastionAndJumpbox'))]"
@@ -7443,25 +7444,12 @@
             "value": "Standard"
           },
           "location": {
-            "value": "[parameters('location')]"
+            "value": "[variables('solutionLocation')]"
           },
           "virtualNetworkResourceId": {
             "value": "[reference('virtualNetwork').outputs.resourceId.value]"
           },
-          "diagnosticSettings": {
-            "value": [
-              {
-                "name": "bastionDiagnostics",
-                "workspaceResourceId": "[if(variables('useExistingLogAnalytics'), parameters('existingLogAnalyticsWorkspaceId'), if(parameters('enableMonitoring'), reference('logAnalyticsWorkspace').outputs.resourceId.value, ''))]",
-                "logCategoriesAndGroups": [
-                  {
-                    "categoryGroup": "allLogs",
-                    "enabled": true
-                  }
-                ]
-              }
-            ]
-          },
+          "diagnosticSettings": "[if(not(empty(if(variables('useExistingLogAnalytics'), parameters('existingLogAnalyticsWorkspaceId'), if(parameters('enableMonitoring'), reference('logAnalyticsWorkspace').outputs.resourceId.value, '')))), createObject('value', createArray(createObject('name', 'bastionDiagnostics', 'workspaceResourceId', if(variables('useExistingLogAnalytics'), parameters('existingLogAnalyticsWorkspaceId'), if(parameters('enableMonitoring'), reference('logAnalyticsWorkspace').outputs.resourceId.value, '')), 'logCategoriesAndGroups', createArray(createObject('categoryGroup', 'allLogs', 'enabled', true()))))), createObject('value', createArray()))]",
           "tags": {
             "value": "[parameters('tags')]"
           },
@@ -24873,8 +24861,8 @@
       },
       "dependsOn": [
         "aiFoundryAiServices",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
         "virtualNetwork"
       ]
     },

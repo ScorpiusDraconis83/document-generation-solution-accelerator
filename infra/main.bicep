@@ -382,7 +382,7 @@ module virtualNetwork 'modules/virtualNetwork.bicep' = if (enablePrivateNetworki
   params: {
     name: 'vnet-${solutionSuffix}'
     addressPrefixes: ['10.0.0.0/20'] // 4096 addresses (enough for 8 /23 subnets or 16 /24)
-    location: location
+    location: solutionLocation
     deployBastionAndJumpbox: enablePrivateNetworking && deployBastionAndJumpbox
     tags: tags
     logAnalyticsWorkspaceId: logAnalyticsWorkspaceResourceId
@@ -405,26 +405,28 @@ var zoneSupportedJumpboxLocations = [
   'uksouth'
   'westus3'
 ]
-var deployAdminAccessResources = enablePrivateNetworking && deployBastionAndJumpbox
+var deployAdminAccessResources = enablePrivateNetworking && deployBastionAndJumpbox && !empty(vmAdminPassword)
 module bastionHost 'br/public:avm/res/network/bastion-host:0.8.2' = if (deployAdminAccessResources) {
   name: take('avm.res.network.bastion-host.${bastionHostName}', 64)
   params: {
     name: bastionHostName
     skuName: 'Standard'
-    location: location
+    location: solutionLocation
     virtualNetworkResourceId: virtualNetwork!.outputs.resourceId
-    diagnosticSettings: [
-      {
-        name: 'bastionDiagnostics'
-        workspaceResourceId: logAnalyticsWorkspaceResourceId
-        logCategoriesAndGroups: [
+    diagnosticSettings: !empty(logAnalyticsWorkspaceResourceId)
+      ? [
           {
-            categoryGroup: 'allLogs'
-            enabled: true
+            name: 'bastionDiagnostics'
+            workspaceResourceId: logAnalyticsWorkspaceResourceId
+            logCategoriesAndGroups: [
+              {
+                categoryGroup: 'allLogs'
+                enabled: true
+              }
+            ]
           }
         ]
-      }
-    ]
+      : []
     tags: tags
     enableTelemetry: enableTelemetry
     publicIPAddressObject: {
@@ -434,7 +436,8 @@ module bastionHost 'br/public:avm/res/network/bastion-host:0.8.2' = if (deployAd
 }
 
 // Jumpbox Virtual Machine
-var jumpboxVmName = take('vm-jumpbox-${solutionSuffix}', 15)
+var jumpboxUniqueToken = take(uniqueString(resourceGroup().id, solutionSuffix), 10)
+var jumpboxVmName = take('vm-${jumpboxUniqueToken}', 15)
 module jumpboxVM 'br/public:avm/res/compute/virtual-machine:0.21.0' = if (deployAdminAccessResources) {
   name: take('avm.res.compute.virtual-machine.${jumpboxVmName}', 64)
   params: {
