@@ -405,7 +405,7 @@ var zoneSupportedJumpboxLocations = [
   'uksouth'
   'westus3'
 ]
-var deployAdminAccessResources = enablePrivateNetworking && deployBastionAndJumpbox && !empty(vmAdminPassword)
+var deployAdminAccessResources = enablePrivateNetworking && deployBastionAndJumpbox
 module bastionHost 'br/public:avm/res/network/bastion-host:0.8.2' = if (deployAdminAccessResources) {
   name: take('avm.res.network.bastion-host.${bastionHostName}', 64)
   params: {

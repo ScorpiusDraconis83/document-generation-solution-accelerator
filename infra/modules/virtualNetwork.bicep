@@ -273,6 +273,6 @@ output webSubnetResourceId string = contains(map(vnetSubnets, subnet => subnet.n
 output pepsSubnetResourceId string = contains(map(vnetSubnets, subnet => subnet.name), 'peps') ? virtualNetwork.outputs.subnetResourceIds[indexOf(map(vnetSubnets, subnet => subnet.name), 'peps')] : ''
 output aciSubnetResourceId string = contains(map(vnetSubnets, subnet => subnet.name), 'aci') ? virtualNetwork.outputs.subnetResourceIds[indexOf(map(vnetSubnets, subnet => subnet.name), 'aci')] : ''
 
-// Bastion/jumpbox subnet outputs (present only when deployBastionAndJumpbox is true)
+// Bastion/jumpbox subnet outputs (always declared; will be empty when those subnets are not deployed)
 output bastionSubnetResourceId string = contains(map(vnetSubnets, subnet => subnet.name), 'AzureBastionSubnet') ? virtualNetwork.outputs.subnetResourceIds[indexOf(map(vnetSubnets, subnet => subnet.name), 'AzureBastionSubnet')] : ''
 output jumpboxSubnetResourceId string = contains(map(vnetSubnets, subnet => subnet.name), 'jumpbox') ? virtualNetwork.outputs.subnetResourceIds[indexOf(map(vnetSubnets, subnet => subnet.name), 'jumpbox')] : ''

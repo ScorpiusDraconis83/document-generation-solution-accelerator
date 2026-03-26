@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.41.2.15936",
-      "templateHash": "11738775177613917473"
+      "templateHash": "14899763561101785269"
     },
     "name": "Intelligent Content Generation Accelerator",
     "description": "Solution Accelerator for multimodal marketing content generation using Microsoft Agent Framework.\n"
@@ -358,7 +358,7 @@
       "uksouth",
       "westus3"
     ],
-    "deployAdminAccessResources": "[and(and(parameters('enablePrivateNetworking'), parameters('deployBastionAndJumpbox')), not(empty(parameters('vmAdminPassword'))))]",
+    "deployAdminAccessResources": "[and(parameters('enablePrivateNetworking'), parameters('deployBastionAndJumpbox'))]",
     "jumpboxVmName": "[take(format('vm-jumpbox-{0}', variables('solutionSuffix')), 15)]",
     "privateDnsZones": [
       "privatelink.cognitiveservices.azure.com",
@@ -24873,8 +24873,8 @@
       },
       "dependsOn": [
         "aiFoundryAiServices",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
         "virtualNetwork"
       ]
     },
