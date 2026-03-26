@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.41.2.15936",
-      "templateHash": "14899763561101785269"
+      "templateHash": "876801466335750099"
     },
     "name": "Intelligent Content Generation Accelerator",
     "description": "Solution Accelerator for multimodal marketing content generation using Microsoft Agent Framework.\n"
@@ -4859,7 +4859,7 @@
             "value": "[parameters('location')]"
           },
           "deployBastionAndJumpbox": {
-            "value": "[and(and(parameters('enablePrivateNetworking'), parameters('deployBastionAndJumpbox')), not(empty(parameters('vmAdminPassword'))))]"
+            "value": "[and(parameters('enablePrivateNetworking'), parameters('deployBastionAndJumpbox'))]"
           },
           "tags": {
             "value": "[parameters('tags')]"

@@ -383,7 +383,7 @@ module virtualNetwork 'modules/virtualNetwork.bicep' = if (enablePrivateNetworki
     name: 'vnet-${solutionSuffix}'
     addressPrefixes: ['10.0.0.0/20'] // 4096 addresses (enough for 8 /23 subnets or 16 /24)
     location: location
-    deployBastionAndJumpbox: enablePrivateNetworking && deployBastionAndJumpbox && !empty(vmAdminPassword)
+    deployBastionAndJumpbox: enablePrivateNetworking && deployBastionAndJumpbox
     tags: tags
     logAnalyticsWorkspaceId: logAnalyticsWorkspaceResourceId
     resourceSuffix: solutionSuffix
