@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.41.2.15936",
-      "templateHash": "18140035795753819765"
+      "templateHash": "17721141165286158425"
     },
     "name": "Intelligent Content Generation Accelerator",
     "description": "Solution Accelerator for multimodal marketing content generation using Microsoft Agent Framework.\n"
@@ -339,6 +339,19 @@
     "applicationInsightsResourceName": "[format('appi-{0}', variables('solutionSuffix'))]",
     "userAssignedIdentityResourceName": "[format('id-{0}', variables('solutionSuffix'))]",
     "bastionHostName": "[format('bas-{0}', variables('solutionSuffix'))]",
+    "zoneSupportedJumpboxLocations": [
+      "australiaeast",
+      "centralus",
+      "eastus",
+      "eastus2",
+      "japaneast",
+      "northeurope",
+      "southeastasia",
+      "swedencentral",
+      "uksouth",
+      "westus3"
+    ],
+    "deployJumpbox": "[and(parameters('enablePrivateNetworking'), not(empty(parameters('vmAdminPassword'))))]",
     "jumpboxVmName": "[take(format('vm-jumpbox-{0}', variables('solutionSuffix')), 15)]",
     "privateDnsZones": [
       "privatelink.cognitiveservices.azure.com",
@@ -3586,14 +3599,7 @@
           "flowType": {
             "value": "Bluefield"
           },
-          "workspaceResourceId": "[if(variables('useExistingLogAnalytics'), createObject('value', parameters('existingLogAnalyticsWorkspaceId')), if(parameters('enableMonitoring'), createObject('value', reference('logAnalyticsWorkspace').outputs.resourceId.value), createObject('value', '')))]",
-          "diagnosticSettings": {
-            "value": [
-              {
-                "workspaceResourceId": "[if(variables('useExistingLogAnalytics'), parameters('existingLogAnalyticsWorkspaceId'), if(parameters('enableMonitoring'), reference('logAnalyticsWorkspace').outputs.resourceId.value, ''))]"
-              }
-            ]
-          }
+          "workspaceResourceId": "[if(variables('useExistingLogAnalytics'), createObject('value', parameters('existingLogAnalyticsWorkspaceId')), if(parameters('enableMonitoring'), createObject('value', reference('logAnalyticsWorkspace').outputs.resourceId.value), createObject('value', '')))]"
         },
         "template": {
           "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
@@ -9239,7 +9245,7 @@
       ]
     },
     "jumpboxVM": {
-      "condition": "[parameters('enablePrivateNetworking')]",
+      "condition": "[variables('deployJumpbox')]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2025-04-01",
       "name": "[take(format('avm.res.compute.virtual-machine.{0}', variables('jumpboxVmName')), 64)]",
@@ -9263,7 +9269,9 @@
           },
           "vmSize": "[if(empty(parameters('vmSize')), createObject('value', 'Standard_D2s_v5'), createObject('value', parameters('vmSize')))]",
           "adminUsername": "[if(empty(parameters('vmAdminUsername')), createObject('value', 'JumpboxAdminUser'), createObject('value', parameters('vmAdminUsername')))]",
-          "adminPassword": "[if(empty(parameters('vmAdminPassword')), createObject('value', 'JumpboxAdminP@ssw0rd1234!'), createObject('value', parameters('vmAdminPassword')))]",
+          "adminPassword": {
+            "value": "[parameters('vmAdminPassword')]"
+          },
           "managedIdentities": {
             "value": {
               "userAssignedResourceIds": [
@@ -9271,9 +9279,7 @@
               ]
             }
           },
-          "availabilityZone": {
-            "value": 1
-          },
+          "availabilityZone": "[if(contains(variables('zoneSupportedJumpboxLocations'), variables('solutionLocation')), createObject('value', 1), createObject('value', -1))]",
           "imageReference": {
             "value": {
               "publisher": "microsoft-dsvm",
@@ -24945,8 +24951,8 @@
       },
       "dependsOn": [
         "aiFoundryAiServices",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
         "virtualNetwork"
       ]
     },
@@ -25214,6 +25220,100 @@
       },
       "dependsOn": [
         "userAssignedIdentity"
+      ]
+    },
+    "existingAiServicesModelDeployments": {
+      "condition": "[variables('useExistingAiFoundryAiProject')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[take(format('module.model-deployments-existing.{0}', variables('aiFoundryAiServicesResourceName')), 64)]",
+      "subscriptionId": "[variables('aiFoundryAiServicesSubscriptionId')]",
+      "resourceGroup": "[variables('aiFoundryAiServicesResourceGroupName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "aiServicesName": {
+            "value": "[variables('aiFoundryAiServicesResourceName')]"
+          },
+          "deployments": {
+            "copy": [
+              {
+                "name": "value",
+                "count": "[length(variables('aiFoundryAiServicesModelDeployment'))]",
+                "input": "[createObject('name', variables('aiFoundryAiServicesModelDeployment')[copyIndex('value')].name, 'format', variables('aiFoundryAiServicesModelDeployment')[copyIndex('value')].format, 'model', variables('aiFoundryAiServicesModelDeployment')[copyIndex('value')].model, 'sku', createObject('name', variables('aiFoundryAiServicesModelDeployment')[copyIndex('value')].sku.name, 'capacity', variables('aiFoundryAiServicesModelDeployment')[copyIndex('value')].sku.capacity), 'version', variables('aiFoundryAiServicesModelDeployment')[copyIndex('value')].version, 'raiPolicyName', variables('aiFoundryAiServicesModelDeployment')[copyIndex('value')].raiPolicyName)]"
+              }
+            ]
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.41.2.15936",
+              "templateHash": "12449348145632794739"
+            }
+          },
+          "parameters": {
+            "aiServicesName": {
+              "type": "string",
+              "metadata": {
+                "description": "Required. Name of the AI Services account."
+              }
+            },
+            "deployments": {
+              "type": "array",
+              "defaultValue": [],
+              "metadata": {
+                "description": "Required. Array of model deployments to create."
+              }
+            }
+          },
+          "resources": [
+            {
+              "copy": {
+                "name": "modelDeployments",
+                "count": "[length(parameters('deployments'))]",
+                "mode": "serial",
+                "batchSize": 1
+              },
+              "type": "Microsoft.CognitiveServices/accounts/deployments",
+              "apiVersion": "2024-10-01",
+              "name": "[format('{0}/{1}', parameters('aiServicesName'), parameters('deployments')[copyIndex()].name)]",
+              "properties": {
+                "model": {
+                  "format": "[parameters('deployments')[copyIndex()].format]",
+                  "name": "[parameters('deployments')[copyIndex()].model]",
+                  "version": "[parameters('deployments')[copyIndex()].version]"
+                },
+                "raiPolicyName": "[parameters('deployments')[copyIndex()].raiPolicyName]"
+              },
+              "sku": {
+                "name": "[parameters('deployments')[copyIndex()].sku.name]",
+                "capacity": "[parameters('deployments')[copyIndex()].sku.capacity]"
+              }
+            }
+          ],
+          "outputs": {
+            "deployedModelNames": {
+              "type": "array",
+              "metadata": {
+                "description": "The names of the deployed models."
+              },
+              "copy": {
+                "count": "[length(parameters('deployments'))]",
+                "input": "[parameters('deployments')[copyIndex()].name]"
+              }
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "existingAiServicesRoleAssignments"
       ]
     },
     "aiSearch": {
@@ -44132,6 +44232,22 @@
               {
                 "name": "AZURE_AI_IMAGE_MODEL_DEPLOYMENT",
                 "value": "[variables('imageModelConfig')[parameters('imageModelChoice')].name]"
+              },
+              {
+                "name": "AZURE_BASIC_LOGGING_LEVEL",
+                "value": "INFO"
+              },
+              {
+                "name": "AZURE_PACKAGE_LOGGING_LEVEL",
+                "value": "WARNING"
+              },
+              {
+                "name": "AZURE_LOGGING_PACKAGES",
+                "value": ""
+              },
+              {
+                "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                "value": "[if(parameters('enableMonitoring'), reference('applicationInsights').outputs.connectionString.value, '')]"
               }
             ]
           }
@@ -44322,6 +44438,7 @@
       },
       "dependsOn": [
         "aiFoundryAiServicesProject",
+        "applicationInsights",
         "userAssignedIdentity",
         "virtualNetwork"
       ]

@@ -27,7 +27,7 @@ By default this template will use the environment name as the prefix to prevent 
 | `enablePrivateNetworking`              | boolean | `false`                    | Enable VNet integration and private endpoints (WAF-aligned).                  |
 | `AZURE_ENV_VM_SIZE`                    | string  | `""`                       | Overrides the jumpbox VM size (private networking only). Must support accelerated networking and Premium SSD. |
 | `AZURE_ENV_VM_ADMIN_USERNAME`          | string  | `""`                       | Sets the jumpbox VM admin username (private networking only).                 |
-| `AZURE_ENV_VM_ADMIN_PASSWORD`          | string  | `""`                       | Sets the jumpbox VM admin password (private networking only).                 |
+| `AZURE_ENV_VM_ADMIN_PASSWORD`          | string  | `""`                       | Sets the jumpbox VM admin password. Required to deploy the jumpbox when private networking is enabled. |
 | `ACR_NAME`                             | string  | `contentgencontainerreg`   | Sets the existing Azure Container Registry name (without `.azurecr.io`).      |
 | `IMAGE_TAG`                            | string  | `latest`                   | Sets the container image tag (e.g., `latest`, `dev`, `hotfix`).               |
 

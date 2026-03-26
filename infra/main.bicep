@@ -358,7 +358,6 @@ module applicationInsights 'br/public:avm/res/insights/component:0.7.1' = if (en
     disableIpMasking: false
     flowType: 'Bluefield'
     workspaceResourceId: logAnalyticsWorkspaceResourceId
-    diagnosticSettings: [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }]
   }
 }
 
@@ -390,6 +389,19 @@ module virtualNetwork 'modules/virtualNetwork.bicep' = if (enablePrivateNetworki
 
 // Azure Bastion Host
 var bastionHostName = 'bas-${solutionSuffix}'
+var zoneSupportedJumpboxLocations = [
+  'australiaeast'
+  'centralus'
+  'eastus'
+  'eastus2'
+  'japaneast'
+  'northeurope'
+  'southeastasia'
+  'swedencentral'
+  'uksouth'
+  'westus3'
+]
+var deployJumpbox = enablePrivateNetworking && !empty(vmAdminPassword)
 module bastionHost 'br/public:avm/res/network/bastion-host:0.8.2' = if (enablePrivateNetworking) {
   name: take('avm.res.network.bastion-host.${bastionHostName}', 64)
   params: {
@@ -419,7 +431,7 @@ module bastionHost 'br/public:avm/res/network/bastion-host:0.8.2' = if (enablePr
 
 // Jumpbox Virtual Machine
 var jumpboxVmName = take('vm-jumpbox-${solutionSuffix}', 15)
-module jumpboxVM 'br/public:avm/res/compute/virtual-machine:0.21.0' = if (enablePrivateNetworking) {
+module jumpboxVM 'br/public:avm/res/compute/virtual-machine:0.21.0' = if (deployJumpbox) {
   name: take('avm.res.compute.virtual-machine.${jumpboxVmName}', 64)
   params: {
     name: take(jumpboxVmName, 15)
@@ -428,13 +440,13 @@ module jumpboxVM 'br/public:avm/res/compute/virtual-machine:0.21.0' = if (enable
     osType: 'Windows'
     vmSize: empty(vmSize) ? 'Standard_D2s_v5' : vmSize
     adminUsername: empty(vmAdminUsername) ? 'JumpboxAdminUser' : vmAdminUsername
-    adminPassword: empty(vmAdminPassword) ? 'JumpboxAdminP@ssw0rd1234!' : vmAdminPassword
+    adminPassword: vmAdminPassword
     managedIdentities: {
       userAssignedResourceIds: [
         userAssignedIdentity.outputs.resourceId
       ]
     }
-    availabilityZone: 1
+    availabilityZone: contains(zoneSupportedJumpboxLocations, solutionLocation) ? 1 : -1
     imageReference: {
       publisher: 'microsoft-dsvm'
       offer: 'dsvm-win-2022'
@@ -630,6 +642,31 @@ module existingAiServicesRoleAssignments 'modules/deploy_foundry_role_assignment
     principalId: userAssignedIdentity.outputs.principalId
     principalType: 'ServicePrincipal'
   }
+}
+
+// ========== Model Deployments for Existing AI Services ========== //
+module existingAiServicesModelDeployments 'modules/deploy_ai_model.bicep' = if (useExistingAiFoundryAiProject) {
+  name: take('module.model-deployments-existing.${aiFoundryAiServicesResourceName}', 64)
+  scope: resourceGroup(aiFoundryAiServicesSubscriptionId, aiFoundryAiServicesResourceGroupName)
+  params: {
+    aiServicesName: aiFoundryAiServicesResourceName
+    deployments: [
+      for deployment in aiFoundryAiServicesModelDeployment: {
+        name: deployment.name
+        format: deployment.format
+        model: deployment.model
+        sku: {
+          name: deployment.sku.name
+          capacity: deployment.sku.capacity
+        }
+        version: deployment.version
+        raiPolicyName: deployment.raiPolicyName
+      }
+    ]
+  }
+  dependsOn: [
+    existingAiServicesRoleAssignments
+  ]
 }
 
 // ========== AI Search ========== //
@@ -971,6 +1008,12 @@ module containerInstance 'modules/container-instance.bicep' = {
       { name: 'AZURE_AI_PROJECT_ENDPOINT', value: aiFoundryAiProjectEndpoint }
       { name: 'AZURE_AI_MODEL_DEPLOYMENT_NAME', value: gptModelName }
       { name: 'AZURE_AI_IMAGE_MODEL_DEPLOYMENT', value: imageModelConfig[imageModelChoice].name }
+      // Logging Settings
+      { name: 'AZURE_BASIC_LOGGING_LEVEL', value: 'INFO' }
+      { name: 'AZURE_PACKAGE_LOGGING_LEVEL', value: 'WARNING' }
+      { name: 'AZURE_LOGGING_PACKAGES', value: '' }
+      // Application Insights
+      { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: enableMonitoring ? applicationInsights!.outputs.connectionString : '' }
     ]
   }
 }
