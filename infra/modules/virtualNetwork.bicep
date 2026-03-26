@@ -2,13 +2,16 @@
 // Networking - NSGs, VNET and Subnets for Content Generation Solution
 /****************************************************************************************************************************/
 @description('Name of the virtual network.')
-param name string 
+param name string
 
 @description('Azure region to deploy resources.')
 param location string = resourceGroup().location
 
 @description('Required. An Array of 1 or more IP Address Prefixes for the Virtual Network.')
 param addressPrefixes array = ['10.0.0.0/20']
+
+@description('Optional. Deploy Azure Bastion and Jumpbox subnets for VM-based administration.')
+param deployBastionAndJumpbox bool = false
 
 @description('An array of subnets to be created within the virtual network.')
 // Core subnets: web (App Service), peps (Private Endpoints), aci (Container Instance)
@@ -98,7 +101,7 @@ var coreSubnets = [
   }
 ]
 
-// Bastion and Jumpbox subnets (always deployed with private networking)
+// Bastion and Jumpbox subnets (only deployed when deployBastionAndJumpbox is true)
 // VM Size Notes:
 // 1 B-series VMs (like Standard_B2ms) do not support accelerated networking.
 // 2 Pick a VM size that supports accelerated networking + Premium SSD (the usual jump-box candidates):
@@ -107,7 +110,7 @@ var coreSubnets = [
 //   Standard_D2s_v4  (2 vCPU, 8 GiB RAM, Premium SSD)           // Previous gen, also broadly available.
 //   Standard_DS2_v2  (2 vCPU, 7 GiB RAM, Premium SSD)           // Legacy SKU, being retired from some regions - avoid for new deployments.
 // 3 A-series (Av2) is NOT suitable: no Premium SSD support, no accelerated networking.
-var bastionSubnets = [
+var bastionSubnets = deployBastionAndJumpbox ? [
   {
     name: 'AzureBastionSubnet'
     addressPrefixes: ['10.0.10.0/26']
@@ -191,7 +194,7 @@ var bastionSubnets = [
       ]
     }
   }
-]
+] : []
 
 var vnetSubnets = concat(coreSubnets, bastionSubnets)
 
@@ -270,6 +273,6 @@ output webSubnetResourceId string = contains(map(vnetSubnets, subnet => subnet.n
 output pepsSubnetResourceId string = contains(map(vnetSubnets, subnet => subnet.name), 'peps') ? virtualNetwork.outputs.subnetResourceIds[indexOf(map(vnetSubnets, subnet => subnet.name), 'peps')] : ''
 output aciSubnetResourceId string = contains(map(vnetSubnets, subnet => subnet.name), 'aci') ? virtualNetwork.outputs.subnetResourceIds[indexOf(map(vnetSubnets, subnet => subnet.name), 'aci')] : ''
 
-// Bastion/jumpbox subnet outputs (always present with private networking)
+// Bastion/jumpbox subnet outputs (present only when deployBastionAndJumpbox is true)
 output bastionSubnetResourceId string = contains(map(vnetSubnets, subnet => subnet.name), 'AzureBastionSubnet') ? virtualNetwork.outputs.subnetResourceIds[indexOf(map(vnetSubnets, subnet => subnet.name), 'AzureBastionSubnet')] : ''
 output jumpboxSubnetResourceId string = contains(map(vnetSubnets, subnet => subnet.name), 'jumpbox') ? virtualNetwork.outputs.subnetResourceIds[indexOf(map(vnetSubnets, subnet => subnet.name), 'jumpbox')] : ''

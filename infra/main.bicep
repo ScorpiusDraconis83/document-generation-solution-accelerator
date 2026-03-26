@@ -107,6 +107,9 @@ param existingLogAnalyticsWorkspaceId string = ''
 @description('Optional. Resource ID of an existing Foundry project.')
 param azureExistingAIProjectResourceId string = ''
 
+@description('Optional. Deploy Azure Bastion and Jumpbox resources for private network administration.')
+param deployBastionAndJumpbox bool = false
+
 @description('Optional. Jumpbox VM size. Must support accelerated networking and Premium SSD.')
 param vmSize string = ''
 
@@ -380,6 +383,7 @@ module virtualNetwork 'modules/virtualNetwork.bicep' = if (enablePrivateNetworki
     name: 'vnet-${solutionSuffix}'
     addressPrefixes: ['10.0.0.0/20'] // 4096 addresses (enough for 8 /23 subnets or 16 /24)
     location: location
+    deployBastionAndJumpbox: enablePrivateNetworking && deployBastionAndJumpbox && !empty(vmAdminPassword)
     tags: tags
     logAnalyticsWorkspaceId: logAnalyticsWorkspaceResourceId
     resourceSuffix: solutionSuffix
@@ -401,8 +405,8 @@ var zoneSupportedJumpboxLocations = [
   'uksouth'
   'westus3'
 ]
-var deployJumpbox = enablePrivateNetworking && !empty(vmAdminPassword)
-module bastionHost 'br/public:avm/res/network/bastion-host:0.8.2' = if (enablePrivateNetworking) {
+var deployAdminAccessResources = enablePrivateNetworking && deployBastionAndJumpbox && !empty(vmAdminPassword)
+module bastionHost 'br/public:avm/res/network/bastion-host:0.8.2' = if (deployAdminAccessResources) {
   name: take('avm.res.network.bastion-host.${bastionHostName}', 64)
   params: {
     name: bastionHostName
@@ -431,7 +435,7 @@ module bastionHost 'br/public:avm/res/network/bastion-host:0.8.2' = if (enablePr
 
 // Jumpbox Virtual Machine
 var jumpboxVmName = take('vm-jumpbox-${solutionSuffix}', 15)
-module jumpboxVM 'br/public:avm/res/compute/virtual-machine:0.21.0' = if (deployJumpbox) {
+module jumpboxVM 'br/public:avm/res/compute/virtual-machine:0.21.0' = if (deployAdminAccessResources) {
   name: take('avm.res.compute.virtual-machine.${jumpboxVmName}', 64)
   params: {
     name: take(jumpboxVmName, 15)

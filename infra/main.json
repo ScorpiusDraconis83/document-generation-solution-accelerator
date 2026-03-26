@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.41.2.15936",
-      "templateHash": "17721141165286158425"
+      "templateHash": "11738775177613917473"
     },
     "name": "Intelligent Content Generation Accelerator",
     "description": "Solution Accelerator for multimodal marketing content generation using Microsoft Agent Framework.\n"
@@ -167,6 +167,13 @@
       "defaultValue": "",
       "metadata": {
         "description": "Optional. Resource ID of an existing Foundry project."
+      }
+    },
+    "deployBastionAndJumpbox": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Optional. Deploy Azure Bastion and Jumpbox resources for private network administration."
       }
     },
     "vmSize": {
@@ -351,7 +358,7 @@
       "uksouth",
       "westus3"
     ],
-    "deployJumpbox": "[and(parameters('enablePrivateNetworking'), not(empty(parameters('vmAdminPassword'))))]",
+    "deployAdminAccessResources": "[and(and(parameters('enablePrivateNetworking'), parameters('deployBastionAndJumpbox')), not(empty(parameters('vmAdminPassword'))))]",
     "jumpboxVmName": "[take(format('vm-jumpbox-{0}', variables('solutionSuffix')), 15)]",
     "privateDnsZones": [
       "privatelink.cognitiveservices.azure.com",
@@ -4851,6 +4858,9 @@
           "location": {
             "value": "[parameters('location')]"
           },
+          "deployBastionAndJumpbox": {
+            "value": "[and(and(parameters('enablePrivateNetworking'), parameters('deployBastionAndJumpbox')), not(empty(parameters('vmAdminPassword'))))]"
+          },
           "tags": {
             "value": "[parameters('tags')]"
           },
@@ -4869,7 +4879,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.41.2.15936",
-              "templateHash": "1152564857842534701"
+              "templateHash": "11359193981707837191"
             }
           },
           "parameters": {
@@ -4893,6 +4903,13 @@
               ],
               "metadata": {
                 "description": "Required. An Array of 1 or more IP Address Prefixes for the Virtual Network."
+              }
+            },
+            "deployBastionAndJumpbox": {
+              "type": "bool",
+              "defaultValue": false,
+              "metadata": {
+                "description": "Optional. Deploy Azure Bastion and Jumpbox subnets for VM-based administration."
               }
             },
             "tags": {
@@ -5026,102 +5043,7 @@
                 }
               }
             ],
-            "bastionSubnets": [
-              {
-                "name": "AzureBastionSubnet",
-                "addressPrefixes": [
-                  "10.0.10.0/26"
-                ],
-                "networkSecurityGroup": {
-                  "name": "nsg-bastion",
-                  "securityRules": [
-                    {
-                      "name": "AllowGatewayManager",
-                      "properties": {
-                        "access": "Allow",
-                        "direction": "Inbound",
-                        "priority": 2702,
-                        "protocol": "*",
-                        "sourcePortRange": "*",
-                        "destinationPortRange": "443",
-                        "sourceAddressPrefix": "GatewayManager",
-                        "destinationAddressPrefix": "*"
-                      }
-                    },
-                    {
-                      "name": "AllowHttpsInBound",
-                      "properties": {
-                        "access": "Allow",
-                        "direction": "Inbound",
-                        "priority": 2703,
-                        "protocol": "*",
-                        "sourcePortRange": "*",
-                        "destinationPortRange": "443",
-                        "sourceAddressPrefix": "Internet",
-                        "destinationAddressPrefix": "*"
-                      }
-                    },
-                    {
-                      "name": "AllowSshRdpOutbound",
-                      "properties": {
-                        "access": "Allow",
-                        "direction": "Outbound",
-                        "priority": 100,
-                        "protocol": "*",
-                        "sourcePortRange": "*",
-                        "destinationPortRanges": [
-                          "22",
-                          "3389"
-                        ],
-                        "sourceAddressPrefix": "*",
-                        "destinationAddressPrefix": "VirtualNetwork"
-                      }
-                    },
-                    {
-                      "name": "AllowAzureCloudOutbound",
-                      "properties": {
-                        "access": "Allow",
-                        "direction": "Outbound",
-                        "priority": 110,
-                        "protocol": "Tcp",
-                        "sourcePortRange": "*",
-                        "destinationPortRange": "443",
-                        "sourceAddressPrefix": "*",
-                        "destinationAddressPrefix": "AzureCloud"
-                      }
-                    }
-                  ]
-                }
-              },
-              {
-                "name": "jumpbox",
-                "addressPrefixes": [
-                  "10.0.12.0/23"
-                ],
-                "networkSecurityGroup": {
-                  "name": "nsg-jumpbox",
-                  "securityRules": [
-                    {
-                      "name": "AllowRdpFromBastion",
-                      "properties": {
-                        "access": "Allow",
-                        "direction": "Inbound",
-                        "priority": 100,
-                        "protocol": "Tcp",
-                        "sourcePortRange": "*",
-                        "destinationPortRange": "3389",
-                        "sourceAddressPrefixes": [
-                          "10.0.10.0/26"
-                        ],
-                        "destinationAddressPrefixes": [
-                          "10.0.12.0/23"
-                        ]
-                      }
-                    }
-                  ]
-                }
-              }
-            ],
+            "bastionSubnets": "[if(parameters('deployBastionAndJumpbox'), createArray(createObject('name', 'AzureBastionSubnet', 'addressPrefixes', createArray('10.0.10.0/26'), 'networkSecurityGroup', createObject('name', 'nsg-bastion', 'securityRules', createArray(createObject('name', 'AllowGatewayManager', 'properties', createObject('access', 'Allow', 'direction', 'Inbound', 'priority', 2702, 'protocol', '*', 'sourcePortRange', '*', 'destinationPortRange', '443', 'sourceAddressPrefix', 'GatewayManager', 'destinationAddressPrefix', '*')), createObject('name', 'AllowHttpsInBound', 'properties', createObject('access', 'Allow', 'direction', 'Inbound', 'priority', 2703, 'protocol', '*', 'sourcePortRange', '*', 'destinationPortRange', '443', 'sourceAddressPrefix', 'Internet', 'destinationAddressPrefix', '*')), createObject('name', 'AllowSshRdpOutbound', 'properties', createObject('access', 'Allow', 'direction', 'Outbound', 'priority', 100, 'protocol', '*', 'sourcePortRange', '*', 'destinationPortRanges', createArray('22', '3389'), 'sourceAddressPrefix', '*', 'destinationAddressPrefix', 'VirtualNetwork')), createObject('name', 'AllowAzureCloudOutbound', 'properties', createObject('access', 'Allow', 'direction', 'Outbound', 'priority', 110, 'protocol', 'Tcp', 'sourcePortRange', '*', 'destinationPortRange', '443', 'sourceAddressPrefix', '*', 'destinationAddressPrefix', 'AzureCloud'))))), createObject('name', 'jumpbox', 'addressPrefixes', createArray('10.0.12.0/23'), 'networkSecurityGroup', createObject('name', 'nsg-jumpbox', 'securityRules', createArray(createObject('name', 'AllowRdpFromBastion', 'properties', createObject('access', 'Allow', 'direction', 'Inbound', 'priority', 100, 'protocol', 'Tcp', 'sourcePortRange', '*', 'destinationPortRange', '3389', 'sourceAddressPrefixes', createArray('10.0.10.0/26'), 'destinationAddressPrefixes', createArray('10.0.12.0/23'))))))), createArray())]",
             "vnetSubnets": "[concat(variables('coreSubnets'), variables('bastionSubnets'))]"
           },
           "resources": [
@@ -7504,7 +7426,7 @@
       ]
     },
     "bastionHost": {
-      "condition": "[parameters('enablePrivateNetworking')]",
+      "condition": "[variables('deployAdminAccessResources')]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2025-04-01",
       "name": "[take(format('avm.res.network.bastion-host.{0}', variables('bastionHostName')), 64)]",
@@ -9245,7 +9167,7 @@
       ]
     },
     "jumpboxVM": {
-      "condition": "[variables('deployJumpbox')]",
+      "condition": "[variables('deployAdminAccessResources')]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2025-04-01",
       "name": "[take(format('avm.res.compute.virtual-machine.{0}', variables('jumpboxVmName')), 64)]",
@@ -24951,8 +24873,8 @@
       },
       "dependsOn": [
         "aiFoundryAiServices",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
         "virtualNetwork"
       ]
     },
