@@ -377,13 +377,14 @@ module userAssignedIdentity 'br/public:avm/res/managed-identity/user-assigned-id
 }
 
 // ========== Virtual Network and Networking Components ========== //
+var deployAdminAccessResources = enablePrivateNetworking && deployBastionAndJumpbox && !empty(vmAdminPassword)
 module virtualNetwork 'modules/virtualNetwork.bicep' = if (enablePrivateNetworking) {
   name: take('module.virtualNetwork.${solutionSuffix}', 64)
   params: {
     name: 'vnet-${solutionSuffix}'
     addressPrefixes: ['10.0.0.0/20'] // 4096 addresses (enough for 8 /23 subnets or 16 /24)
     location: solutionLocation
-    deployBastionAndJumpbox: enablePrivateNetworking && deployBastionAndJumpbox
+    deployBastionAndJumpbox: deployAdminAccessResources
     tags: tags
     logAnalyticsWorkspaceId: logAnalyticsWorkspaceResourceId
     resourceSuffix: solutionSuffix
@@ -405,7 +406,6 @@ var zoneSupportedJumpboxLocations = [
   'uksouth'
   'westus3'
 ]
-var deployAdminAccessResources = enablePrivateNetworking && deployBastionAndJumpbox && !empty(vmAdminPassword)
 module bastionHost 'br/public:avm/res/network/bastion-host:0.8.2' = if (deployAdminAccessResources) {
   name: take('avm.res.network.bastion-host.${bastionHostName}', 64)
   params: {
