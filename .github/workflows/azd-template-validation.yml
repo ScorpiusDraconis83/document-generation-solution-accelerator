@@ -8,7 +8,6 @@ permissions:
   contents: read
   id-token: write
   pull-requests: write
-
 jobs:
   template_validation:
     runs-on: ubuntu-latest
