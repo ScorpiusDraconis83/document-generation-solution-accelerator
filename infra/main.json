@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.41.2.15936",
-      "templateHash": "14575344972848807462"
+      "templateHash": "11471837462839864996"
     },
     "name": "Intelligent Content Generation Accelerator",
     "description": "Solution Accelerator for multimodal marketing content generation using Microsoft Agent Framework.\n"
@@ -3570,14 +3570,7 @@
           "flowType": {
             "value": "Bluefield"
           },
-          "workspaceResourceId": "[if(variables('useExistingLogAnalytics'), createObject('value', parameters('existingLogAnalyticsWorkspaceId')), if(parameters('enableMonitoring'), createObject('value', reference('logAnalyticsWorkspace').outputs.resourceId.value), createObject('value', '')))]",
-          "diagnosticSettings": {
-            "value": [
-              {
-                "workspaceResourceId": "[if(variables('useExistingLogAnalytics'), parameters('existingLogAnalyticsWorkspaceId'), if(parameters('enableMonitoring'), reference('logAnalyticsWorkspace').outputs.resourceId.value, ''))]"
-              }
-            ]
-          }
+          "workspaceResourceId": "[if(variables('useExistingLogAnalytics'), createObject('value', parameters('existingLogAnalyticsWorkspaceId')), if(parameters('enableMonitoring'), createObject('value', reference('logAnalyticsWorkspace').outputs.resourceId.value), createObject('value', '')))]"
         },
         "template": {
           "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
@@ -14247,6 +14240,100 @@
       },
       "dependsOn": [
         "userAssignedIdentity"
+      ]
+    },
+    "existingAiServicesModelDeployments": {
+      "condition": "[variables('useExistingAiFoundryAiProject')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[take(format('module.model-deployments-existing.{0}', variables('aiFoundryAiServicesResourceName')), 64)]",
+      "subscriptionId": "[variables('aiFoundryAiServicesSubscriptionId')]",
+      "resourceGroup": "[variables('aiFoundryAiServicesResourceGroupName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "aiServicesName": {
+            "value": "[variables('aiFoundryAiServicesResourceName')]"
+          },
+          "deployments": {
+            "copy": [
+              {
+                "name": "value",
+                "count": "[length(variables('aiFoundryAiServicesModelDeployment'))]",
+                "input": "[createObject('name', variables('aiFoundryAiServicesModelDeployment')[copyIndex('value')].name, 'format', variables('aiFoundryAiServicesModelDeployment')[copyIndex('value')].format, 'model', variables('aiFoundryAiServicesModelDeployment')[copyIndex('value')].model, 'sku', createObject('name', variables('aiFoundryAiServicesModelDeployment')[copyIndex('value')].sku.name, 'capacity', variables('aiFoundryAiServicesModelDeployment')[copyIndex('value')].sku.capacity), 'version', variables('aiFoundryAiServicesModelDeployment')[copyIndex('value')].version, 'raiPolicyName', variables('aiFoundryAiServicesModelDeployment')[copyIndex('value')].raiPolicyName)]"
+              }
+            ]
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.41.2.15936",
+              "templateHash": "12449348145632794739"
+            }
+          },
+          "parameters": {
+            "aiServicesName": {
+              "type": "string",
+              "metadata": {
+                "description": "Required. Name of the AI Services account."
+              }
+            },
+            "deployments": {
+              "type": "array",
+              "defaultValue": [],
+              "metadata": {
+                "description": "Required. Array of model deployments to create."
+              }
+            }
+          },
+          "resources": [
+            {
+              "copy": {
+                "name": "modelDeployments",
+                "count": "[length(parameters('deployments'))]",
+                "mode": "serial",
+                "batchSize": 1
+              },
+              "type": "Microsoft.CognitiveServices/accounts/deployments",
+              "apiVersion": "2024-10-01",
+              "name": "[format('{0}/{1}', parameters('aiServicesName'), parameters('deployments')[copyIndex()].name)]",
+              "properties": {
+                "model": {
+                  "format": "[parameters('deployments')[copyIndex()].format]",
+                  "name": "[parameters('deployments')[copyIndex()].model]",
+                  "version": "[parameters('deployments')[copyIndex()].version]"
+                },
+                "raiPolicyName": "[parameters('deployments')[copyIndex()].raiPolicyName]"
+              },
+              "sku": {
+                "name": "[parameters('deployments')[copyIndex()].sku.name]",
+                "capacity": "[parameters('deployments')[copyIndex()].sku.capacity]"
+              }
+            }
+          ],
+          "outputs": {
+            "deployedModelNames": {
+              "type": "array",
+              "metadata": {
+                "description": "The names of the deployed models."
+              },
+              "copy": {
+                "count": "[length(parameters('deployments'))]",
+                "input": "[parameters('deployments')[copyIndex()].name]"
+              }
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "existingAiServicesRoleAssignments"
       ]
     },
     "aiSearch": {
@@ -33165,6 +33252,22 @@
               {
                 "name": "AZURE_AI_IMAGE_MODEL_DEPLOYMENT",
                 "value": "[variables('imageModelConfig')[parameters('imageModelChoice')].name]"
+              },
+              {
+                "name": "AZURE_BASIC_LOGGING_LEVEL",
+                "value": "INFO"
+              },
+              {
+                "name": "AZURE_PACKAGE_LOGGING_LEVEL",
+                "value": "WARNING"
+              },
+              {
+                "name": "AZURE_LOGGING_PACKAGES",
+                "value": ""
+              },
+              {
+                "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                "value": "[if(parameters('enableMonitoring'), reference('applicationInsights').outputs.connectionString.value, '')]"
               }
             ]
           }
@@ -33355,6 +33458,7 @@
       },
       "dependsOn": [
         "aiFoundryAiServicesProject",
+        "applicationInsights",
         "userAssignedIdentity",
         "virtualNetwork"
       ]
