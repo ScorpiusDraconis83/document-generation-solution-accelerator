@@ -11,6 +11,16 @@ jobs:
     runs-on: ubuntu-latest
     name: azd deploy
     environment: production
+    env:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_ENV_NAME: ${{ secrets.AZURE_ENV_NAME }}
+      AZURE_LOCATION: ${{ secrets.AZURE_LOCATION }}
+      AZURE_ENV_OPENAI_LOCATION: ${{ secrets.AZURE_ENV_OPENAI_LOCATION }}
+      AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID: ${{ secrets.AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID }}
+      AZURE_EXISTING_AI_PROJECT_RESOURCE_ID: ${{ secrets.AZURE_EXISTING_AI_PROJECT_RESOURCE_ID }}
+      AZURE_DEV_COLLECT_TELEMETRY: ${{ vars.AZURE_DEV_COLLECT_TELEMETRY }}
 
     steps:
       - name: Checkout Code
@@ -28,9 +38,6 @@ jobs:
 
       - name: Login to AZD
         shell: bash
-        env:
-          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
         run: |
           azd auth login \
             --client-id "$AZURE_CLIENT_ID" \
@@ -39,27 +46,20 @@ jobs:
 
       - name: Provision and Deploy
         shell: bash
-        env:
-          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          AZURE_ENV_NAME: ${{ secrets.AZURE_ENV_NAME }}
-          AZURE_LOCATION: ${{ secrets.AZURE_LOCATION }}
-          AZURE_ENV_OPENAI_LOCATION: ${{ secrets.AZURE_ENV_OPENAI_LOCATION }}
-          AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID: ${{ secrets.AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID }}
-          AZURE_EXISTING_AI_PROJECT_RESOURCE_ID: ${{ secrets.AZURE_EXISTING_AI_PROJECT_RESOURCE_ID }}
-          AZURE_DEV_COLLECT_TELEMETRY: ${{ vars.AZURE_DEV_COLLECT_TELEMETRY }}
         run: |
-          set -euo pipefail
-
-          # Determine whether the AZD environment already exists.
-          # Fail fast if we cannot list environments.
-          if ! env_list=$(azd env list); then
-            echo "Error: Failed to list azd environments. Not creating a new environment." >&2
-            exit 1
-          fi
-
-          if printf '%s\n' "$env_list" | grep -qx "$AZURE_ENV_NAME"; then
-            azd env select "$AZURE_ENV_NAME"
-          else
+          if ! azd env select "$AZURE_ENV_NAME"; then
             azd env new "$AZURE_ENV_NAME" --subscription "$AZURE_SUBSCRIPTION_ID" --location "$AZURE_LOCATION" --no-prompt
           fi
+
+          azd config set defaults.subscription "$AZURE_SUBSCRIPTION_ID"
+          
+
+          if [[ -n "${AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID:-}" ]]; then
+            azd env set AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID "$AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID"
+          fi
+
+          if [[ -n "${AZURE_EXISTING_AI_PROJECT_RESOURCE_ID:-}" ]]; then
+            azd env set AZURE_EXISTING_AI_PROJECT_RESOURCE_ID "$AZURE_EXISTING_AI_PROJECT_RESOURCE_ID"
+          fi
+
           azd up --no-prompt
