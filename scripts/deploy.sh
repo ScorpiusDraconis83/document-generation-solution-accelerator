@@ -134,6 +134,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     npm run build
     
     # Copy built files to server directory
+    mkdir -p "$PROJECT_DIR/src/app/server/static"
     cp -r "$PROJECT_DIR/src/app/static/"* "$PROJECT_DIR/src/app/server/static/"
     
     cd "$PROJECT_DIR/src/app/server"

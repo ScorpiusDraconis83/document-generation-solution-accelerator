@@ -136,6 +136,7 @@ if ($continue -eq "y" -or $continue -eq "Y") {
     npm run build
     
     # Copy built files to server directory
+    New-Item -ItemType Directory -Force "$ProjectDir\src\app\server\static" | Out-Null
     Copy-Item -Path "$ProjectDir\src\app\static\*" -Destination "$ProjectDir\src\app\server\static\" -Recurse -Force
     
     Set-Location "$ProjectDir\src\app\server"
