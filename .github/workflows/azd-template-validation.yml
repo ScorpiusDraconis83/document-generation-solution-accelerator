@@ -17,6 +17,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set timestamp
+        shell: bash
+        run: echo "HHMM=$(date -u +'%H%M')" >> "$GITHUB_ENV"
+
       - name: Validate Azure Template
         uses: microsoft/template-validation-action@v0.4.3
         with:
@@ -28,7 +32,7 @@ jobs:
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          AZURE_ENV_NAME: ${{ secrets.AZURE_ENV_NAME }}
+          AZURE_ENV_NAME: ${{ secrets.AZURE_ENV_NAME }}-${{ env.HHMM }}
           AZURE_LOCATION: ${{ secrets.AZURE_LOCATION }}
           AZURE_ENV_OPENAI_LOCATION: ${{ secrets.AZURE_ENV_OPENAI_LOCATION }}
           AZURE_AI_MODEL_CAPACITY: 1
