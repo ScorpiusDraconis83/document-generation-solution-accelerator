@@ -1,6 +1,6 @@
 name: AZD Template Validation
 on:
-push:
+  push:
     branches:
       - psl-content-gen-templatev
   schedule:
