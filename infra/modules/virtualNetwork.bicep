@@ -2,7 +2,7 @@
 // Networking - NSGs, VNET and Subnets for Content Generation Solution
 /****************************************************************************************************************************/
 @description('Name of the virtual network.')
-param name string
+param vnetName string
 
 @description('Azure region to deploy resources.')
 param location string = resourceGroup().location
@@ -227,9 +227,9 @@ module nsgs 'br/public:avm/res/network/network-security-group:0.5.2' = [
 
 // Create VNet and subnets using AVM Virtual Network module
 module virtualNetwork 'br/public:avm/res/network/virtual-network:0.7.2' = {
-  name: take('avm.res.network.virtual-network.${name}', 64)
+  name: take('avm.res.network.virtual-network.${vnetName}', 64)
   params: {
-    name: name
+    name: vnetName
     location: location
     addressPrefixes: addressPrefixes
     subnets: [

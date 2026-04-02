@@ -381,7 +381,7 @@ var deployAdminAccessResources = enablePrivateNetworking && deployBastionAndJump
 module virtualNetwork 'modules/virtualNetwork.bicep' = if (enablePrivateNetworking) {
   name: take('module.virtualNetwork.${solutionSuffix}', 64)
   params: {
-    name: 'vnet-${solutionSuffix}'
+    vnetName: 'vnet-${solutionSuffix}'
     addressPrefixes: ['10.0.0.0/20'] // 4096 addresses (enough for 8 /23 subnets or 16 /24)
     location: solutionLocation
     deployBastionAndJumpbox: deployAdminAccessResources
