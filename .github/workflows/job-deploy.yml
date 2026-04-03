@@ -339,12 +339,14 @@ jobs:
           AZURE_REGIONS: ${{ vars.AZURE_REGIONS }}
         run: |
           chmod +x scripts/checkquota.sh
-          if ! scripts/checkquota.sh; then
+          QUOTA_OUTPUT="$(scripts/checkquota.sh 2>&1)"; QUOTA_STATUS=$?
+          echo "$QUOTA_OUTPUT"
+          if [ "$QUOTA_STATUS" -ne 0 ]; then
             # If quota check fails due to insufficient quota, set the flag
-            if grep -q "No region with sufficient quota found" scripts/checkquota.sh; then
+            if echo "$QUOTA_OUTPUT" | grep -q "No region with sufficient quota found"; then
               echo "QUOTA_FAILED=true" >> $GITHUB_ENV
             fi
-            exit 1  # Fail the pipeline if any other failure occurs
+            exit 1  # Fail the pipeline if any failure occurs
           fi
 
       - name: Set Quota Failure Output
