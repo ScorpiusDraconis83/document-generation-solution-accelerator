@@ -83,7 +83,7 @@ hooks:
         Write-Host "Image: ${backendImage}:latest" -ForegroundColor Cyan
         
         az acr login --name $acrName 2>$null
-        az acr build --registry $acrName --image "${backendImage}:latest" --file ./src/backend/ApiApp.Dockerfile ./src/backend --no-logs
+        az acr build --registry $acrName --image "${backendImage}:latest" --file ./src/backend/ApiApp.Dockerfile ./src/backend
         if ($LASTEXITCODE -ne 0) {
           Write-Host "Failed to build container image" -ForegroundColor Red
           exit 1
@@ -151,7 +151,7 @@ hooks:
         echo "Registry: $ACR_NAME"
         echo "Image: $BACKEND_IMAGE:latest"
         
-        if az acr build --registry "$ACR_NAME" --image "$BACKEND_IMAGE:latest" --file ./src/backend/ApiApp.Dockerfile ./src/backend --no-logs; then
+        if az acr build --registry "$ACR_NAME" --image "$BACKEND_IMAGE:latest" --file ./src/backend/ApiApp.Dockerfile ./src/backend; then
           echo "Container image built and pushed successfully!"
         else
           echo "Failed to build container image"
