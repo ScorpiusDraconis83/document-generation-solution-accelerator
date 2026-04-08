@@ -124,14 +124,14 @@ This single command will:
 
 ```bash
 # Set the resource ID of your existing AI Project
-azd env set AZURE_ENV_FOUNDRY_PROJECT_RID "/subscriptions/<sub-id>/resourceGroups/<rg>/providers/Microsoft.MachineLearningServices/workspaces/<project-name>"
+azd env set AZURE_EXISTING_AIPROJECT_RESOURCE_ID "/subscriptions/<sub-id>/resourceGroups/<rg>/providers/Microsoft.MachineLearningServices/workspaces/<project-name>"
 ```
 
 ### Reuse Existing Log Analytics Workspace
 
 ```bash
 # Set the resource ID of your existing Log Analytics workspace
-azd env set AZURE_ENV_LOG_ANALYTICS_WORKSPACE_RID "/subscriptions/<sub-id>/resourceGroups/<rg>/providers/Microsoft.OperationalInsights/workspaces/<workspace-name>"
+azd env set AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID "/subscriptions/<sub-id>/resourceGroups/<rg>/providers/Microsoft.OperationalInsights/workspaces/<workspace-name>"
 ```
 
 ## Post-Deployment

@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.42.1.51946",
-      "templateHash": "2787206892264299441"
+      "templateHash": "15695041727004400845"
     },
     "name": "Intelligent Content Generation Accelerator",
     "description": "Solution Accelerator for multimodal marketing content generation using Microsoft Agent Framework.\n"
@@ -44453,7 +44453,7 @@
       },
       "value": "[if(variables('useExistingAiFoundryAiProject'), '', reference('aiFoundryAiServices').outputs.resourceId.value)]"
     },
-    "AZURE_ENV_FOUNDRY_PROJECT_RID": {
+    "AZURE_EXISTING_AIPROJECT_RESOURCE_ID": {
       "type": "string",
       "metadata": {
         "description": "Contains existing AI project resource ID."

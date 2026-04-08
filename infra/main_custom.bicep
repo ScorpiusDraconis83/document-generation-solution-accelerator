@@ -1209,7 +1209,7 @@ output AZURE_AI_AGENT_API_VERSION string = azureAiAgentApiVersion
 output AZURE_APPLICATION_INSIGHTS_CONNECTION_STRING string = (enableMonitoring && !useExistingLogAnalytics) ? applicationInsights!.outputs.connectionString : ''
 
 @description('Contains the location used for AI Services deployment')
-output AZURE_ENV_OPENAI_LOCATION string = azureAiServiceLocation
+output AZURE_ENV_AI_SERVICE_LOCATION string = azureAiServiceLocation
 
 @description('Contains Container Instance Name')
 output CONTAINER_INSTANCE_NAME string = shouldDeployACI ? containerInstance!.name : ''

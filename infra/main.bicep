@@ -1069,7 +1069,7 @@ output AI_FOUNDRY_RG_NAME string = aiFoundryAiServicesResourceGroupName
 output AI_FOUNDRY_RESOURCE_ID string = useExistingAiFoundryAiProject ? '' : aiFoundryAiServices!.outputs.resourceId
 
 @description('Contains existing AI project resource ID.')
-output AZURE_ENV_FOUNDRY_PROJECT_RID string = azureExistingAIProjectResourceId
+output AZURE_EXISTING_AIPROJECT_RESOURCE_ID string = azureExistingAIProjectResourceId
 
 @description('Contains AI Search Service Endpoint URL')
 output AZURE_AI_SEARCH_ENDPOINT string = 'https://${aiSearch.outputs.name}.search.windows.net/'

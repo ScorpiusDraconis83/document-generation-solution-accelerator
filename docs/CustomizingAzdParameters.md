@@ -19,8 +19,8 @@ By default this template will use the environment name as the prefix to prevent 
 | `AZURE_ENV_IMAGE_MODEL_CAPACITY`       | integer | `1`                        | Sets the image model deployment capacity in RPM (minimum: `1`).               |
 | `AZURE_ENV_OPENAI_API_VERSION`            | string  | `2025-01-01-preview`       | Specifies the API version for Azure OpenAI service.                           |
 | `AZURE_ENV_AI_SERVICE_LOCATION`           | string  | `<User selects during deployment>` | Sets the Azure region for OpenAI resource deployment. Allowed: `australiaeast`, `canadaeast`, `eastus2`, `japaneast`, `koreacentral`, `polandcentral`, `swedencentral`, `switzerlandnorth`, `uaenorth`, `uksouth`, `westus3`. |
-| `AZURE_ENV_LOG_ANALYTICS_WORKSPACE_RID`   | string  | `""`                       | Reuses an existing Log Analytics Workspace instead of creating a new one.     |
-| `AZURE_ENV_FOUNDRY_PROJECT_RID`           | string  | `""`                       | Reuses an existing AI Foundry Project instead of creating a new one.          |
+| `AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID`   | string  | `""`                       | Reuses an existing Log Analytics Workspace instead of creating a new one.     |
+| `AZURE_EXISTING_AIPROJECT_RESOURCE_ID`           | string  | `""`                       | Reuses an existing AI Foundry Project instead of creating a new one.          |
 | `enableMonitoring`                     | boolean | `false`                    | Enable Log Analytics and Application Insights (WAF-aligned).                  |
 | `enableScalability`                    | boolean | `false`                    | Enable auto-scaling and higher SKUs (WAF-aligned).                            |
 | `enableRedundancy`                     | boolean | `false`                    | Enable zone redundancy and geo-replication (WAF-aligned).                     |

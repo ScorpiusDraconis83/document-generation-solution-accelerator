@@ -105,7 +105,7 @@ hooks:
             --template-file ./infra/main.bicep `
             --parameters solutionName=$env:AZURE_ENV_NAME `
             --parameters location=$env:AZURE_LOCATION `
-            --parameters azureAiServiceLocation=$env:AZURE_ENV_OPENAI_LOCATION `
+            --parameters azureAiServiceLocation=$env:AZURE_ENV_AI_SERVICE_LOCATION `
             --parameters imageTag=latest `
             --query "properties.outputs" -o json | Out-Null
           
@@ -172,7 +172,7 @@ hooks:
             --template-file ./infra/main.bicep \
             --parameters solutionName="$AZURE_ENV_NAME" \
             --parameters location="$AZURE_LOCATION" \
-            --parameters azureAiServiceLocation="$AZURE_ENV_OPENAI_LOCATION" \
+            --parameters azureAiServiceLocation="$AZURE_ENV_AI_SERVICE_LOCATION" \
             --parameters imageTag=latest \
             --query "properties.outputs" -o json > /dev/null; then
             # Refresh azd env with new outputs
