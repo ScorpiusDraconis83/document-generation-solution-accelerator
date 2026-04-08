@@ -43,7 +43,8 @@ export const ChatInput = memo(function ChatInput({
     if (controlledValue === undefined) setInternalValue(v);
   }, [controlledOnChange, controlledValue]);
 
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
     if (inputValue.trim() && !disabled) {
       onSendMessage(inputValue.trim());
       setInputValue('');
@@ -53,7 +54,7 @@ export const ChatInput = memo(function ChatInput({
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit();
+      handleSubmit(e);
     }
   }, [handleSubmit]);
 

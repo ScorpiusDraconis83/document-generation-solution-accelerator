@@ -178,7 +178,7 @@ httpClient.onRequest(async (_url, init) => {
   try {
     const { store } = await import('../store/store');
     const state = store?.getState?.();
-    const userId: string = state?.app?.userId || 'anonymous';
+    const userId: string = state?.app?.userId ?? 'anonymous';
     headers.set('X-Ms-Client-Principal-Id', userId);
   } catch {
     headers.set('X-Ms-Client-Principal-Id', 'anonymous');
