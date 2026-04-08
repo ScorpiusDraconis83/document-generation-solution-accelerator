@@ -129,15 +129,15 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     echo "Step 3: Building and deploying frontend..."
     echo "=========================================="
     
-    cd "$PROJECT_DIR/src/app"
+    cd "$PROJECT_DIR/src/App"
     npm install
     npm run build
     
     # Copy built files to server directory
-    mkdir -p "$PROJECT_DIR/src/app/server/static"
-    cp -r "$PROJECT_DIR/src/app/static/"* "$PROJECT_DIR/src/app/server/static/"
+    mkdir -p "$PROJECT_DIR/src/App/server/static"
+    cp -r "$PROJECT_DIR/src/App/static/"* "$PROJECT_DIR/src/App/server/static/"
     
-    cd "$PROJECT_DIR/src/app/server"
+    cd "$PROJECT_DIR/src/App/server"
     
     # Create deployment package
     rm -f frontend-deploy.zip

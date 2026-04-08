@@ -35,8 +35,8 @@ updates:
   # npm dependencies - grouped
   - package-ecosystem: "npm"
     directories:
-      - "/src/app"
-      - "/src/app/server"
+      - "/src/App"
+      - "/src/App/server"
     schedule:
       interval: "monthly"
     target-branch: "dependabotchanges"
