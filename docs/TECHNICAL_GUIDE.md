@@ -179,7 +179,7 @@ BRAND_SECONDARY_COLOR=#107C10
 
 ## Documentation
 
-- [Local Development Guide](./LOCAL_DEPLOYMENT.md) - Run locally for development
+- [Local Development Guide](./LocalDevelopmentSetup.md) - Run locally for development
 - [AZD Deployment Guide](./AZD_DEPLOYMENT.md) - Deploy with Azure Developer CLI
 - [Manual Deployment Guide](./DEPLOYMENT.md) - Step-by-step manual deployment
 - [Image Generation Configuration](./IMAGE_GENERATION.md) - GPT image model setup
