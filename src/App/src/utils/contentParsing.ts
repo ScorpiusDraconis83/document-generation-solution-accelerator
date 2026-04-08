@@ -61,8 +61,8 @@ function parseTextContent(
  * Resolve the best available image URL from a raw API response.
  *
  * Priority: explicit `image_url` (with blob rewrite) → base64 data URI.
- * Pass `rewriteBlobs: true` (default) when restoring from a saved
- * conversation; `false` when the response just came from the live API.
+ * Pass `rewriteBlobs: true` when restoring from a saved
+ * conversation; `false` (default) when the response just came from the live API.
  */
 function resolveImageUrl(
   raw: { image_url?: string; image_base64?: string },
