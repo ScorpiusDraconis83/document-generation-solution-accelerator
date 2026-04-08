@@ -2,12 +2,16 @@
 # This script is called by AZD during prepackage hook
 # Working directory is ./src/app/frontend-server (project directory)
 
+$ErrorActionPreference = 'Stop'
+
 Write-Host "Building React frontend..." -ForegroundColor Cyan
 
 # Build React frontend (one level up)
 Push-Location ../frontend
 npm ci --loglevel=error
+if ($LASTEXITCODE -ne 0) { throw "npm ci failed with exit code $LASTEXITCODE" }
 npm run build -- --outDir ../frontend-server/static
+if ($LASTEXITCODE -ne 0) { throw "npm run build failed with exit code $LASTEXITCODE" }
 Pop-Location
 
 Write-Host "Packaging frontend server..." -ForegroundColor Cyan

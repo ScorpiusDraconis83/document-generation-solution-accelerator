@@ -1,4 +1,6 @@
 #!/bin/bash
+set -euo pipefail
+
 # Package frontend for App Service deployment
 # This script is called by AZD during prepackage hook
 # Working directory is ./src/app/frontend-server (project directory)

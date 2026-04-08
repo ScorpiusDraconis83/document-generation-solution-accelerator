@@ -141,6 +141,10 @@ param backendImageName string = 'content-gen-api'
 @description('Optional. Image tag for container deployment. Leave empty to skip ACI deployment.')
 param imageTag string
 
+@description('Optional. Azure Container Registry name (unused - ACR name is auto-generated). Declared for parameter file compatibility.')
+#disable-next-line no-unused-params
+param acrName string = ''
+
 @description('Optional. Created by user name.')
 param createdBy string = contains(deployer(), 'userPrincipalName')? split(deployer().userPrincipalName, '@')[0]: deployer().objectId
 
@@ -160,6 +164,7 @@ var solutionSuffix = toLower(trim(replace(
   ''
 )))
 
+// ACR name is always auto-generated in custom deployment
 var acrResourceName = 'cr${solutionSuffix}'
 
 var cosmosDbZoneRedundantHaRegionPairs = {
@@ -381,9 +386,16 @@ module containerRegistry 'br/public:avm/res/container-registry/registry:0.9.0' =
     enableTelemetry: enableTelemetry
     acrSku: 'Standard'
     acrAdminUserEnabled: false
-    anonymousPullEnabled: true  // Allows ACI to pull images without credentials
+    anonymousPullEnabled: false
     publicNetworkAccess: 'Enabled'
     networkRuleBypassOptions: 'AzureServices'
+    roleAssignments: [
+      {
+        principalId: userAssignedIdentity.outputs.principalId
+        roleDefinitionIdOrName: '7f951dda-4ed3-4680-a7ca-43fe172d538d' // AcrPull
+        principalType: 'ServicePrincipal'
+      }
+    ]
   }
 }
 
@@ -889,61 +901,120 @@ module webSite 'modules/web-sites.bicep' = {
 }
 
 // ========== Container Instance (Backend API) ========== //
-// CUSTOM DEPLOYMENT: ACI is skipped when imageTag='none' (first run), deployed after images are built
+// CUSTOM DEPLOYMENT: Inline ACI definition with managed identity auth for ACR
 var containerInstanceName = 'aci-${solutionSuffix}'
 var backendImageUrl = '${containerRegistry.outputs.loginServer}/${backendImageName}:${imageTag}'
+var aciPort = 8000
+var isPrivateNetworking = enablePrivateNetworking
+// Construct identity resource ID from known values (required for deployment-time calculation)
+var userAssignedIdentityResourceIdForACI = '/subscriptions/${subscription().subscriptionId}/resourceGroups/${resourceGroup().name}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/${userAssignedIdentityResourceName}'
 // Deploy ACI only when imageTag is set to a real tag (not 'none')
 var shouldDeployACI = !empty(imageTag) && imageTag != 'none'
-module containerInstance 'modules/container-instance.bicep' = if (shouldDeployACI) {
-  name: take('module.container-instance.${containerInstanceName}', 64)
-  params: {
-    name: containerInstanceName
-    location: solutionLocation
-    tags: tags
-    containerImage: backendImageUrl
-    cpu: 2
-    memoryInGB: 4
-    port: 8000
-    // Only pass subnetResourceId when private networking is enabled
-    subnetResourceId: enablePrivateNetworking ? virtualNetwork!.outputs.aciSubnetResourceId : ''
-    userAssignedIdentityResourceId: userAssignedIdentity.outputs.resourceId
-    enableTelemetry: enableTelemetry
-    environmentVariables: [
-      // Azure OpenAI Settings
-      { name: 'AZURE_OPENAI_ENDPOINT', value: 'https://${aiFoundryAiServicesResourceName}.openai.azure.com/' }
-      { name: 'AZURE_OPENAI_GPT_MODEL', value: gptModelName }
-      { name: 'AZURE_OPENAI_IMAGE_MODEL', value: imageModelConfig[imageModelChoice].name }
-      { name: 'AZURE_OPENAI_GPT_IMAGE_ENDPOINT', value: imageModelChoice != 'none' ? 'https://${aiFoundryAiServicesResourceName}.openai.azure.com/' : '' }
-      { name: 'AZURE_OPENAI_API_VERSION', value: azureOpenaiAPIVersion }
-      // Azure Cosmos DB Settings
-      { name: 'AZURE_COSMOS_ENDPOINT', value: 'https://cosmos-${solutionSuffix}.documents.azure.com:443/' }
-      { name: 'AZURE_COSMOS_DATABASE_NAME', value: cosmosDBDatabaseName }
-      { name: 'AZURE_COSMOS_PRODUCTS_CONTAINER', value: cosmosDBProductsContainer }
-      { name: 'AZURE_COSMOS_CONVERSATIONS_CONTAINER', value: cosmosDBConversationsContainer }
-      // Azure Blob Storage Settings
-      { name: 'AZURE_BLOB_ACCOUNT_NAME', value: storageAccountName }
-      { name: 'AZURE_BLOB_PRODUCT_IMAGES_CONTAINER', value: productImagesContainer }
-      { name: 'AZURE_BLOB_GENERATED_IMAGES_CONTAINER', value: generatedImagesContainer }
-      // Azure AI Search Settings
-      { name: 'AZURE_AI_SEARCH_ENDPOINT', value: 'https://${aiSearchName}.search.windows.net' }
-      { name: 'AZURE_AI_SEARCH_PRODUCTS_INDEX', value: azureSearchIndex }
-      { name: 'AZURE_AI_SEARCH_IMAGE_INDEX', value: 'product-images' }
-      // App Settings
-      { name: 'AZURE_CLIENT_ID', value: userAssignedIdentity.outputs.clientId }
-      { name: 'PORT', value: '8000' }
-      { name: 'WORKERS', value: '4' }
-      { name: 'RUNNING_IN_PRODUCTION', value: 'true' }
-      // Azure AI Foundry Settings
-      { name: 'USE_FOUNDRY', value: useFoundryMode ? 'true' : 'false' }
-      { name: 'AZURE_AI_PROJECT_ENDPOINT', value: aiFoundryAiProjectEndpoint }
-      { name: 'AZURE_AI_MODEL_DEPLOYMENT_NAME', value: gptModelName }
-      { name: 'AZURE_AI_IMAGE_MODEL_DEPLOYMENT', value: imageModelConfig[imageModelChoice].name }
-      // Logging Settings
-      { name: 'AZURE_BASIC_LOGGING_LEVEL', value: 'INFO' }
-      { name: 'AZURE_PACKAGE_LOGGING_LEVEL', value: 'WARNING' }
-      { name: 'AZURE_LOGGING_PACKAGES', value: '' }
-      // Application Insights
-      { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: enableMonitoring ? applicationInsights!.outputs.connectionString : '' }
+
+#disable-next-line no-deployments-resources
+resource aciTelemetry 'Microsoft.Resources/deployments@2024-03-01' = if (enableTelemetry && shouldDeployACI) {
+  name: '46d3xbcp.res.containerinstance.${replace('-..--..-', '.', '-')}.${substring(uniqueString(deployment().name, solutionLocation), 0, 4)}'
+  properties: {
+    mode: 'Incremental'
+    template: {
+      '$schema': 'https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#'
+      contentVersion: '1.0.0.0'
+      resources: []
+    }
+  }
+}
+
+resource containerInstance 'Microsoft.ContainerInstance/containerGroups@2025-09-01' = if (shouldDeployACI) {
+  name: containerInstanceName
+  location: solutionLocation
+  tags: tags
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${userAssignedIdentityResourceIdForACI}': {}
+    }
+  }
+  properties: {
+    containers: [
+      {
+        name: containerInstanceName
+        properties: {
+          image: backendImageUrl
+          resources: {
+            requests: {
+              cpu: 2
+              memoryInGB: 4
+            }
+          }
+          ports: [
+            {
+              port: aciPort
+              protocol: 'TCP'
+            }
+          ]
+          environmentVariables: [
+            // Azure OpenAI Settings
+            { name: 'AZURE_OPENAI_ENDPOINT', value: 'https://${aiFoundryAiServicesResourceName}.openai.azure.com/' }
+            { name: 'AZURE_OPENAI_GPT_MODEL', value: gptModelName }
+            { name: 'AZURE_OPENAI_IMAGE_MODEL', value: imageModelConfig[imageModelChoice].name }
+            { name: 'AZURE_OPENAI_GPT_IMAGE_ENDPOINT', value: imageModelChoice != 'none' ? 'https://${aiFoundryAiServicesResourceName}.openai.azure.com/' : '' }
+            { name: 'AZURE_OPENAI_API_VERSION', value: azureOpenaiAPIVersion }
+            // Azure Cosmos DB Settings
+            { name: 'AZURE_COSMOS_ENDPOINT', value: 'https://cosmos-${solutionSuffix}.documents.azure.com:443/' }
+            { name: 'AZURE_COSMOS_DATABASE_NAME', value: cosmosDBDatabaseName }
+            { name: 'AZURE_COSMOS_PRODUCTS_CONTAINER', value: cosmosDBProductsContainer }
+            { name: 'AZURE_COSMOS_CONVERSATIONS_CONTAINER', value: cosmosDBConversationsContainer }
+            // Azure Blob Storage Settings
+            { name: 'AZURE_BLOB_ACCOUNT_NAME', value: storageAccountName }
+            { name: 'AZURE_BLOB_PRODUCT_IMAGES_CONTAINER', value: productImagesContainer }
+            { name: 'AZURE_BLOB_GENERATED_IMAGES_CONTAINER', value: generatedImagesContainer }
+            // Azure AI Search Settings
+            { name: 'AZURE_AI_SEARCH_ENDPOINT', value: 'https://${aiSearchName}.search.windows.net' }
+            { name: 'AZURE_AI_SEARCH_PRODUCTS_INDEX', value: azureSearchIndex }
+            { name: 'AZURE_AI_SEARCH_IMAGE_INDEX', value: 'product-images' }
+            // App Settings
+            { name: 'AZURE_CLIENT_ID', value: userAssignedIdentity.outputs.clientId }
+            { name: 'PORT', value: '8000' }
+            { name: 'WORKERS', value: '4' }
+            { name: 'RUNNING_IN_PRODUCTION', value: 'true' }
+            // Azure AI Foundry Settings
+            { name: 'USE_FOUNDRY', value: useFoundryMode ? 'true' : 'false' }
+            { name: 'AZURE_AI_PROJECT_ENDPOINT', value: aiFoundryAiProjectEndpoint }
+            { name: 'AZURE_AI_MODEL_DEPLOYMENT_NAME', value: gptModelName }
+            { name: 'AZURE_AI_IMAGE_MODEL_DEPLOYMENT', value: imageModelConfig[imageModelChoice].name }
+            // Logging Settings
+            { name: 'AZURE_BASIC_LOGGING_LEVEL', value: 'INFO' }
+            { name: 'AZURE_PACKAGE_LOGGING_LEVEL', value: 'WARNING' }
+            { name: 'AZURE_LOGGING_PACKAGES', value: '' }
+            // Application Insights
+            { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: enableMonitoring ? applicationInsights!.outputs.connectionString : '' }
+          ]
+        }
+      }
+    ]
+    osType: 'Linux'
+    restartPolicy: 'Always'
+    subnetIds: isPrivateNetworking ? [
+      {
+        id: virtualNetwork!.outputs.aciSubnetResourceId
+      }
+    ] : null
+    ipAddress: {
+      type: isPrivateNetworking ? 'Private' : 'Public'
+      ports: [
+        {
+          port: aciPort
+          protocol: 'TCP'
+        }
+      ]
+      dnsNameLabel: isPrivateNetworking ? null : containerInstanceName
+    }
+    // Managed identity auth for ACR (instead of anonymous pull)
+    imageRegistryCredentials: [
+      {
+        server: containerRegistry.outputs.loginServer
+        identity: userAssignedIdentityResourceIdForACI
+      }
     ]
   }
 }
@@ -1037,13 +1108,13 @@ output AZURE_APPLICATION_INSIGHTS_CONNECTION_STRING string = (enableMonitoring &
 output AZURE_ENV_OPENAI_LOCATION string = azureAiServiceLocation
 
 @description('Contains Container Instance Name')
-output CONTAINER_INSTANCE_NAME string = shouldDeployACI ? containerInstance!.outputs.name : ''
+output CONTAINER_INSTANCE_NAME string = shouldDeployACI ? containerInstance!.name : ''
 
 @description('Contains Container Instance IP Address')
-output CONTAINER_INSTANCE_IP string = shouldDeployACI ? containerInstance!.outputs.ipAddress : ''
+output CONTAINER_INSTANCE_IP string = shouldDeployACI ? containerInstance!.properties.ipAddress.ip : ''
 
 @description('Contains Container Instance FQDN (only for non-private networking)')
-output CONTAINER_INSTANCE_FQDN string = (shouldDeployACI && !enablePrivateNetworking) ? containerInstance!.outputs.fqdn : ''
+output CONTAINER_INSTANCE_FQDN string = (shouldDeployACI && !isPrivateNetworking) ? containerInstance!.properties.ipAddress.fqdn : ''
 
 @description('Contains ACR Name')
 output ACR_NAME string = acrResourceName
