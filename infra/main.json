@@ -5,8 +5,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.41.2.15936",
-      "templateHash": "690774053853233065"
+      "version": "0.42.1.51946",
+      "templateHash": "15695041727004400845"
     },
     "name": "Intelligent Content Generation Accelerator",
     "description": "Solution Accelerator for multimodal marketing content generation using Microsoft Agent Framework.\n"
@@ -345,6 +345,7 @@
     "logAnalyticsWorkspaceResourceName": "[format('log-{0}', variables('solutionSuffix'))]",
     "applicationInsightsResourceName": "[format('appi-{0}', variables('solutionSuffix'))]",
     "userAssignedIdentityResourceName": "[format('id-{0}', variables('solutionSuffix'))]",
+    "deployAdminAccessResources": "[and(and(parameters('enablePrivateNetworking'), parameters('deployBastionAndJumpbox')), not(empty(parameters('vmAdminPassword'))))]",
     "bastionHostName": "[format('bas-{0}', variables('solutionSuffix'))]",
     "zoneSupportedJumpboxLocations": [
       "australiaeast",
@@ -358,7 +359,6 @@
       "uksouth",
       "westus3"
     ],
-    "deployAdminAccessResources": "[and(and(parameters('enablePrivateNetworking'), parameters('deployBastionAndJumpbox')), not(empty(parameters('vmAdminPassword'))))]",
     "jumpboxUniqueToken": "[take(uniqueString(resourceGroup().id, variables('solutionSuffix')), 10)]",
     "jumpboxVmName": "[take(format('vm-{0}', variables('jumpboxUniqueToken')), 15)]",
     "privateDnsZones": [
@@ -4848,7 +4848,7 @@
         },
         "mode": "Incremental",
         "parameters": {
-          "name": {
+          "vnetName": {
             "value": "[format('vnet-{0}', variables('solutionSuffix'))]"
           },
           "addressPrefixes": {
@@ -4860,7 +4860,7 @@
             "value": "[variables('solutionLocation')]"
           },
           "deployBastionAndJumpbox": {
-            "value": "[and(parameters('enablePrivateNetworking'), parameters('deployBastionAndJumpbox'))]"
+            "value": "[variables('deployAdminAccessResources')]"
           },
           "tags": {
             "value": "[parameters('tags')]"
@@ -4879,12 +4879,12 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.41.2.15936",
-              "templateHash": "11359193981707837191"
+              "version": "0.42.1.51946",
+              "templateHash": "3628160320006039137"
             }
           },
           "parameters": {
-            "name": {
+            "vnetName": {
               "type": "string",
               "metadata": {
                 "description": "Name of the virtual network."
@@ -5720,7 +5720,7 @@
             {
               "type": "Microsoft.Resources/deployments",
               "apiVersion": "2025-04-01",
-              "name": "[take(format('avm.res.network.virtual-network.{0}', parameters('name')), 64)]",
+              "name": "[take(format('avm.res.network.virtual-network.{0}', parameters('vnetName')), 64)]",
               "properties": {
                 "expressionEvaluationOptions": {
                   "scope": "inner"
@@ -5728,7 +5728,7 @@
                 "mode": "Incremental",
                 "parameters": {
                   "name": {
-                    "value": "[parameters('name')]"
+                    "value": "[parameters('vnetName')]"
                   },
                   "location": {
                     "value": "[parameters('location')]"
@@ -7393,31 +7393,31 @@
           "outputs": {
             "name": {
               "type": "string",
-              "value": "[reference(resourceId('Microsoft.Resources/deployments', take(format('avm.res.network.virtual-network.{0}', parameters('name')), 64)), '2025-04-01').outputs.name.value]"
+              "value": "[reference(resourceId('Microsoft.Resources/deployments', take(format('avm.res.network.virtual-network.{0}', parameters('vnetName')), 64)), '2025-04-01').outputs.name.value]"
             },
             "resourceId": {
               "type": "string",
-              "value": "[reference(resourceId('Microsoft.Resources/deployments', take(format('avm.res.network.virtual-network.{0}', parameters('name')), 64)), '2025-04-01').outputs.resourceId.value]"
+              "value": "[reference(resourceId('Microsoft.Resources/deployments', take(format('avm.res.network.virtual-network.{0}', parameters('vnetName')), 64)), '2025-04-01').outputs.resourceId.value]"
             },
             "webSubnetResourceId": {
               "type": "string",
-              "value": "[if(contains(map(variables('vnetSubnets'), lambda('subnet', lambdaVariables('subnet').name)), 'web'), reference(resourceId('Microsoft.Resources/deployments', take(format('avm.res.network.virtual-network.{0}', parameters('name')), 64)), '2025-04-01').outputs.subnetResourceIds.value[indexOf(map(variables('vnetSubnets'), lambda('subnet', lambdaVariables('subnet').name)), 'web')], '')]"
+              "value": "[if(contains(map(variables('vnetSubnets'), lambda('subnet', lambdaVariables('subnet').name)), 'web'), reference(resourceId('Microsoft.Resources/deployments', take(format('avm.res.network.virtual-network.{0}', parameters('vnetName')), 64)), '2025-04-01').outputs.subnetResourceIds.value[indexOf(map(variables('vnetSubnets'), lambda('subnet', lambdaVariables('subnet').name)), 'web')], '')]"
             },
             "pepsSubnetResourceId": {
               "type": "string",
-              "value": "[if(contains(map(variables('vnetSubnets'), lambda('subnet', lambdaVariables('subnet').name)), 'peps'), reference(resourceId('Microsoft.Resources/deployments', take(format('avm.res.network.virtual-network.{0}', parameters('name')), 64)), '2025-04-01').outputs.subnetResourceIds.value[indexOf(map(variables('vnetSubnets'), lambda('subnet', lambdaVariables('subnet').name)), 'peps')], '')]"
+              "value": "[if(contains(map(variables('vnetSubnets'), lambda('subnet', lambdaVariables('subnet').name)), 'peps'), reference(resourceId('Microsoft.Resources/deployments', take(format('avm.res.network.virtual-network.{0}', parameters('vnetName')), 64)), '2025-04-01').outputs.subnetResourceIds.value[indexOf(map(variables('vnetSubnets'), lambda('subnet', lambdaVariables('subnet').name)), 'peps')], '')]"
             },
             "aciSubnetResourceId": {
               "type": "string",
-              "value": "[if(contains(map(variables('vnetSubnets'), lambda('subnet', lambdaVariables('subnet').name)), 'aci'), reference(resourceId('Microsoft.Resources/deployments', take(format('avm.res.network.virtual-network.{0}', parameters('name')), 64)), '2025-04-01').outputs.subnetResourceIds.value[indexOf(map(variables('vnetSubnets'), lambda('subnet', lambdaVariables('subnet').name)), 'aci')], '')]"
+              "value": "[if(contains(map(variables('vnetSubnets'), lambda('subnet', lambdaVariables('subnet').name)), 'aci'), reference(resourceId('Microsoft.Resources/deployments', take(format('avm.res.network.virtual-network.{0}', parameters('vnetName')), 64)), '2025-04-01').outputs.subnetResourceIds.value[indexOf(map(variables('vnetSubnets'), lambda('subnet', lambdaVariables('subnet').name)), 'aci')], '')]"
             },
             "bastionSubnetResourceId": {
               "type": "string",
-              "value": "[if(contains(map(variables('vnetSubnets'), lambda('subnet', lambdaVariables('subnet').name)), 'AzureBastionSubnet'), reference(resourceId('Microsoft.Resources/deployments', take(format('avm.res.network.virtual-network.{0}', parameters('name')), 64)), '2025-04-01').outputs.subnetResourceIds.value[indexOf(map(variables('vnetSubnets'), lambda('subnet', lambdaVariables('subnet').name)), 'AzureBastionSubnet')], '')]"
+              "value": "[if(contains(map(variables('vnetSubnets'), lambda('subnet', lambdaVariables('subnet').name)), 'AzureBastionSubnet'), reference(resourceId('Microsoft.Resources/deployments', take(format('avm.res.network.virtual-network.{0}', parameters('vnetName')), 64)), '2025-04-01').outputs.subnetResourceIds.value[indexOf(map(variables('vnetSubnets'), lambda('subnet', lambdaVariables('subnet').name)), 'AzureBastionSubnet')], '')]"
             },
             "jumpboxSubnetResourceId": {
               "type": "string",
-              "value": "[if(contains(map(variables('vnetSubnets'), lambda('subnet', lambdaVariables('subnet').name)), 'jumpbox'), reference(resourceId('Microsoft.Resources/deployments', take(format('avm.res.network.virtual-network.{0}', parameters('name')), 64)), '2025-04-01').outputs.subnetResourceIds.value[indexOf(map(variables('vnetSubnets'), lambda('subnet', lambdaVariables('subnet').name)), 'jumpbox')], '')]"
+              "value": "[if(contains(map(variables('vnetSubnets'), lambda('subnet', lambdaVariables('subnet').name)), 'jumpbox'), reference(resourceId('Microsoft.Resources/deployments', take(format('avm.res.network.virtual-network.{0}', parameters('vnetName')), 64)), '2025-04-01').outputs.subnetResourceIds.value[indexOf(map(variables('vnetSubnets'), lambda('subnet', lambdaVariables('subnet').name)), 'jumpbox')], '')]"
             }
           }
         }
@@ -24861,8 +24861,8 @@
       },
       "dependsOn": [
         "aiFoundryAiServices",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
         "virtualNetwork"
       ]
     },
@@ -24902,8 +24902,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.41.2.15936",
-              "templateHash": "5579055444657114163"
+              "version": "0.42.1.51946",
+              "templateHash": "831092851343254936"
             }
           },
           "parameters": {
@@ -25040,8 +25040,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.41.2.15936",
-              "templateHash": "4896504561894393634"
+              "version": "0.42.1.51946",
+              "templateHash": "1725382017005764747"
             }
           },
           "parameters": {
@@ -25164,8 +25164,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.41.2.15936",
-              "templateHash": "12449348145632794739"
+              "version": "0.42.1.51946",
+              "templateHash": "8900687660670713557"
             }
           },
           "parameters": {
@@ -42102,8 +42102,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.41.2.15936",
-              "templateHash": "8373975196748337393"
+              "version": "0.42.1.51946",
+              "templateHash": "1960900918045956971"
             }
           },
           "definitions": {
@@ -43131,8 +43131,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.41.2.15936",
-                      "templateHash": "5518029515589119726"
+                      "version": "0.42.1.51946",
+                      "templateHash": "12846584330925464650"
                     },
                     "name": "Site App Settings",
                     "description": "This module deploys a Site App Setting."
@@ -44056,11 +44056,11 @@
                 "value": "[format('https://{0}.openai.azure.com/', variables('aiFoundryAiServicesResourceName'))]"
               },
               {
-                "name": "AZURE_OPENAI_GPT_MODEL",
+                "name": "AZURE_ENV_GPT_MODEL_NAME",
                 "value": "[parameters('gptModelName')]"
               },
               {
-                "name": "AZURE_OPENAI_IMAGE_MODEL",
+                "name": "AZURE_ENV_IMAGE_MODEL_NAME",
                 "value": "[variables('imageModelConfig')[parameters('imageModelChoice')].name]"
               },
               {
@@ -44068,7 +44068,7 @@
                 "value": "[if(not(equals(parameters('imageModelChoice'), 'none')), format('https://{0}.openai.azure.com/', variables('aiFoundryAiServicesResourceName')), '')]"
               },
               {
-                "name": "AZURE_OPENAI_API_VERSION",
+                "name": "AZURE_ENV_OPENAI_API_VERSION",
                 "value": "[parameters('azureOpenaiAPIVersion')]"
               },
               {
@@ -44168,8 +44168,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.41.2.15936",
-              "templateHash": "11066122245438821615"
+              "version": "0.42.1.51946",
+              "templateHash": "10568375158361462358"
             }
           },
           "parameters": {
@@ -44453,7 +44453,7 @@
       },
       "value": "[if(variables('useExistingAiFoundryAiProject'), '', reference('aiFoundryAiServices').outputs.resourceId.value)]"
     },
-    "AZURE_EXISTING_AI_PROJECT_RESOURCE_ID": {
+    "AZURE_EXISTING_AIPROJECT_RESOURCE_ID": {
       "type": "string",
       "metadata": {
         "description": "Contains existing AI project resource ID."
@@ -44495,14 +44495,14 @@
       },
       "value": "[format('https://{0}.openai.azure.com/', variables('aiFoundryAiServicesResourceName'))]"
     },
-    "AZURE_OPENAI_GPT_MODEL": {
+    "AZURE_ENV_GPT_MODEL_NAME": {
       "type": "string",
       "metadata": {
         "description": "Contains GPT Model"
       },
       "value": "[parameters('gptModelName')]"
     },
-    "AZURE_OPENAI_IMAGE_MODEL": {
+    "AZURE_ENV_IMAGE_MODEL_NAME": {
       "type": "string",
       "metadata": {
         "description": "Contains Image Model (empty if none selected)"
@@ -44516,7 +44516,7 @@
       },
       "value": "[if(not(equals(parameters('imageModelChoice'), 'none')), format('https://{0}.openai.azure.com/', variables('aiFoundryAiServicesResourceName')), '')]"
     },
-    "AZURE_OPENAI_API_VERSION": {
+    "AZURE_ENV_OPENAI_API_VERSION": {
       "type": "string",
       "metadata": {
         "description": "Contains Azure OpenAI API Version"
@@ -44551,7 +44551,7 @@
       },
       "value": "[if(and(parameters('enableMonitoring'), not(variables('useExistingLogAnalytics'))), reference('applicationInsights').outputs.connectionString.value, '')]"
     },
-    "AZURE_ENV_OPENAI_LOCATION": {
+    "AZURE_ENV_AI_SERVICE_LOCATION": {
       "type": "string",
       "metadata": {
         "description": "Contains the location used for AI Services deployment"
@@ -44579,7 +44579,7 @@
       },
       "value": "[if(parameters('enablePrivateNetworking'), '', reference('containerInstance').outputs.fqdn.value)]"
     },
-    "ACR_NAME": {
+    "AZURE_ENV_CONTAINER_REGISTRY_NAME": {
       "type": "string",
       "metadata": {
         "description": "Contains ACR Name"

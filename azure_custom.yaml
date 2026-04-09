@@ -35,10 +35,10 @@ hooks:
         Write-Host "Preparing deployment..." -ForegroundColor Cyan
         
         # Check if this is first run (ACR doesn't exist yet)
-        # Set IMAGE_TAG='none' to skip ACI deployment until image is built
-        if (-not $env:AZURE_CONTAINER_REGISTRY_NAME) {
+        # Set AZURE_ENV_IMAGE_TAG='none' to skip ACI deployment until image is built
+        if (-not $env:AZURE_ENV_CONTAINER_REGISTRY_NAME) {
           Write-Host "First deployment - ACI will be deployed after image build" -ForegroundColor Yellow
-          azd env set IMAGE_TAG none
+          azd env set AZURE_ENV_IMAGE_TAG none
         }
       continueOnError: false
     posix:
@@ -47,9 +47,9 @@ hooks:
         echo "Preparing deployment..."
         
         # Check if this is first run (ACR doesn't exist yet)
-        if [ -z "$AZURE_CONTAINER_REGISTRY_NAME" ]; then
+        if [ -z "$AZURE_ENV_CONTAINER_REGISTRY_NAME" ]; then
           echo "First deployment - ACI will be deployed after image build"
-          azd env set IMAGE_TAG none
+          azd env set AZURE_ENV_IMAGE_TAG none
         fi
       continueOnError: false
 
@@ -57,7 +57,7 @@ hooks:
     windows:
       shell: pwsh
       run: |
-        $acrName = $env:AZURE_CONTAINER_REGISTRY_NAME
+        $acrName = $env:AZURE_ENV_CONTAINER_REGISTRY_NAME
         $resourceGroup = $env:RESOURCE_GROUP_NAME
         $backendImage = $env:BACKEND_IMAGE_NAME
         $appServiceName = $env:APP_SERVICE_NAME
@@ -89,7 +89,7 @@ hooks:
         if (-not $aciName) {
           Write-Host ""
           Write-Host "===== Deploying Container Instance =====" -ForegroundColor Yellow
-          azd env set IMAGE_TAG latest
+          azd env set AZURE_ENV_IMAGE_TAG latest
           
           # Use az deployment instead of azd provision to avoid hook recursion
           # Pass parameters inline (main.parameters.json uses AZD ${VAR} syntax not supported by az CLI)
@@ -100,7 +100,7 @@ hooks:
             --template-file ./infra/main.bicep `
             --parameters solutionName=$env:AZURE_ENV_NAME `
             --parameters location=$env:AZURE_LOCATION `
-            --parameters azureAiServiceLocation=$env:AZURE_ENV_OPENAI_LOCATION `
+            --parameters azureAiServiceLocation=$env:AZURE_ENV_AI_SERVICE_LOCATION `
             --parameters imageTag=latest `
             --query "properties.outputs" -o json | Out-Null
           
@@ -127,7 +127,7 @@ hooks:
     posix:
       shell: sh
       run: |
-        ACR_NAME="$AZURE_CONTAINER_REGISTRY_NAME"
+        ACR_NAME="$AZURE_ENV_CONTAINER_REGISTRY_NAME"
         RESOURCE_GROUP="$RESOURCE_GROUP_NAME"
         BACKEND_IMAGE="$BACKEND_IMAGE_NAME"
         APP_SERVICE="$APP_SERVICE_NAME"
@@ -157,7 +157,7 @@ hooks:
         if [ -z "$ACI_NAME" ]; then
           echo ""
           echo "===== Deploying Container Instance ====="
-          azd env set IMAGE_TAG latest
+          azd env set AZURE_ENV_IMAGE_TAG latest
           
           # Use az deployment instead of azd provision to avoid hook recursion
           # Pass parameters inline (main.parameters.json uses AZD ${VAR} syntax not supported by az CLI)
@@ -167,7 +167,7 @@ hooks:
             --template-file ./infra/main.bicep \
             --parameters solutionName="$AZURE_ENV_NAME" \
             --parameters location="$AZURE_LOCATION" \
-            --parameters azureAiServiceLocation="$AZURE_ENV_OPENAI_LOCATION" \
+            --parameters azureAiServiceLocation="$AZURE_ENV_AI_SERVICE_LOCATION" \
             --parameters imageTag=latest \
             --query "properties.outputs" -o json > /dev/null; then
             # Refresh azd env with new outputs
