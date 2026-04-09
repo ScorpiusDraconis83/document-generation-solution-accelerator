@@ -96,7 +96,7 @@ if ($continue -eq "y" -or $continue -eq "Y") {
     Write-Host "Step 1: Building and pushing backend container..." -ForegroundColor Green
     Write-Host "==========================================" -ForegroundColor Green
     
-    Set-Location "$ProjectDir\src"
+    Set-Location "$ProjectDir\src\backend"
     
     # Login to ACR
     az acr login --name $AcrName
@@ -105,7 +105,7 @@ if ($continue -eq "y" -or $continue -eq "Y") {
     az acr build `
         --registry $AcrName `
         --image "contentgen-backend:$ImageTag" `
-        --file WebApp.Dockerfile `
+        --file ApiApp.Dockerfile `
         .
     
     Write-Host "✓ Container built and pushed to $AcrName.azurecr.io/contentgen-backend:$ImageTag" -ForegroundColor Green
