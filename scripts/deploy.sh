@@ -103,8 +103,8 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     az acr build \
         --registry "$AZURE_ENV_CONTAINER_REGISTRY_NAME" \
         --image "contentgen-backend:$AZURE_ENV_IMAGE_TAG" \
-        --file WebApp.Dockerfile \
-        .
+        --file backend/ApiApp.Dockerfile \
+        backend
     
     echo "✓ Container built and pushed to $AZURE_ENV_CONTAINER_REGISTRY_NAME.azurecr.io/contentgen-backend:$AZURE_ENV_IMAGE_TAG"
     

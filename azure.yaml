@@ -3,8 +3,8 @@ environment:
   location: eastus
 
 name: content-generation
-metadata:
-  template: content-generation@1.22
+# metadata:
+#   template: content-generation@1.22
 
 requiredVersions:
   azd: '>= 1.18.0 != 1.23.9'

@@ -227,7 +227,7 @@ Error: The model 'gpt-4o' is not available in region 'westeurope'
 
 **Solution**: Set a different region for AI Services:
 ```bash
-azd env set AZURE_ENV_AI_SERVICE_LOCATION eastus
+azd env set AZURE_ENV_AI_SERVICE_LOCATION eastus2
 ```
 
 #### 3. Container Build Fails
