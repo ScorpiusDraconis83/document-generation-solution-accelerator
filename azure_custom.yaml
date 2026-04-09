@@ -36,10 +36,7 @@ hooks:
         
         # Check if this is first run (ACR doesn't exist yet)
         # Set AZURE_ENV_IMAGE_TAG='none' to skip ACI deployment until image is built
-        $currentTag = azd env get-value AZURE_ENV_IMAGE_TAG 2>$null
-        $global:LASTEXITCODE = 0
-        
-        if (-not $env:AZURE_ENV_CONTAINER_REGISTRY_NAME -and $currentTag -ne 'latest') {
+        if (-not $env:AZURE_ENV_CONTAINER_REGISTRY_NAME) {
           Write-Host "First deployment - ACI will be deployed after image build" -ForegroundColor Yellow
           azd env set AZURE_ENV_IMAGE_TAG none
         }
@@ -50,9 +47,7 @@ hooks:
         echo "Preparing deployment..."
         
         # Check if this is first run (ACR doesn't exist yet)
-        current_tag=$(azd env get-value AZURE_ENV_IMAGE_TAG 2>/dev/null || echo "")
-        
-        if [ -z "$AZURE_ENV_CONTAINER_REGISTRY_NAME" ] && [ "$current_tag" != "latest" ]; then
+        if [ -z "$AZURE_ENV_CONTAINER_REGISTRY_NAME" ]; then
           echo "First deployment - ACI will be deployed after image build"
           azd env set AZURE_ENV_IMAGE_TAG none
         fi
