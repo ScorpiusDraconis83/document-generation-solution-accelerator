@@ -34,7 +34,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 SRC_DIR="$PROJECT_ROOT/src"
 BACKEND_DIR="$SRC_DIR/backend"
-FRONTEND_DIR="$SRC_DIR/app/frontend"
+FRONTEND_DIR="$SRC_DIR/App"
 
 # Default ports
 BACKEND_PORT=${BACKEND_PORT:-5000}
@@ -105,7 +105,7 @@ ensure_azure_ai_user_role() {
     local existing_project_id=""
     local foundry_resource_id=""
     if [ -f ".env" ]; then
-        existing_project_id=$(grep "^AZURE_EXISTING_AI_PROJECT_RESOURCE_ID=" .env | cut -d'=' -f2- | tr -d '"' | tr -d "'" || echo "")
+        existing_project_id=$(grep "^AZURE_EXISTING_AIPROJECT_RESOURCE_ID=" .env | cut -d'=' -f2- | tr -d '"' | tr -d "'" || echo "")
         foundry_resource_id=$(grep "^AI_FOUNDRY_RESOURCE_ID=" .env | cut -d'=' -f2- | tr -d '"' | tr -d "'" || echo "")
     fi
     
@@ -115,7 +115,7 @@ ensure_azure_ai_user_role() {
     elif [ -n "$foundry_resource_id" ]; then
         scope="$foundry_resource_id"
     else
-        print_error "Neither AZURE_EXISTING_AI_PROJECT_RESOURCE_ID nor AI_FOUNDRY_RESOURCE_ID found in .env"
+        print_error "Neither AZURE_EXISTING_AIPROJECT_RESOURCE_ID nor AI_FOUNDRY_RESOURCE_ID found in .env"
         exit 1
     fi
     

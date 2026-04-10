@@ -8,12 +8,10 @@ on:
       - demo
     paths:
       - 'src/backend/**'
-      - 'src/app/frontend/**'
-      - 'src/app/frontend-server/**'
-      - 'src/app/WebApp.Dockerfile'
-      - 'src/app/.dockerignore'
-      - '.github/workflows/docker-build.yml'
-  pull_request:
+      - 'src/App/**'
+      - 'src/App/server/**'
+      - 'src/App/WebApp.Dockerfile'
+      - 'src/App/.dockerignore'
     types:
       - opened
       - ready_for_review
@@ -25,10 +23,10 @@ on:
       - demo
     paths:
       - 'src/backend/**'
-      - 'src/app/frontend/**'
-      - 'src/app/frontend-server/**'
-      - 'src/app/WebApp.Dockerfile'
-      - 'src/app/.dockerignore'
+      - 'src/App/**'
+      - 'src/App/server/**'
+      - 'src/App/WebApp.Dockerfile'
+      - 'src/App/.dockerignore'
       - '.github/workflows/docker-build.yml'
   workflow_dispatch:
 
@@ -92,8 +90,8 @@ jobs:
       - name: Build and Push Docker Image for Frontend Server
         uses: docker/build-push-action@v6
         with:
-          context: ./src/app
-          file: ./src/app/WebApp.Dockerfile
+          context: ./src/App
+          file: ./src/App/WebApp.Dockerfile
           push: ${{ github.ref_name == 'main' || github.ref_name == 'dev' || github.ref_name == 'demo'  || github.ref_name == 'dependabotchanges'  }}
           tags: |
             ${{ secrets.ACR_LOGIN_SERVER || 'acrlogin.azurecr.io' }}/content-gen-app:${{ steps.determine_tag.outputs.tagname }}

@@ -107,8 +107,18 @@ param existingLogAnalyticsWorkspaceId string = ''
 @description('Optional. Resource ID of an existing Foundry project.')
 param azureExistingAIProjectResourceId string = ''
 
-@description('Optional. Deploy Azure Bastion and Jumpbox VM for private network administration.')
+@description('Optional. Deploy Azure Bastion and Jumpbox resources for private network administration.')
 param deployBastionAndJumpbox bool = false
+
+@description('Optional. Jumpbox VM size. Must support accelerated networking and Premium SSD.')
+param vmSize string = ''
+
+@description('Optional. Jumpbox VM admin username.')
+param vmAdminUsername string = ''
+
+@description('Optional. Jumpbox VM admin password.')
+@secure()
+param vmAdminPassword string = ''
 
 @description('Optional. The tags to apply to all deployed Azure resources.')
 param tags object = {}
@@ -367,17 +377,111 @@ module userAssignedIdentity 'br/public:avm/res/managed-identity/user-assigned-id
 }
 
 // ========== Virtual Network and Networking Components ========== //
+var deployAdminAccessResources = enablePrivateNetworking && deployBastionAndJumpbox && !empty(vmAdminPassword)
 module virtualNetwork 'modules/virtualNetwork.bicep' = if (enablePrivateNetworking) {
   name: take('module.virtualNetwork.${solutionSuffix}', 64)
   params: {
     vnetName: 'vnet-${solutionSuffix}'
-    vnetLocation: solutionLocation
-    vnetAddressPrefixes: ['10.0.0.0/20']
+    addressPrefixes: ['10.0.0.0/20'] // 4096 addresses (enough for 8 /23 subnets or 16 /24)
+    location: solutionLocation
+    deployBastionAndJumpbox: deployAdminAccessResources
     tags: tags
     logAnalyticsWorkspaceId: logAnalyticsWorkspaceResourceId
-    enableTelemetry: enableTelemetry
     resourceSuffix: solutionSuffix
-    deployBastionAndJumpbox: deployBastionAndJumpbox
+    enableTelemetry: enableTelemetry
+  }
+}
+
+// Azure Bastion Host
+var bastionHostName = 'bas-${solutionSuffix}'
+var zoneSupportedJumpboxLocations = [
+  'australiaeast'
+  'centralus'
+  'eastus'
+  'eastus2'
+  'japaneast'
+  'northeurope'
+  'southeastasia'
+  'swedencentral'
+  'uksouth'
+  'westus3'
+]
+module bastionHost 'br/public:avm/res/network/bastion-host:0.8.2' = if (deployAdminAccessResources) {
+  name: take('avm.res.network.bastion-host.${bastionHostName}', 64)
+  params: {
+    name: bastionHostName
+    skuName: 'Standard'
+    location: solutionLocation
+    virtualNetworkResourceId: virtualNetwork!.outputs.resourceId
+    diagnosticSettings: !empty(logAnalyticsWorkspaceResourceId)
+      ? [
+          {
+            name: 'bastionDiagnostics'
+            workspaceResourceId: logAnalyticsWorkspaceResourceId
+            logCategoriesAndGroups: [
+              {
+                categoryGroup: 'allLogs'
+                enabled: true
+              }
+            ]
+          }
+        ]
+      : []
+    tags: tags
+    enableTelemetry: enableTelemetry
+    publicIPAddressObject: {
+      name: 'pip-${bastionHostName}'
+    }
+  }
+}
+
+// Jumpbox Virtual Machine
+var jumpboxUniqueToken = take(uniqueString(resourceGroup().id, solutionSuffix), 10)
+var jumpboxVmName = take('vm-${jumpboxUniqueToken}', 15)
+module jumpboxVM 'br/public:avm/res/compute/virtual-machine:0.21.0' = if (deployAdminAccessResources) {
+  name: take('avm.res.compute.virtual-machine.${jumpboxVmName}', 64)
+  params: {
+    name: take(jumpboxVmName, 15)
+    enableTelemetry: enableTelemetry
+    computerName: take(jumpboxVmName, 15)
+    osType: 'Windows'
+    vmSize: empty(vmSize) ? 'Standard_D2s_v5' : vmSize
+    adminUsername: empty(vmAdminUsername) ? 'JumpboxAdminUser' : vmAdminUsername
+    adminPassword: vmAdminPassword
+    managedIdentities: {
+      userAssignedResourceIds: [
+        userAssignedIdentity.outputs.resourceId
+      ]
+    }
+    availabilityZone: contains(zoneSupportedJumpboxLocations, solutionLocation) ? 1 : -1
+    imageReference: {
+      publisher: 'microsoft-dsvm'
+      offer: 'dsvm-win-2022'
+      sku: 'winserver-2022'
+      version: 'latest'
+    }
+    nicConfigurations: [
+      {
+        name: 'nic-${jumpboxVmName}'
+        enableAcceleratedNetworking: true
+        ipConfigurations: [
+          {
+            name: 'ipconfig01'
+            subnetResourceId: virtualNetwork!.outputs.jumpboxSubnetResourceId
+          }
+        ]
+      }
+    ]
+    osDisk: {
+      caching: 'ReadWrite'
+      diskSizeGB: 128
+      managedDisk: {
+        storageAccountType: 'Premium_LRS'
+      }
+    }
+    encryptionAtHost: false // Some Azure subscriptions do not support encryption at host
+    location: solutionLocation
+    tags: tags
   }
   dependsOn: (enableMonitoring && !useExistingLogAnalytics) ? [logAnalyticsWorkspace] : []
 }
@@ -884,10 +988,10 @@ module containerInstance 'modules/container-instance.bicep' = {
     environmentVariables: [
       // Azure OpenAI Settings
       { name: 'AZURE_OPENAI_ENDPOINT', value: 'https://${aiFoundryAiServicesResourceName}.openai.azure.com/' }
-      { name: 'AZURE_OPENAI_GPT_MODEL', value: gptModelName }
-      { name: 'AZURE_OPENAI_IMAGE_MODEL', value: imageModelConfig[imageModelChoice].name }
+      { name: 'AZURE_ENV_GPT_MODEL_NAME', value: gptModelName }
+      { name: 'AZURE_ENV_IMAGE_MODEL_NAME', value: imageModelConfig[imageModelChoice].name }
       { name: 'AZURE_OPENAI_GPT_IMAGE_ENDPOINT', value: imageModelChoice != 'none' ? 'https://${aiFoundryAiServicesResourceName}.openai.azure.com/' : '' }
-      { name: 'AZURE_OPENAI_API_VERSION', value: azureOpenaiAPIVersion }
+      { name: 'AZURE_ENV_OPENAI_API_VERSION', value: azureOpenaiAPIVersion }
       // Azure Cosmos DB Settings
       { name: 'AZURE_COSMOS_ENDPOINT', value: 'https://cosmos-${solutionSuffix}.documents.azure.com:443/' }
       { name: 'AZURE_COSMOS_DATABASE_NAME', value: cosmosDBDatabaseName }
@@ -965,7 +1069,7 @@ output AI_FOUNDRY_RG_NAME string = aiFoundryAiServicesResourceGroupName
 output AI_FOUNDRY_RESOURCE_ID string = useExistingAiFoundryAiProject ? '' : aiFoundryAiServices!.outputs.resourceId
 
 @description('Contains existing AI project resource ID.')
-output AZURE_EXISTING_AI_PROJECT_RESOURCE_ID string = azureExistingAIProjectResourceId
+output AZURE_EXISTING_AIPROJECT_RESOURCE_ID string = azureExistingAIProjectResourceId
 
 @description('Contains AI Search Service Endpoint URL')
 output AZURE_AI_SEARCH_ENDPOINT string = 'https://${aiSearch.outputs.name}.search.windows.net/'
@@ -983,16 +1087,16 @@ output AZURE_AI_SEARCH_IMAGE_INDEX string = 'product-images'
 output AZURE_OPENAI_ENDPOINT string = 'https://${aiFoundryAiServicesResourceName}.openai.azure.com/'
 
 @description('Contains GPT Model')
-output AZURE_OPENAI_GPT_MODEL string = gptModelName
+output AZURE_ENV_GPT_MODEL_NAME string = gptModelName
 
 @description('Contains Image Model (empty if none selected)')
-output AZURE_OPENAI_IMAGE_MODEL string = imageModelConfig[imageModelChoice].name
+output AZURE_ENV_IMAGE_MODEL_NAME string = imageModelConfig[imageModelChoice].name
 
 @description('Contains Azure OpenAI GPT/Image endpoint URL (empty if no image model selected)')
 output AZURE_OPENAI_GPT_IMAGE_ENDPOINT string = imageModelChoice != 'none' ? 'https://${aiFoundryAiServicesResourceName}.openai.azure.com/' : ''
 
 @description('Contains Azure OpenAI API Version')
-output AZURE_OPENAI_API_VERSION string = azureOpenaiAPIVersion
+output AZURE_ENV_OPENAI_API_VERSION string = azureOpenaiAPIVersion
 
 @description('Contains OpenAI Resource')
 output AZURE_OPENAI_RESOURCE string = aiFoundryAiServicesResourceName
@@ -1007,7 +1111,7 @@ output AZURE_AI_AGENT_API_VERSION string = azureAiAgentApiVersion
 output AZURE_APPLICATION_INSIGHTS_CONNECTION_STRING string = (enableMonitoring && !useExistingLogAnalytics) ? applicationInsights!.outputs.connectionString : ''
 
 @description('Contains the location used for AI Services deployment')
-output AZURE_ENV_OPENAI_LOCATION string = azureAiServiceLocation
+output AZURE_ENV_AI_SERVICE_LOCATION string = azureAiServiceLocation
 
 @description('Contains Container Instance Name')
 output CONTAINER_INSTANCE_NAME string = containerInstance.outputs.name
@@ -1019,7 +1123,7 @@ output CONTAINER_INSTANCE_IP string = containerInstance.outputs.ipAddress
 output CONTAINER_INSTANCE_FQDN string = enablePrivateNetworking ? '' : containerInstance.outputs.fqdn
 
 @description('Contains ACR Name')
-output ACR_NAME string = acrResourceName
+output AZURE_ENV_CONTAINER_REGISTRY_NAME string = acrResourceName
 
 @description('Contains flag for Azure AI Foundry usage')
 output USE_FOUNDRY bool = useFoundryMode ? true : false

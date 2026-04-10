@@ -31,7 +31,7 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ProjectRoot = Split-Path -Parent $ScriptDir
 $SrcDir = Join-Path $ProjectRoot "src"
 $BackendDir = Join-Path $SrcDir "backend"
-$FrontendDir = Join-Path $SrcDir "app\frontend"
+$FrontendDir = Join-Path $SrcDir "App"
 
 # Default ports
 $BackendPort = if ($env:BACKEND_PORT) { $env:BACKEND_PORT } else { "5000" }
@@ -109,7 +109,7 @@ function Ensure-AzureAIUserRole {
     $foundryResourceId = $null
     if (Test-Path ".env") {
         Get-Content ".env" | ForEach-Object {
-            if ($_ -match "^AZURE_EXISTING_AI_PROJECT_RESOURCE_ID=(.*)$") { $existingProjectId = $matches[1].Trim('"').Trim("'") }
+            if ($_ -match "^AZURE_EXISTING_AIPROJECT_RESOURCE_ID=(.*)$") { $existingProjectId = $matches[1].Trim('"').Trim("'") }
             if ($_ -match "^AI_FOUNDRY_RESOURCE_ID=(.*)$") { $foundryResourceId = $matches[1].Trim('"').Trim("'") }
         }
     }
@@ -121,7 +121,7 @@ function Ensure-AzureAIUserRole {
     } elseif ($foundryResourceId) {
         $scope = $foundryResourceId
     } else {
-        Write-Error "Neither AZURE_EXISTING_AI_PROJECT_RESOURCE_ID nor AI_FOUNDRY_RESOURCE_ID found in .env"
+        Write-Error "Neither AZURE_EXISTING_AIPROJECT_RESOURCE_ID nor AI_FOUNDRY_RESOURCE_ID found in .env"
         exit 1
     }
     
