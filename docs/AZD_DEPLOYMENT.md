@@ -239,7 +239,7 @@ Error: az acr build failed
 **Solution**: Check the Dockerfile and ensure all required files are present:
 ```bash
 # Manual build for debugging
-cd src/App
+cd src/app
 docker build -f WebApp.Dockerfile -t content-gen-app:test .
 ```
 
@@ -251,7 +251,7 @@ Error: az webapp deploy failed
 
 **Solution**: Ensure the frontend builds successfully:
 ```bash
-cd src/App
+cd src/app/frontend
 npm install
 npm run build
 ```
