@@ -143,7 +143,6 @@ Create `.vscode/settings.json` and copy the following JSON:
 
 ```json
 {
-    "python.defaultInterpreterPath": "./.venv/bin/python",
     "python.terminal.activateEnvironment": true,
     "python.formatting.provider": "black",
     "python.linting.enabled": true,
@@ -297,7 +296,7 @@ The `.env` file is loaded from the repository root. It is **auto-generated** whe
 | `AZURE_ENV_GPT_MODEL_NAME` | Yes | GPT model deployment name (e.g., `gpt-5.1`) |
 | `AZURE_ENV_IMAGE_MODEL_NAME` | Yes | Image generation model (e.g., `gpt-image-1-mini`) |
 | `AZURE_OPENAI_GPT_IMAGE_ENDPOINT` | No | Separate endpoint for image generation (if different from main endpoint) |
-| `AZURE_ENV_OPENAI_API_VERSION` | Yes | API version (e.g., `2025-01-01-preview`) |
+| `AZURE_ENV_OPENAI_API_VERSION` | Yes | API version (e.g., `2024-06-01`) |
 
 ### Azure AI Foundry Configuration
 
@@ -353,7 +352,8 @@ The `.env` file is loaded from the repository root. It is **auto-generated** whe
 
 ```bash
 # Check what's using the port
-netstat -tulpn | grep :5000          # Linux/macOS
+netstat -tulpn | grep :5000          # Linux
+lsof -i :5000                        # macOS
 netstat -ano | findstr :5000         # Windows PowerShell
 
 # Kill the process if needed (use PID from above command)

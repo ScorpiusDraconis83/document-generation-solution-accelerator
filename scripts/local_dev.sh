@@ -343,7 +343,6 @@ generate_env() {
         if [ ! -f ".env" ] && [ -f ".env.sample" ]; then
             cp .env.sample .env
             print_info "Created .env from .env.sample"
-            print_info "Created .env from template"
         fi
     fi
     
