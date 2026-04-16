@@ -293,9 +293,9 @@ function Invoke-Setup {
     # Check for .env file
     if (-not (Test-Path ".env")) {
         Write-Warning ".env file not found"
-        if (Test-Path ".env.template") {
-            Write-Info "Copying .env.template to .env..."
-            Copy-Item ".env.template" ".env"
+        if (Test-Path ".env.sample") {
+            Write-Info "Copying .env.sample to .env..."
+            Copy-Item ".env.sample" ".env"
             Write-Warning "Please update .env with your Azure resource values"
         }
     } else {
@@ -357,9 +357,9 @@ function Invoke-EnvGeneration {
         Write-Warning "Azure Developer CLI not found or no azure.yaml"
         Write-Info "Please manually update .env with your Azure resource values"
         
-        if (-not (Test-Path ".env") -and (Test-Path ".env.template")) {
-            Copy-Item ".env.template" ".env"
-            Write-Info "Created .env from template"
+        if (-not (Test-Path ".env") -and (Test-Path ".env.sample")) {
+            Copy-Item ".env.sample" ".env"
+            Write-Info "Created .env from .env.sample"
         }
     }
     
@@ -423,6 +423,8 @@ function Start-Backend {
     Push-Location $BackendDir
     try {
         # Use hypercorn for async support
+        # Output filter suppresses benign Ctrl+C shutdown noise from Python (InterruptedError tracebacks,
+        # sys.exit, frozen importlib). Real startup/runtime errors appear before these patterns.
         if (Test-Command "hypercorn") {
             hypercorn app:app --bind "0.0.0.0:$BackendPort" --reload 2>&1 | ForEach-Object {
                 if ($_ -notmatch "Traceback|File.*frozen|InterruptedError|sys\.exit") {
@@ -437,7 +439,7 @@ function Start-Backend {
             }
         }
     } catch {
-        # Suppress Ctrl+C exceptions
+        # Suppress Ctrl+C PipelineStoppedException — not a real error
     } finally {
         Pop-Location
     }
@@ -481,6 +483,33 @@ function Start-All {
     
     Set-Location $ProjectRoot
     
+    # Handle .env: generate if missing, or prompt to refresh if exists
+    if (-not (Test-Path ".env")) {
+        Write-Warning ".env file not found. Generating from Azure resources..."
+        Invoke-EnvGeneration
+        # Fallback to .env.sample if generation didn't produce .env
+        if (-not (Test-Path ".env") -and (Test-Path ".env.sample")) {
+            Write-Warning "Env generation did not create .env. Copying .env.sample as fallback..."
+            Copy-Item ".env.sample" ".env"
+            Write-Info "Created .env from .env.sample. Update the file with your Azure resource values."
+        }
+        if (-not (Test-Path ".env")) {
+            Write-Error "Failed to create .env. Run '.\scripts\local_dev.ps1 -Command env' or create .env manually from .env.sample."
+            exit 1
+        }
+    } else {
+        Write-Success "Found existing .env file"
+        $overwrite = Read-Host "Do you want to overwrite it with fresh values from Azure deployment? (y/N)"
+        if ($overwrite -eq 'y' -or $overwrite -eq 'Y') {
+            Write-Info "Regenerating .env from Azure resources..."
+            Remove-Item ".env" -Force
+            Invoke-EnvGeneration
+            Write-Success "Environment variables refreshed."
+        } else {
+            Write-Info "Preserving existing .env. Using local configuration."
+        }
+    }
+    
     # Auto-run setup if prerequisites are missing
     $needsSetup = $false
     if (-not (Test-Path ".venv")) {
@@ -493,12 +522,6 @@ function Start-All {
     }
     if ($needsSetup) {
         Invoke-Setup
-    }
-    
-    # Auto-run env generation if .env is missing
-    if (-not (Test-Path ".env")) {
-        Write-Warning ".env file not found. Generating from Azure resources..."
-        Invoke-EnvGeneration
     }
     
     # Ensure Azure roles
@@ -572,8 +595,15 @@ function Start-All {
                 }
             }
 
-            if ($backendJob.State -eq 'Failed' -or $frontendJob.State -eq 'Failed') {
-                Write-Error "One of the services failed"
+            # Break if either job is no longer running
+            $backendState = $backendJob.State
+            $frontendState = $frontendJob.State
+            if ($backendState -ne 'Running' -or $frontendState -ne 'Running') {
+                if ($backendState -eq 'Failed' -or $frontendState -eq 'Failed') {
+                    Write-Error "One of the services failed (backend: $backendState, frontend: $frontendState)"
+                } else {
+                    Write-Warning "A service has stopped (backend: $backendState, frontend: $frontendState)"
+                }
                 break
             }
 

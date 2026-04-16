@@ -36,38 +36,68 @@ content-generation-solution-accelerator/    ← Repository root (start here)
 
 ## Step 1: Prerequisites - Install Required Tools
 
-### Windows (PowerShell)
+### Windows Development
+
+#### Option 1: Native Windows (PowerShell)
 
 ```powershell
-# Install Python 3.11+, Node.js 18+, Git, and Azure CLI
-winget install Python.Python.3.12
-winget install OpenJS.NodeJS.LTS
+# Install Git
 winget install Git.Git
+
+# Install Node.js for frontend
+winget install OpenJS.NodeJS.LTS
+
+# Install Python 3.11+
+winget install Python.Python.3.12
+
+# Install Azure CLI and Azure Developer CLI
 winget install Microsoft.AzureCLI
 winget install Microsoft.Azd
-
-# Verify installations
-python --version
-node --version
-git --version
-az --version
-azd version
 ```
 
-### Linux (Ubuntu/Debian)
+#### Option 2: Windows with WSL2 (Recommended)
 
 ```bash
-# Install prerequisites
-sudo apt update && sudo apt install python3.11 python3.11-venv git curl nodejs npm -y
+# Install WSL2 first (run in PowerShell as Administrator):
+# wsl --install -d Ubuntu
+
+# Then in WSL2 Ubuntu terminal:
+sudo apt update && sudo apt install git curl python3.11 python3.11-venv -y
+
+# Install Node.js 20+ from NodeSource
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
 
 # Install Azure CLI
 curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
 
 # Install Azure Developer CLI
 curl -fsSL https://aka.ms/install-azd.sh | bash
+```
 
-# Verify installations
-python3 --version
+### Linux Development
+
+#### Ubuntu/Debian
+
+```bash
+# Install prerequisites
+sudo apt update && sudo apt install git curl python3.11 python3.11-venv -y
+
+# Install Node.js 20+ from NodeSource
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+
+# Install Azure CLI
+curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+
+# Install Azure Developer CLI
+curl -fsSL https://aka.ms/install-azd.sh | bash
+```
+
+### Verify Installations
+
+```bash
+python3 --version    # or python --version on Windows
 node --version
 git --version
 az --version

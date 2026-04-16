@@ -283,9 +283,9 @@ setup() {
     # Check for .env file
     if [ ! -f ".env" ]; then
         print_warning ".env file not found"
-        if [ -f ".env.template" ]; then
-            print_info "Copying .env.template to .env..."
-            cp .env.template .env
+        if [ -f ".env.sample" ]; then
+            print_info "Copying .env.sample to .env..."
+            cp .env.sample .env
             print_warning "Please update .env with your Azure resource values"
         fi
     else
@@ -340,8 +340,9 @@ generate_env() {
         print_warning "Azure Developer CLI not found or no azure.yaml"
         print_info "Please manually update .env with your Azure resource values"
         
-        if [ ! -f ".env" ] && [ -f ".env.template" ]; then
-            cp .env.template .env
+        if [ ! -f ".env" ] && [ -f ".env.sample" ]; then
+            cp .env.sample .env
+            print_info "Created .env from .env.sample"
             print_info "Created .env from template"
         fi
     fi
@@ -437,6 +438,33 @@ start_all() {
     
     cd "$PROJECT_ROOT"
     
+    # Handle .env: generate if missing, or prompt to refresh if exists
+    if [ ! -f ".env" ]; then
+        print_warning ".env file not found. Generating from Azure resources..."
+        generate_env
+        # Fallback to .env.sample if generation didn't produce .env
+        if [ ! -f ".env" ] && [ -f ".env.sample" ]; then
+            print_warning "Env generation did not create .env. Copying .env.sample as fallback..."
+            cp .env.sample .env
+            print_info "Created .env from .env.sample. Update the file with your Azure resource values."
+        fi
+        if [ ! -f ".env" ]; then
+            print_error "Failed to create .env. Run './scripts/local_dev.sh env' or create .env manually from .env.sample."
+            exit 1
+        fi
+    else
+        print_success "Found existing .env file"
+        read -p "Do you want to overwrite it with fresh values from Azure deployment? (y/N): " overwrite
+        if [ "$overwrite" = "y" ] || [ "$overwrite" = "Y" ]; then
+            print_info "Regenerating .env from Azure resources..."
+            rm -f .env
+            generate_env
+            print_success "Environment variables refreshed."
+        else
+            print_info "Preserving existing .env. Using local configuration."
+        fi
+    fi
+    
     # Auto-run setup if prerequisites are missing
     local needs_setup=false
     if [ ! -d ".venv" ]; then
@@ -449,12 +477,6 @@ start_all() {
     fi
     if [ "$needs_setup" = true ]; then
         setup
-    fi
-    
-    # Auto-run env generation if .env is missing
-    if [ ! -f ".env" ]; then
-        print_warning ".env file not found. Generating from Azure resources..."
-        generate_env
     fi
     
     # Ensure Azure authentication and role assignments
