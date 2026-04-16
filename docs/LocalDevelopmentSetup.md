@@ -473,6 +473,7 @@ If the `env` command fails or produces an incomplete `.env`, ensure:
 ## Related Documentation
 
 - [AZD Deployment Guide](AZD_DEPLOYMENT.md): Deploy to Azure with `azd up`
+- [Deploy Local Changes](AZD_DEPLOYMENT.md#advanced-deploy-local-changes): Deploy your local code modifications to Azure
 - [Technical Guide](TECHNICAL_GUIDE.md): Architecture and technical details
 - [Azure Account Setup](AzureAccountSetUp.md): Setting up your Azure account
 - [Quota Check](QuotaCheck.md): Verify Azure resource quotas before deployment
