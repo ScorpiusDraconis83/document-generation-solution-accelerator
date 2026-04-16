@@ -437,20 +437,24 @@ start_all() {
     
     cd "$PROJECT_ROOT"
     
-    # Check prerequisites
-    if [ ! -f ".env" ]; then
-        print_error ".env file not found. Run: ./scripts/local_dev.sh setup"
-        exit 1
-    fi
-    
+    # Auto-run setup if prerequisites are missing
+    local needs_setup=false
     if [ ! -d ".venv" ]; then
-        print_error "Virtual environment not found. Run: ./scripts/local_dev.sh setup"
-        exit 1
+        print_warning "Virtual environment not found. Running setup..."
+        needs_setup=true
+    fi
+    if [ ! -d "$FRONTEND_DIR/node_modules" ]; then
+        print_warning "Frontend dependencies not found. Running setup..."
+        needs_setup=true
+    fi
+    if [ "$needs_setup" = true ]; then
+        setup
     fi
     
-    if [ ! -d "$FRONTEND_DIR/node_modules" ]; then
-        print_error "Frontend dependencies not found. Run: ./scripts/local_dev.sh setup"
-        exit 1
+    # Auto-run env generation if .env is missing
+    if [ ! -f ".env" ]; then
+        print_warning ".env file not found. Generating from Azure resources..."
+        generate_env
     fi
     
     # Ensure Azure authentication and role assignments
@@ -475,7 +479,7 @@ start_all() {
     (
         cd "$PROJECT_ROOT"
         source .venv/bin/activate
-        export PYTHONPATH="$SRC_DIR"
+        export PYTHONPATH="$BACKEND_DIR"
         export DOTENV_PATH="$PROJECT_ROOT/.env"
         set -a
         source "$PROJECT_ROOT/.env"
@@ -566,7 +570,7 @@ case "${1:-}" in
     ""|all)
         start_all
         ;;
-    *)
+    help|*)
         echo "Content Generation Accelerator - Local Development"
         echo ""
         echo "Usage: $0 [command]"
@@ -579,6 +583,7 @@ case "${1:-}" in
         echo "  all       Start both backend and frontend (default)"
         echo "  build     Build frontend for production"
         echo "  clean     Remove cache and build artifacts"
+        echo "  help      Show this help message"
         echo ""
         echo "Environment Variables:"
         echo "  BACKEND_PORT   Backend port (default: 5000)"

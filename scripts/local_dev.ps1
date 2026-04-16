@@ -420,14 +420,30 @@ function Start-Backend {
     Write-Info "Health check: http://localhost:$BackendPort/api/health"
     Write-Host ""
     
-    Set-Location $BackendDir
-    
-    # Use hypercorn for async support
-    if (Test-Command "hypercorn") {
-        hypercorn app:app --bind "0.0.0.0:$BackendPort" --reload
-    } else {
-        python -m quart --app app:app run --host 0.0.0.0 --port $BackendPort --reload
+    Push-Location $BackendDir
+    try {
+        # Use hypercorn for async support
+        if (Test-Command "hypercorn") {
+            hypercorn app:app --bind "0.0.0.0:$BackendPort" --reload 2>&1 | ForEach-Object {
+                if ($_ -notmatch "Traceback|File.*frozen|InterruptedError|sys\.exit") {
+                    Write-Host $_
+                }
+            }
+        } else {
+            python -m quart --app app:app run --host 0.0.0.0 --port $BackendPort --reload 2>&1 | ForEach-Object {
+                if ($_ -notmatch "Traceback|File.*frozen|InterruptedError|sys\.exit") {
+                    Write-Host $_
+                }
+            }
+        }
+    } catch {
+        # Suppress Ctrl+C exceptions
+    } finally {
+        Pop-Location
     }
+    
+    Write-Host ""
+    Write-Success "Backend stopped."
 }
 
 # =============================================================================
@@ -437,20 +453,23 @@ function Start-Backend {
 function Start-Frontend {
     Write-Header "Starting Frontend Development Server"
     
-    Set-Location $FrontendDir
-    
-    # Check if node_modules exists
-    if (-not (Test-Path "node_modules")) {
-        Write-Error "Node modules not found. Run: .\scripts\local_dev.ps1 -Command setup"
-        exit 1
+    Push-Location $FrontendDir
+    try {
+        # Check if node_modules exists
+        if (-not (Test-Path "node_modules")) {
+            Write-Error "Node modules not found. Run: .\scripts\local_dev.ps1 -Command setup"
+            exit 1
+        }
+        
+        Write-Info "Starting Vite dev server on port $FrontendPort..."
+        Write-Info "Frontend will be available at: http://localhost:$FrontendPort"
+        Write-Info "API requests will proxy to: http://localhost:$BackendPort"
+        Write-Host ""
+        
+        npm run dev
+    } finally {
+        Pop-Location
     }
-    
-    Write-Info "Starting Vite dev server on port $FrontendPort..."
-    Write-Info "Frontend will be available at: http://localhost:$FrontendPort"
-    Write-Info "API requests will proxy to: http://localhost:$BackendPort"
-    Write-Host ""
-    
-    npm run dev
 }
 
 # =============================================================================
@@ -462,20 +481,24 @@ function Start-All {
     
     Set-Location $ProjectRoot
     
-    # Check prerequisites
-    if (-not (Test-Path ".env")) {
-        Write-Error ".env file not found. Run: .\scripts\local_dev.ps1 -Command setup"
-        exit 1
-    }
-    
+    # Auto-run setup if prerequisites are missing
+    $needsSetup = $false
     if (-not (Test-Path ".venv")) {
-        Write-Error "Virtual environment not found. Run: .\scripts\local_dev.ps1 -Command setup"
-        exit 1
+        Write-Warning "Virtual environment not found. Running setup..."
+        $needsSetup = $true
+    }
+    if (-not (Test-Path (Join-Path $FrontendDir "node_modules"))) {
+        Write-Warning "Frontend dependencies not found. Running setup..."
+        $needsSetup = $true
+    }
+    if ($needsSetup) {
+        Invoke-Setup
     }
     
-    if (-not (Test-Path (Join-Path $FrontendDir "node_modules"))) {
-        Write-Error "Frontend dependencies not found. Run: .\scripts\local_dev.ps1 -Command setup"
-        exit 1
+    # Auto-run env generation if .env is missing
+    if (-not (Test-Path ".env")) {
+        Write-Warning ".env file not found. Generating from Azure resources..."
+        Invoke-EnvGeneration
     }
     
     # Ensure Azure roles
@@ -517,32 +540,43 @@ function Start-All {
                 Set-Item -Path "env:$name" -Value $value
             }
         }
-        
+
         Set-Location $BackendDir
-        python -m quart --app app:app run --host 0.0.0.0 --port $BackendPort --reload
+        python -m quart --app app:app run --host 0.0.0.0 --port $BackendPort --reload 2>&1
     } -ArgumentList $ProjectRoot, $BackendDir, $BackendPort
-    
+
     # Give backend time to start
     Start-Sleep -Seconds 2
-    
+
     # Start frontend as a job
     $frontendJob = Start-Job -ScriptBlock {
         param($FrontendDir)
         Set-Location $FrontendDir
-        npm run dev
+        npm run dev 2>&1
     } -ArgumentList $FrontendDir
-    
+
     try {
         # Monitor jobs and output their results
         while ($true) {
-            Receive-Job -Job $backendJob -ErrorAction SilentlyContinue
-            Receive-Job -Job $frontendJob -ErrorAction SilentlyContinue
-            
+            $backendOutput = Receive-Job -Job $backendJob 2>&1
+            if ($backendOutput) {
+                $backendOutput | ForEach-Object {
+                    Write-Host "[backend]  $_" -ForegroundColor Cyan
+                }
+            }
+
+            $frontendOutput = Receive-Job -Job $frontendJob 2>&1
+            if ($frontendOutput) {
+                $frontendOutput | ForEach-Object {
+                    Write-Host "[frontend] $_" -ForegroundColor Green
+                }
+            }
+
             if ($backendJob.State -eq 'Failed' -or $frontendJob.State -eq 'Failed') {
                 Write-Error "One of the services failed"
                 break
             }
-            
+
             Start-Sleep -Milliseconds 500
         }
     } finally {
