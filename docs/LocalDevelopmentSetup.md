@@ -1,111 +1,258 @@
-# Local Development Guide
+# Local Development Setup Guide
 
-This guide covers running the Content Generation Solution Accelerator locally for development and testing.
+This guide provides comprehensive instructions for setting up the Content Generation Solution Accelerator for local development across Windows and Linux platforms.
 
-## Prerequisites
+## Important Setup Notes
 
-- **Python 3.11+** - Backend runtime
-- **Node.js 18+** - Frontend build tools
-- **Azure CLI** - For authentication and environment setup
-- **Azure Developer CLI (azd)** - Optional, for automatic environment configuration
+### Multi-Service Architecture
 
-### Azure Resources
+This application consists of **two separate services** that run in parallel:
 
-You need access to the following Azure resources (can use an existing deployment):
+1. **Backend API**: Python/Quart server providing content generation and orchestration APIs
+2. **Frontend**: React/Vite-based user interface
 
-- Azure OpenAI with GPT and image generation models deployed
-- Azure Cosmos DB account with database and containers
-- Azure Blob Storage account
-- Azure AI Search service (optional, for product search)
+> **💡 Note:** The local development script (`local_dev.ps1` / `local_dev.sh`) manages both services automatically. When running individually, each service requires its own terminal window.
 
-## Quick Start
+### Path Conventions
 
-### Linux/Mac
+**All paths in this guide are relative to the repository root directory:**
 
 ```bash
-# First time setup
-./scripts/local_dev.sh setup
-
-# Start development servers
-./scripts/local_dev.sh
+content-generation-solution-accelerator/    ← Repository root (start here)
+├── scripts/
+│   ├── local_dev.ps1               ← Local dev script (Windows)
+│   └── local_dev.sh                ← Local dev script (Linux/Mac)
+├── src/
+│   ├── backend/
+│   │   ├── app.py                  ← API entry point
+│   │   └── requirements.txt        ← Python dependencies
+│   └── app/
+│       └── frontend/
+│           └── package.json        ← Node.js dependencies
+├── .env.sample                     ← Template for environment variables
+├── .env                            ← Your local config file
+└── docs/                           ← Documentation (you are here)
 ```
 
-### Windows PowerShell
+## Step 1: Prerequisites - Install Required Tools
+
+### Windows Development
+
+#### Option 1: Native Windows (PowerShell)
 
 ```powershell
-# First time setup
-.\scripts\local_dev.ps1 -Command setup
+# Install Git
+winget install Git.Git
 
-# Start development servers
-.\scripts\local_dev.ps1
+# Install Node.js for frontend
+winget install OpenJS.NodeJS.LTS
+
+# Install Python 3.11+
+winget install Python.Python.3.12
+
+# Install Azure CLI and Azure Developer CLI
+winget install Microsoft.AzureCLI
+winget install Microsoft.Azd
 ```
 
-## Environment Configuration
-
-### Option 1: Generate from Azure Deployment
-
-If you have an existing Azure deployment with `azd`:
+#### Option 2: Windows with WSL2 (Recommended)
 
 ```bash
-./scripts/local_dev.sh env
+# Install WSL2 first (run in PowerShell as Administrator):
+# wsl --install -d Ubuntu
+
+# Then in WSL2 Ubuntu terminal:
+sudo apt update && sudo apt install git curl python3.11 python3.11-venv -y
+
+# Install Node.js 20+ from NodeSource
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+
+# Install Azure CLI
+curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+
+# Install Azure Developer CLI
+curl -fsSL https://aka.ms/install-azd.sh | bash
 ```
 
-### Option 2: Manual Configuration
+### Linux Development
 
-1. Copy the environment template:
-   ```bash
-   cp .env.sample .env
-   ```
+#### Ubuntu/Debian
 
-2. Edit `.env` with your Azure resource values (see [Environment Variables Reference](#environment-variables-reference) below)
-
-## Development Commands
-
-| Command | Description |
-|---------|-------------|
-| `setup` | Create virtual environment, install Python and Node.js dependencies |
-| `env` | Generate `.env` file from Azure resources (uses azd if available) |
-| `backend` | Start only the Python/Quart backend server (port 5000) |
-| `frontend` | Start only the Vite frontend dev server (port 3000) |
-| `all` | Start both backend and frontend in parallel (default) |
-| `build` | Build frontend for production |
-| `clean` | Remove cache files, node_modules, and build artifacts |
-
-### Usage Examples
-
-**Linux/Mac:**
 ```bash
-# Full setup and start
-./scripts/local_dev.sh setup
-./scripts/local_dev.sh
+# Install prerequisites
+sudo apt update && sudo apt install git curl python3.11 python3.11-venv -y
 
-# Start only backend (for API development)
-./scripts/local_dev.sh backend
+# Install Node.js 20+ from NodeSource
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
 
-# Start only frontend (if backend is running elsewhere)
-./scripts/local_dev.sh frontend
+# Install Azure CLI
+curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
 
-# Build for production
-./scripts/local_dev.sh build
-
-# Clean up
-./scripts/local_dev.sh clean
+# Install Azure Developer CLI
+curl -fsSL https://aka.ms/install-azd.sh | bash
 ```
+
+### Verify Installations
+
+```bash
+python3 --version    # or python --version on Windows
+node --version
+git --version
+az --version
+azd version
+```
+
+### Clone the Repository
+
+```bash
+git clone https://github.com/microsoft/content-generation-solution-accelerator.git
+cd content-generation-solution-accelerator
+```
+
+## Step 2: Development Tools Setup
+
+### Visual Studio Code (Recommended)
+
+#### Required Extensions
+
+Create `.vscode/extensions.json` in the workspace root and copy the following JSON:
+
+```json
+{
+    "recommendations": [
+        "ms-python.python",
+        "ms-python.pylint",
+        "ms-python.black-formatter",
+        "ms-python.isort",
+        "ms-vscode-remote.remote-wsl",
+        "ms-vscode-remote.remote-containers",
+        "redhat.vscode-yaml",
+        "ms-vscode.azure-account",
+        "ms-python.mypy-type-checker"
+    ]
+}
+```
+
+VS Code will prompt you to install these recommended extensions when you open the workspace.
+
+#### Settings Configuration
+
+Create `.vscode/settings.json` and copy the following JSON:
+
+```json
+{
+    "python.terminal.activateEnvironment": true,
+    "python.formatting.provider": "black",
+    "python.linting.enabled": true,
+    "python.linting.pylintEnabled": true,
+    "python.testing.pytestEnabled": true,
+    "python.testing.unittestEnabled": false,
+    "files.associations": {
+        "*.yaml": "yaml",
+        "*.yml": "yaml"
+    }
+}
+```
+
+## Step 3: Azure Infrastructure Deployment & Authentication
+
+Before running the application locally, you need to deploy the Azure infrastructure. Follow the [AZD Deployment Guide](AZD_DEPLOYMENT.md) to deploy using `azd up`.
+
+### Azure Authentication
+
+After deployment, ensure you are authenticated with Azure CLI:
+
+```bash
+# Login to Azure CLI
+az login
+
+# Set your subscription
+az account set --subscription "your-subscription-id"
+
+# Verify authentication
+az account show
+```
+
+## Step 4: Start Development Servers
+
+### Option A: Complete Automated Run
+
+Start everything with a single command:
 
 **Windows PowerShell:**
 ```powershell
-# Full setup and start
-.\scripts\local_dev.ps1 -Command setup
 .\scripts\local_dev.ps1
-
-# Start only backend
-.\scripts\local_dev.ps1 -Command backend
-
-# Start only frontend
-.\scripts\local_dev.ps1 -Command frontend
 ```
 
-## Development URLs
+**Linux/Mac:**
+```bash
+chmod +x ./scripts/local_dev.sh   # First time only: grant execute permission
+./scripts/local_dev.sh
+```
+
+The script automatically handles environment setup, dependency installation, Azure authentication, role assignments, and starts both the backend (port 5000) and frontend (port 3000).
+
+> **Note:** RBAC changes can take 5-10 minutes to propagate. If you get "Forbidden" errors, wait and retry.
+
+### Option B: Run Each Step Individually
+
+If you prefer more control over the setup process, follow the steps below to configure and run each service individually.
+
+> **Linux/Mac:** If you haven't already, run `chmod +x ./scripts/local_dev.sh` first to grant execute permission.
+
+#### 1. Generate Environment Configuration
+
+```powershell
+.\scripts\local_dev.ps1 -Command env        # Windows PowerShell
+./scripts/local_dev.sh env                  # Linux/Mac
+```
+
+This runs `azd env get-values` and writes the output to a `.env` file in the repository root.
+
+> **Alternative: Manual Configuration**
+>
+> If you don't have `azd` or prefer manual setup:
+> 1. Copy the sample file:
+>    ```bash
+>    cp .env.sample .env        # Linux/macOS
+>    Copy-Item .env.sample .env  # Windows PowerShell
+>    ```
+> 2. Get the environment variable values from the Azure Portal:
+>    - Navigate to your **Resource Group** in the Azure Portal
+>    - Open the **Azure Container Instance (ACI)** resource
+>    - Go to **Containers** → select the container → **Properties**
+>    - Copy the environment variable values from the **Environment variables** section into your `.env` file
+>
+> See [Environment Variables Reference](#environment-variables-reference) for details on each variable.
+
+#### 2. Install Dependencies
+
+```powershell
+.\scripts\local_dev.ps1 -Command setup      # Windows PowerShell
+./scripts/local_dev.sh setup                # Linux/Mac
+```
+
+Creates a Python virtual environment (`.venv`), installs backend Python packages, and installs frontend Node.js packages.
+
+#### 3. Start Backend
+
+```powershell
+.\scripts\local_dev.ps1 -Command backend    # Windows PowerShell
+./scripts/local_dev.sh backend              # Linux/Mac
+```
+
+#### 4. Start Frontend (in a separate terminal)
+
+```powershell
+.\scripts\local_dev.ps1 -Command frontend   # Windows PowerShell
+./scripts/local_dev.sh frontend             # Linux/Mac
+```
+
+---
+
+## Step 5: Verify Services Are Running
 
 | Service | URL |
 |---------|-----|
@@ -113,193 +260,89 @@ If you have an existing Azure deployment with `azd`:
 | Backend API | http://localhost:5000 |
 | Health Check | http://localhost:5000/api/health |
 
-The frontend Vite dev server automatically proxies `/api/*` requests to the backend.
+Open http://localhost:3000 in your browser - you should see the Content Generation Accelerator UI.
 
-## Hot Reload
+Both servers support **hot reload** - changes to source files trigger automatic reload.
 
-Both servers support hot reload:
-- **Backend**: Uses Hypercorn with `--reload` flag
-- **Frontend**: Uses Vite's built-in HMR (Hot Module Replacement)
+## Step 6: Additional Commands
 
-Changes to source files will automatically trigger a reload.
+### Clean Up Artifacts
+
+Removes Python caches, `node_modules`, and build artifacts:
+
+```powershell
+.\scripts\local_dev.ps1 -Command clean      # Windows PowerShell
+./scripts/local_dev.sh clean                # Linux/Mac
+```
+
+### Show Help
+
+```powershell
+.\scripts\local_dev.ps1 -Command help       # Windows PowerShell
+./scripts/local_dev.sh help                 # Linux/Mac
+```
 
 ---
 
 ## Environment Variables Reference
 
-### Server Configuration
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | `5000` | Port for the Python backend API |
-| `WORKERS` | `4` | Number of Hypercorn worker processes |
-| `BACKEND_PORT` | `5000` | Alternative port variable for local dev scripts |
-| `FRONTEND_PORT` | `3000` | Port for the Vite dev server |
-
-### Azure Authentication
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `AZURE_CLIENT_ID` | No | Azure AD application (client) ID for authentication |
+The `.env` file is loaded from the repository root. It is **auto-generated** when you run the main script if missing, or you can generate it manually using the `env` command. You can also create it manually from `.env.sample`.
 
 ### Azure OpenAI Configuration
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `AZURE_OPENAI_ENDPOINT` | Yes | Azure OpenAI endpoint URL (e.g., `https://your-resource.openai.azure.com/`) |
-| `AZURE_ENV_GPT_MODEL_NAME` | Yes | GPT model deployment name (e.g., `gpt-4o`, `gpt-5.1`) |
-| `AZURE_ENV_IMAGE_MODEL_NAME` | Yes | Image generation model (`gpt-image-1-mini` or `gpt-image-1.5`) |
-| `AZURE_OPENAI_GPT_IMAGE_ENDPOINT` | No | Separate endpoint for gpt-image-1-mini (if different from main endpoint) |
+| `AZURE_OPENAI_ENDPOINT` | Yes | Azure OpenAI endpoint URL |
+| `AZURE_ENV_GPT_MODEL_NAME` | Yes | GPT model deployment name (e.g., `gpt-5.1`) |
+| `AZURE_ENV_IMAGE_MODEL_NAME` | Yes | Image generation model (e.g., `gpt-image-1-mini`) |
+| `AZURE_OPENAI_GPT_IMAGE_ENDPOINT` | No | Separate endpoint for image generation (if different from main endpoint) |
 | `AZURE_ENV_OPENAI_API_VERSION` | Yes | API version (e.g., `2024-06-01`) |
-| `AZURE_OPENAI_TEMPERATURE` | No | Generation temperature (default: `0.7`) |
-| `AZURE_OPENAI_MAX_TOKENS` | No | Max tokens for generation (default: `2000`) |
 
-### Image Generation Settings
+### Azure AI Foundry Configuration
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `AZURE_OPENAI_IMAGE_SIZE` | `1024x1024` | Image dimensions |
-| `AZURE_OPENAI_IMAGE_QUALITY` | `medium` | Image quality setting |
-
-**GPT-Image-1-mini/1.5 Options:**
-- Sizes: `1024x1024`, `1536x1024`, `1024x1536`, `auto`
-- Quality: `low`, `medium`, `high`, `auto`
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `USE_FOUNDRY` | Yes | Set to `true` to use Azure AI Foundry (default deployment uses Foundry) |
+| `AZURE_AI_PROJECT_ENDPOINT` | Yes | AI Foundry project endpoint URL |
+| `AZURE_AI_MODEL_DEPLOYMENT_NAME` | Yes | GPT model deployment name in Foundry |
+| `AZURE_AI_IMAGE_MODEL_DEPLOYMENT` | Yes | Image model deployment name in Foundry |
+| `AI_FOUNDRY_RESOURCE_ID` | Yes | Resource ID of the AI Foundry account (used for role assignments) |
+| `AZURE_EXISTING_AIPROJECT_RESOURCE_ID` | No | Resource ID of an existing AI project (used for role assignments if set) |
 
 ### Azure Cosmos DB
 
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `AZURE_COSMOS_ENDPOINT` | Yes | Cosmos DB endpoint URL |
-| `AZURE_COSMOS_DATABASE_NAME` | Yes | Database name (default: `content-generation`) |
-| `AZURE_COSMOS_PRODUCTS_CONTAINER` | Yes | Products container name (default: `products`) |
-| `AZURE_COSMOS_CONVERSATIONS_CONTAINER` | Yes | Conversations container name (default: `conversations`) |
+| `AZURE_COSMOS_DATABASE_NAME` | Yes | Database name |
+| `AZURE_COSMOS_PRODUCTS_CONTAINER` | Yes | Products container name |
+| `AZURE_COSMOS_CONVERSATIONS_CONTAINER` | Yes | Conversations container name |
+| `COSMOSDB_ACCOUNT_NAME` | Yes | Cosmos DB account name (used for role assignments) |
 
 ### Azure Blob Storage
 
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `AZURE_BLOB_ACCOUNT_NAME` | Yes | Storage account name |
-| `AZURE_BLOB_PRODUCT_IMAGES_CONTAINER` | Yes | Container for product images (default: `product-images`) |
-| `AZURE_BLOB_GENERATED_IMAGES_CONTAINER` | Yes | Container for AI-generated images (default: `generated-images`) |
+| `AZURE_BLOB_PRODUCT_IMAGES_CONTAINER` | Yes | Container for product images |
+| `AZURE_BLOB_GENERATED_IMAGES_CONTAINER` | Yes | Container for AI-generated images |
 
 ### Azure AI Search
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `AZURE_AI_SEARCH_ENDPOINT` | No | AI Search service endpoint URL |
-| `AZURE_AI_SEARCH_PRODUCTS_INDEX` | No | Product search index name (default: `products`) |
-| `AZURE_AI_SEARCH_IMAGE_INDEX` | No | Image search index name (default: `product-images`) |
-
-### UI Configuration
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `UI_APP_NAME` | `Content Generation Accelerator` | Application name shown in UI |
-| `UI_TITLE` | `Content Generation` | Browser tab title |
-| `UI_CHAT_TITLE` | `Marketing Content Generator` | Chat interface title |
-| `UI_CHAT_DESCRIPTION` | AI-powered multimodal content generation... | Chat interface description |
-
-### Brand Guidelines
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `BRAND_TONE` | `Professional yet approachable` | Brand voice tone |
-| `BRAND_VOICE` | `Innovative, trustworthy, customer-focused` | Brand voice characteristics |
-| `BRAND_PRIMARY_COLOR` | `#0078D4` | Primary brand color (hex) |
-| `BRAND_SECONDARY_COLOR` | `#107C10` | Secondary brand color (hex) |
-| `BRAND_IMAGE_STYLE` | `Modern, clean, minimalist...` | Image generation style guidance |
-| `BRAND_MAX_HEADLINE_LENGTH` | `60` | Maximum headline character length |
-| `BRAND_MAX_BODY_LENGTH` | `500` | Maximum body text character length |
-| `BRAND_REQUIRE_CTA` | `true` | Require call-to-action in content |
-| `BRAND_PROHIBITED_WORDS` | `cheapest,guaranteed,...` | Comma-separated list of prohibited words |
-| `BRAND_REQUIRED_DISCLOSURES` | `` | Comma-separated required legal disclosures |
+| `AZURE_AI_SEARCH_ENDPOINT` | Yes | AI Search service endpoint URL |
+| `AZURE_AI_SEARCH_PRODUCTS_INDEX` | Yes | Product search index name |
+| `AZURE_AI_SEARCH_IMAGE_INDEX` | Yes | Image search index name |
 
 ### Application Settings
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `AUTH_ENABLED` | `false` | Enable Azure AD authentication |
-| `SANITIZE_ANSWER` | `false` | Sanitize AI responses for safety |
-
----
-
-## Example .env File
-
-```dotenv
-# Azure OpenAI
-AZURE_OPENAI_ENDPOINT=https://my-openai.openai.azure.com/
-AZURE_ENV_GPT_MODEL_NAME=gpt-4o
-AZURE_ENV_IMAGE_MODEL_NAME=gpt-image-1-mini
-AZURE_OPENAI_GPT_IMAGE_ENDPOINT=https://my-openai.openai.azure.com
-AZURE_OPENAI_IMAGE_SIZE=1024x1024
-AZURE_OPENAI_IMAGE_QUALITY=medium
-AZURE_ENV_OPENAI_API_VERSION=2024-06-01
-
-# Cosmos DB
-AZURE_COSMOS_ENDPOINT=https://my-cosmos.documents.azure.com:443/
-AZURE_COSMOS_DATABASE_NAME=content-generation
-AZURE_COSMOS_PRODUCTS_CONTAINER=products
-AZURE_COSMOS_CONVERSATIONS_CONTAINER=conversations
-
-# Blob Storage
-AZURE_BLOB_ACCOUNT_NAME=mystorageaccount
-AZURE_BLOB_PRODUCT_IMAGES_CONTAINER=product-images
-AZURE_BLOB_GENERATED_IMAGES_CONTAINER=generated-images
-
-# AI Search (optional)
-AZURE_AI_SEARCH_ENDPOINT=https://my-search.search.windows.net
-AZURE_AI_SEARCH_PRODUCTS_INDEX=products
-
-# UI
-UI_APP_NAME=Content Generation Accelerator
-UI_TITLE=Content Generation
-
-# Brand
-BRAND_TONE=Professional yet approachable
-BRAND_VOICE=Innovative, trustworthy, customer-focused
-BRAND_PRIMARY_COLOR=#0078D4
-BRAND_PROHIBITED_WORDS=cheapest,guaranteed,best in class
-
-# Server
-PORT=5000
-AUTH_ENABLED=false
-```
-
----
-
-## Utility Scripts
-
-### Data Scripts
-
-| Script | Description |
-|--------|-------------|
-| `load_sample_data.py` | Load sample products into Cosmos DB and images into Blob Storage |
-| `index_products.py` | Create and populate Azure AI Search index with product data |
-| `upload_images.py` | Upload images from local directory to Blob Storage |
-| `create_image_search_index.py` | Create image search index for visual similarity |
-
-**Usage:**
-```bash
-# Load sample data
-python scripts/load_sample_data.py
-
-# Create search index
-python scripts/index_products.py
-
-# Upload images
-python scripts/upload_images.py --source ./images --container product-images
-```
-
-### Testing Scripts
-
-| Script | Description |
-|--------|-------------|
-| `test_content_generation.py` | End-to-end test for content generation pipeline |
-
-**Usage:**
-```bash
-python scripts/test_content_generation.py
-```
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `AZURE_CLIENT_ID` | Yes | Azure AD application (client) ID |
+| `PORT` | No | Backend API port (default: `5000` locally, `8000` in ACI) |
+| `WORKERS` | No | Number of Hypercorn worker processes (default: `4`) |
+| `RESOURCE_GROUP_NAME` | Yes | Azure resource group name (used for role assignments) |
 
 ---
 
@@ -308,28 +351,39 @@ python scripts/test_content_generation.py
 ### Port Already in Use
 
 ```bash
-# Find and kill the process
-lsof -i :5000
-kill -9 <PID>
+# Check what's using the port
+netstat -tulpn | grep :5000          # Linux
+lsof -i :5000                        # macOS
+netstat -ano | findstr :5000         # Windows PowerShell
+
+# Kill the process if needed (use PID from above command)
+kill -9 <PID>                        # Linux/macOS
+Stop-Process -Id <PID>              # Windows PowerShell
 
 # Or use a different port
-BACKEND_PORT=8000 ./scripts/local_dev.sh backend
+BACKEND_PORT=8000 ./scripts/local_dev.sh backend                           # Linux/Mac
+$env:BACKEND_PORT=8000; .\scripts\local_dev.ps1 -Command backend          # Windows PowerShell
 ```
 
 ### Virtual Environment Issues
 
+- If `python` command is not found, try `python3` or `py -3.12`
+- On Windows, if venv activation fails, run: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
+
 ```bash
-# Remove and recreate
-rm -rf .venv
-./scripts/local_dev.sh setup
+rm -rf .venv                                          # Linux/macOS
+Remove-Item -Recurse -Force .venv                     # Windows PowerShell
+
+# Then re-run setup
+./scripts/local_dev.sh setup                          # Linux/Mac
+.\scripts\local_dev.ps1 -Command setup                # Windows PowerShell
 ```
 
 ### Node Modules Issues
 
 ```bash
-# Clean and reinstall
-./scripts/local_dev.sh clean
-./scripts/local_dev.sh setup
+./scripts/local_dev.sh clean && ./scripts/local_dev.sh setup              # Linux/Mac
+.\scripts\local_dev.ps1 -Command clean; .\scripts\local_dev.ps1 -Command setup   # Windows PowerShell
 ```
 
 ### Azure Authentication
@@ -345,8 +399,10 @@ az account show
 
 ### Cosmos DB Access Denied
 
-Ensure your user has the "Cosmos DB Data Contributor" role:
+The local dev script assigns the Cosmos DB Data Contributor role automatically. If you still encounter issues, add manually:
+
 ```bash
+# Linux/macOS
 az cosmosdb sql role assignment create \
   --resource-group <rg> \
   --account-name <cosmos-account> \
@@ -355,20 +411,69 @@ az cosmosdb sql role assignment create \
   --scope "/"
 ```
 
+```powershell
+# Windows PowerShell
+az cosmosdb sql role assignment create `
+  --resource-group <rg> `
+  --account-name <cosmos-account> `
+  --role-definition-id "00000000-0000-0000-0000-000000000002" `
+  --principal-id (az ad signed-in-user show --query id -o tsv) `
+  --scope "/"
+```
+
 ### Storage Access Denied
 
-Ensure your user has the "Storage Blob Data Contributor" role:
+The local dev script assigns the Storage Blob Data Contributor role automatically. If you still encounter issues, add manually:
+
 ```bash
+# Linux/macOS
 az role assignment create \
   --role "Storage Blob Data Contributor" \
   --assignee $(az ad signed-in-user show --query userPrincipalName -o tsv) \
   --scope /subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Storage/storageAccounts/<storage>
 ```
 
+```powershell
+# Windows PowerShell
+az role assignment create `
+  --role "Storage Blob Data Contributor" `
+  --assignee (az ad signed-in-user show --query userPrincipalName -o tsv) `
+  --scope "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Storage/storageAccounts/<storage>"
+```
+
+### Azure AI User Access Denied
+
+The local dev script assigns the Azure AI User role automatically. If you still encounter issues, add manually:
+
+```bash
+# Linux/macOS
+az role assignment create \
+  --role "Azure AI User" \
+  --assignee $(az ad signed-in-user show --query id -o tsv) \
+  --scope /subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.CognitiveServices/accounts/<ai-foundry-account>
+```
+
+```powershell
+# Windows PowerShell
+az role assignment create `
+  --role "Azure AI User" `
+  --assignee (az ad signed-in-user show --query id -o tsv) `
+  --scope "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.CognitiveServices/accounts/<ai-foundry-account>"
+```
+
+### Missing Environment Variables
+
+If the `env` command fails or produces an incomplete `.env`, ensure:
+1. You have run `azd up` successfully
+2. Your `azd` environment is set correctly: `azd env list`
+3. You can manually check values with: `azd env get-values`
+
 ---
 
 ## Related Documentation
 
-- [AZD Deployment Guide](AZD_DEPLOYMENT.md) - Deploy to Azure with `azd up`
-- [Manual Deployment Guide](DEPLOYMENT.md) - Step-by-step Azure deployment
-- [Image Generation Configuration](IMAGE_GENERATION.md) - GPT Image model setup
+- [AZD Deployment Guide](AZD_DEPLOYMENT.md): Deploy to Azure with `azd up`
+- [Deploy Local Changes](AZD_DEPLOYMENT.md#advanced-deploy-local-changes): Deploy your local code modifications to Azure
+- [Technical Guide](TECHNICAL_GUIDE.md): Architecture and technical details
+- [Azure Account Setup](AzureAccountSetUp.md): Setting up your Azure account
+- [Quota Check](QuotaCheck.md): Verify Azure resource quotas before deployment
