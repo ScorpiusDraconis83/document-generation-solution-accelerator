@@ -11,7 +11,7 @@ infra:
 
 services:
   frontend:
-    project: ./src/app/frontend-server
+    project: ./src/App/server
     language: js
     host: appservice
     dist: ./dist
