@@ -51,12 +51,12 @@ on:
         required: false
         default: ''
         type: string
-      AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID:
+      AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID:
         description: 'Log Analytics Workspace ID (Optional)'
         required: false
         default: ''
         type: string
-      AZURE_EXISTING_AI_PROJECT_RESOURCE_ID:
+      AZURE_EXISTING_AIPROJECT_RESOURCE_ID:
         description: 'AI Project Resource ID (Optional)'
         required: false
         default: ''
@@ -66,10 +66,10 @@ on:
         required: false
         default: ''
         type: string
-      image_model_choice:
-        description: 'Image model to deploy (gpt-image-1, gpt-image-1.5, none)'
+      AZURE_ENV_IMAGE_MODEL_NAME:
+        description: 'Image model to deploy (gpt-image-1-mini, gpt-image-1.5, none)'
         required: false
-        default: 'gpt-image-1'
+        default: 'gpt-image-1-mini'
         type: string
     outputs:
       RESOURCE_GROUP_NAME:
@@ -77,19 +77,19 @@ on:
         value: ${{ jobs.azure-setup.outputs.RESOURCE_GROUP_NAME }}
       WEB_APPURL:
         description: "Container Web App URL"
-        value: ${{ jobs.deploy-linux.outputs.WEB_APPURL || jobs.deploy-windows.outputs.WEB_APPURL || jobs.deploy-devcontainer.outputs.WEB_APPURL }}
+        value: ${{ jobs.deploy-linux.outputs.WEB_APPURL || jobs.deploy-windows.outputs.WEB_APPURL }}
       ENV_NAME:
         description: "Environment Name"
         value: ${{ jobs.azure-setup.outputs.ENV_NAME }}
       AZURE_LOCATION:
         description: "Azure Location"
         value: ${{ jobs.azure-setup.outputs.AZURE_LOCATION }}
-      AZURE_ENV_OPENAI_LOCATION:
+      AZURE_ENV_AI_SERVICE_LOCATION:
         description: "Azure OpenAI Location"
-        value: ${{ jobs.azure-setup.outputs.AZURE_ENV_OPENAI_LOCATION }}
-      IMAGE_TAG:
+        value: ${{ jobs.azure-setup.outputs.AZURE_ENV_AI_SERVICE_LOCATION }}
+      AZURE_ENV_IMAGE_TAG:
         description: "Docker Image Tag Used"
-        value: ${{ jobs.azure-setup.outputs.IMAGE_TAG }}
+        value: ${{ jobs.azure-setup.outputs.AZURE_ENV_IMAGE_TAG }}
       QUOTA_FAILED:
         description: "Quota Check Failed Flag"
         value: ${{ jobs.azure-setup.outputs.QUOTA_FAILED || 'false' }}
@@ -103,22 +103,20 @@ env:
   CLEANUP_RESOURCES: ${{ inputs.trigger_type != 'workflow_dispatch' || inputs.cleanup_resources }}
   RUN_E2E_TESTS: ${{ inputs.trigger_type == 'workflow_dispatch' && (inputs.run_e2e_tests || 'GoldenPath-Testing') || 'GoldenPath-Testing' }}
   BUILD_DOCKER_IMAGE: ${{ inputs.trigger_type == 'workflow_dispatch' && (inputs.build_docker_image || false) || false }}
-permissions:
-  contents: read
-  actions: read
-  packages: write  # Required by job-deploy-devcontainer to push devcontainer image to GHCR
-  
+  RG_TAGS: ${{ vars.RG_TAGS }}
+
 jobs:
   azure-setup:
     name: Azure Setup
     if: inputs.trigger_type != 'workflow_dispatch' || inputs.existing_webapp_url == '' || inputs.existing_webapp_url == null
     runs-on: ubuntu-latest
+    environment: production
     outputs:
       RESOURCE_GROUP_NAME: ${{ steps.check_create_rg.outputs.RESOURCE_GROUP_NAME }}
       ENV_NAME: ${{ steps.generate_env_name.outputs.ENV_NAME }}
       AZURE_LOCATION: ${{ steps.set_region.outputs.AZURE_LOCATION }}
-      AZURE_ENV_OPENAI_LOCATION: ${{ steps.set_region.outputs.AZURE_ENV_OPENAI_LOCATION }}
-      IMAGE_TAG: ${{ steps.determine_image_tag.outputs.IMAGE_TAG }}
+      AZURE_ENV_AI_SERVICE_LOCATION: ${{ steps.set_region.outputs.AZURE_ENV_AI_SERVICE_LOCATION }}
+      AZURE_ENV_IMAGE_TAG: ${{ steps.determine_image_tag.outputs.AZURE_ENV_IMAGE_TAG }}
       QUOTA_FAILED: ${{ steps.quota_failure_output.outputs.QUOTA_FAILED }}
       EXP_ENABLED: ${{ steps.configure_exp.outputs.EXP_ENABLED }}
 
@@ -135,8 +133,8 @@ jobs:
           INPUT_EXP: ${{ inputs.EXP }}
           INPUT_CLEANUP_RESOURCES: ${{ inputs.cleanup_resources }}
           INPUT_RUN_E2E_TESTS: ${{ inputs.run_e2e_tests }}
-          INPUT_AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID: ${{ inputs.AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID }}
-          INPUT_AZURE_EXISTING_AI_PROJECT_RESOURCE_ID: ${{ inputs.AZURE_EXISTING_AI_PROJECT_RESOURCE_ID }}
+          INPUT_AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID: ${{ inputs.AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID }}
+          INPUT_AZURE_EXISTING_AIPROJECT_RESOURCE_ID: ${{ inputs.AZURE_EXISTING_AIPROJECT_RESOURCE_ID }}
           INPUT_EXISTING_WEBAPP_URL: ${{ inputs.existing_webapp_url }}
           INPUT_DOCKER_IMAGE_TAG: ${{ inputs.docker_image_tag }}
         run: |
@@ -155,7 +153,7 @@ jobs:
           fi
           
           # Validate runner_os (required - must be specific values)
-          ALLOWED_RUNNER_OS=("ubuntu-latest" "windows-latest" "devcontainer")
+          ALLOWED_RUNNER_OS=("ubuntu-latest" "windows-latest")
           if [[ -z "$INPUT_RUNNER_OS" ]]; then
             echo "❌ ERROR: runner_os is required but was not provided"
             VALIDATION_FAILED=true
@@ -232,27 +230,27 @@ jobs:
             fi
           fi
           
-          # Validate AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID (Azure Resource ID format)
-          if [[ -n "$INPUT_AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID" ]]; then
-            if [[ ! "$INPUT_AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID" =~ ^/subscriptions/[a-fA-F0-9-]+/[Rr]esource[Gg]roups/[^/]+/providers/[Mm]icrosoft\.[Oo]perational[Ii]nsights/[Ww]orkspaces/[^/]+$ ]]; then
-              echo "❌ ERROR: AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID is invalid. Must be a valid Azure Resource ID format:"
+          # Validate AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID (Azure Resource ID format)
+          if [[ -n "$INPUT_AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID" ]]; then
+            if [[ ! "$INPUT_AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID" =~ ^/subscriptions/[a-fA-F0-9-]+/[Rr]esource[Gg]roups/[^/]+/providers/[Mm]icrosoft\.[Oo]perational[Ii]nsights/[Ww]orkspaces/[^/]+$ ]]; then
+              echo "❌ ERROR: AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID is invalid. Must be a valid Azure Resource ID format:"
               echo "   /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.OperationalInsights/workspaces/{workspaceName}"
-              echo "   Got: '$INPUT_AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID'"
+              echo "   Got: '$INPUT_AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID'"
               VALIDATION_FAILED=true
             else
-              echo "✅ AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID: Valid Resource ID format"
+              echo "✅ AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID: Valid Resource ID format"
             fi
           fi
           
-          # Validate AZURE_EXISTING_AI_PROJECT_RESOURCE_ID (Azure Resource ID format)
-          if [[ -n "$INPUT_AZURE_EXISTING_AI_PROJECT_RESOURCE_ID" ]]; then
-            if [[ ! "$INPUT_AZURE_EXISTING_AI_PROJECT_RESOURCE_ID" =~ ^/subscriptions/[a-fA-F0-9-]+/[Rr]esource[Gg]roups/[^/]+/providers/([Mm]icrosoft\.[Mm]achine[Ll]earning[Ss]ervices/([Ww]orkspaces|[Pp]rojects)/[^/]+|[Mm]icrosoft\.[Cc]ognitive[Ss]ervices/[Aa]ccounts/[^/]+/[Pp]rojects/[^/]+)$ ]]; then
-              echo "❌ ERROR: AZURE_EXISTING_AI_PROJECT_RESOURCE_ID is invalid. Must be a valid Azure Resource ID format:"
+          # Validate AZURE_EXISTING_AIPROJECT_RESOURCE_ID (Azure Resource ID format)
+          if [[ -n "$INPUT_AZURE_EXISTING_AIPROJECT_RESOURCE_ID" ]]; then
+            if [[ ! "$INPUT_AZURE_EXISTING_AIPROJECT_RESOURCE_ID" =~ ^/subscriptions/[a-fA-F0-9-]+/[Rr]esource[Gg]roups/[^/]+/providers/([Mm]icrosoft\.[Mm]achine[Ll]earning[Ss]ervices/([Ww]orkspaces|[Pp]rojects)/[^/]+|[Mm]icrosoft\.[Cc]ognitive[Ss]ervices/[Aa]ccounts/[^/]+/[Pp]rojects/[^/]+)$ ]]; then
+              echo "❌ ERROR: AZURE_EXISTING_AIPROJECT_RESOURCE_ID is invalid. Must be a valid Azure Resource ID format:"
               echo "   /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CognitiveServices/accounts/{accountName}/projects/{projectName}"
-              echo "   Got: '$INPUT_AZURE_EXISTING_AI_PROJECT_RESOURCE_ID'"
+              echo "   Got: '$INPUT_AZURE_EXISTING_AIPROJECT_RESOURCE_ID'"
               VALIDATION_FAILED=true
             else
-              echo "✅ AZURE_EXISTING_AI_PROJECT_RESOURCE_ID: Valid Resource ID format"
+              echo "✅ AZURE_EXISTING_AIPROJECT_RESOURCE_ID: Valid Resource ID format"
             fi
           fi
           
@@ -296,8 +294,8 @@ jobs:
         shell: bash
         env:
           INPUT_EXP: ${{ inputs.EXP }}
-          INPUT_LOG_ANALYTICS_WORKSPACE_ID: ${{ inputs.AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID }}
-          INPUT_AI_PROJECT_RESOURCE_ID: ${{ inputs.AZURE_EXISTING_AI_PROJECT_RESOURCE_ID }}
+          INPUT_LOG_ANALYTICS_WORKSPACE_ID: ${{ inputs.AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID }}
+          INPUT_AI_PROJECT_RESOURCE_ID: ${{ inputs.AZURE_EXISTING_AIPROJECT_RESOURCE_ID }}
         run: |
           echo "🔍 Validating EXP configuration..."
           
@@ -325,31 +323,31 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v6
 
-      - name: Login to Azure
-        shell: bash
-        run: |
-          az login --service-principal -u ${{ secrets.AZURE_CLIENT_ID }} -p ${{ secrets.AZURE_CLIENT_SECRET }} --tenant ${{ secrets.AZURE_TENANT_ID }}
-          az account set --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Login to Azure (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       
       - name: Run Quota Check
         id: quota-check
         env:
-          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           GPT_MIN_CAPACITY: ${{ env.GPT_MIN_CAPACITY }}
-          IMAGE_MODEL_CHOICE: ${{ inputs.image_model_choice || 'gpt-image-1' }}
+          AZURE_ENV_IMAGE_MODEL_NAME: ${{ inputs.AZURE_ENV_IMAGE_MODEL_NAME || 'gpt-image-1-mini' }}
           IMAGE_MODEL_MIN_CAPACITY: ${{ env.IMAGE_MODEL_MIN_CAPACITY }}
           AZURE_REGIONS: ${{ vars.AZURE_REGIONS }}
         run: |
-          chmod +x content-gen/scripts/checkquota.sh
-          if ! content-gen/scripts/checkquota.sh; then
+          chmod +x scripts/checkquota.sh
+          QUOTA_OUTPUT="$(scripts/checkquota.sh 2>&1)"; QUOTA_STATUS=$?
+          echo "$QUOTA_OUTPUT"
+          if [ "$QUOTA_STATUS" -ne 0 ]; then
             # If quota check fails due to insufficient quota, set the flag
-            if grep -q "No region with sufficient quota found" content-gen/scripts/checkquota.sh; then
+            if echo "$QUOTA_OUTPUT" | grep -q "No region with sufficient quota found"; then
               echo "QUOTA_FAILED=true" >> $GITHUB_ENV
             fi
-            exit 1  # Fail the pipeline if any other failure occurs
+            exit 1  # Fail the pipeline if any failure occurs
           fi
 
       - name: Set Quota Failure Output
@@ -481,8 +479,8 @@ jobs:
         run: |
           echo "Selected Region from OpenAI Quota Check: $VALID_REGION"
           echo "Selected Region from Search Quota Check: $SEARCH_VALID_REGION"
-          echo "AZURE_ENV_OPENAI_LOCATION=$VALID_REGION" >> $GITHUB_ENV
-          echo "AZURE_ENV_OPENAI_LOCATION=$VALID_REGION" >> $GITHUB_OUTPUT
+          echo "AZURE_ENV_AI_SERVICE_LOCATION=$VALID_REGION" >> $GITHUB_ENV
+          echo "AZURE_ENV_AI_SERVICE_LOCATION=$VALID_REGION" >> $GITHUB_OUTPUT
 
           if [[ "${{ inputs.trigger_type }}" == "workflow_dispatch" && -n "$INPUT_AZURE_LOCATION" ]]; then
             # Manual trigger: use user's region if it passed search quota, otherwise use search-validated region
@@ -535,7 +533,7 @@ jobs:
           rg_exists=$(az group exists --name $RESOURCE_GROUP_NAME)
           if [ "$rg_exists" = "false" ]; then
             echo "📦 Resource group does not exist. Creating new resource group '$RESOURCE_GROUP_NAME' in location '$AZURE_LOCATION'..."
-            az group create --name $RESOURCE_GROUP_NAME --location $AZURE_LOCATION || { echo "❌ Error creating resource group"; exit 1; }
+            az group create --name $RESOURCE_GROUP_NAME --location $AZURE_LOCATION --tags ${{ env.RG_TAGS }} || { echo "❌ Error creating resource group"; exit 1; }
             echo "✅ Resource group '$RESOURCE_GROUP_NAME' created successfully."
           else
             echo "✅ Resource group '$RESOURCE_GROUP_NAME' already exists. Deploying to existing resource group."
@@ -562,8 +560,8 @@ jobs:
         run: |
           if [[ "${{ env.BUILD_DOCKER_IMAGE }}" == "true" ]]; then
             if [[ -n "$INPUT_DOCKER_IMAGE_TAG" ]]; then
-              IMAGE_TAG="$INPUT_DOCKER_IMAGE_TAG"
-              echo "🔗 Using Docker image tag from build job: $IMAGE_TAG"
+              AZURE_ENV_IMAGE_TAG="$INPUT_DOCKER_IMAGE_TAG"
+              echo "🔗 Using Docker image tag from build job: $AZURE_ENV_IMAGE_TAG"
             else
               echo "❌ Docker build job failed or was skipped, but BUILD_DOCKER_IMAGE is true"
               exit 1
@@ -575,24 +573,24 @@ jobs:
             
             # Determine image tag based on branch
             if [[ "$BRANCH_NAME" == "main" ]]; then
-              IMAGE_TAG="latest"
+              AZURE_ENV_IMAGE_TAG="latest"
               echo "Using main branch - image tag: latest"
             elif [[ "$BRANCH_NAME" == "dev" ]]; then
-              IMAGE_TAG="dev"
+              AZURE_ENV_IMAGE_TAG="dev"
               echo "Using dev branch - image tag: dev"
             elif [[ "$BRANCH_NAME" == "demo" ]]; then
-              IMAGE_TAG="demo"
+              AZURE_ENV_IMAGE_TAG="demo"
               echo "Using demo branch - image tag: demo"
             else
-              IMAGE_TAG="latest"
+              AZURE_ENV_IMAGE_TAG="latest"
               echo "Using default for branch '$BRANCH_NAME' - image tag: latest"
             fi
             
-            echo "Using existing Docker image tag: $IMAGE_TAG"
+            echo "Using existing Docker image tag: $AZURE_ENV_IMAGE_TAG"
           fi
           
-          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
-          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "AZURE_ENV_IMAGE_TAG=$AZURE_ENV_IMAGE_TAG" >> $GITHUB_ENV
+          echo "AZURE_ENV_IMAGE_TAG=$AZURE_ENV_IMAGE_TAG" >> $GITHUB_OUTPUT
 
       - name: Generate Unique Environment Name
         id: generate_env_name
@@ -648,15 +646,15 @@ jobs:
     uses: ./.github/workflows/job-deploy-linux.yml
     with:
       ENV_NAME: ${{ needs.azure-setup.outputs.ENV_NAME }}
-      AZURE_ENV_OPENAI_LOCATION: ${{ needs.azure-setup.outputs.AZURE_ENV_OPENAI_LOCATION }}
+      AZURE_ENV_AI_SERVICE_LOCATION: ${{ needs.azure-setup.outputs.AZURE_ENV_AI_SERVICE_LOCATION }}
       AZURE_LOCATION: ${{ needs.azure-setup.outputs.AZURE_LOCATION }}
       RESOURCE_GROUP_NAME: ${{ needs.azure-setup.outputs.RESOURCE_GROUP_NAME }}
-      IMAGE_TAG: ${{ needs.azure-setup.outputs.IMAGE_TAG }}
+      AZURE_ENV_IMAGE_TAG: ${{ needs.azure-setup.outputs.AZURE_ENV_IMAGE_TAG }}
       BUILD_DOCKER_IMAGE: ${{ inputs.build_docker_image || 'false' }}
       EXP: ${{ needs.azure-setup.outputs.EXP_ENABLED }}
       WAF_ENABLED: ${{ inputs.waf_enabled == true && 'true' || 'false' }}
-      AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID: ${{ inputs.AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID }}
-      AZURE_EXISTING_AI_PROJECT_RESOURCE_ID: ${{ inputs.AZURE_EXISTING_AI_PROJECT_RESOURCE_ID }}
+      AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID: ${{ inputs.AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID }}
+      AZURE_EXISTING_AIPROJECT_RESOURCE_ID: ${{ inputs.AZURE_EXISTING_AIPROJECT_RESOURCE_ID }}
     secrets: inherit
 
   deploy-windows:
@@ -666,31 +664,13 @@ jobs:
     uses: ./.github/workflows/job-deploy-windows.yml
     with:
       ENV_NAME: ${{ needs.azure-setup.outputs.ENV_NAME }}
-      AZURE_ENV_OPENAI_LOCATION: ${{ needs.azure-setup.outputs.AZURE_ENV_OPENAI_LOCATION }}
+      AZURE_ENV_AI_SERVICE_LOCATION: ${{ needs.azure-setup.outputs.AZURE_ENV_AI_SERVICE_LOCATION }}
       AZURE_LOCATION: ${{ needs.azure-setup.outputs.AZURE_LOCATION }}
       RESOURCE_GROUP_NAME: ${{ needs.azure-setup.outputs.RESOURCE_GROUP_NAME }}
-      IMAGE_TAG: ${{ needs.azure-setup.outputs.IMAGE_TAG }}
+      AZURE_ENV_IMAGE_TAG: ${{ needs.azure-setup.outputs.AZURE_ENV_IMAGE_TAG }}
       BUILD_DOCKER_IMAGE: ${{ inputs.build_docker_image || 'false' }}
       EXP: ${{ needs.azure-setup.outputs.EXP_ENABLED }}
       WAF_ENABLED: ${{ inputs.waf_enabled == true && 'true' || 'false' }}
-      AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID: ${{ inputs.AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID }}
-      AZURE_EXISTING_AI_PROJECT_RESOURCE_ID: ${{ inputs.AZURE_EXISTING_AI_PROJECT_RESOURCE_ID }}
-    secrets: inherit
-
-  deploy-devcontainer:
-    name: Deploy on DevContainer
-    needs: azure-setup
-    if: inputs.runner_os == 'devcontainer' && !cancelled() && needs.azure-setup.result == 'success'
-    uses: ./.github/workflows/job-deploy-devcontainer.yml
-    with:
-      ENV_NAME: ${{ needs.azure-setup.outputs.ENV_NAME }}
-      AZURE_ENV_OPENAI_LOCATION: ${{ needs.azure-setup.outputs.AZURE_ENV_OPENAI_LOCATION }}
-      AZURE_LOCATION: ${{ needs.azure-setup.outputs.AZURE_LOCATION }}
-      RESOURCE_GROUP_NAME: ${{ needs.azure-setup.outputs.RESOURCE_GROUP_NAME }}
-      IMAGE_TAG: ${{ needs.azure-setup.outputs.IMAGE_TAG }}
-      BUILD_DOCKER_IMAGE: ${{ inputs.build_docker_image || 'false' }}
-      EXP: ${{ needs.azure-setup.outputs.EXP_ENABLED }}
-      WAF_ENABLED: ${{ inputs.waf_enabled == true && 'true' || 'false' }}
-      AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID: ${{ inputs.AZURE_ENV_LOG_ANALYTICS_WORKSPACE_ID }}
-      AZURE_EXISTING_AI_PROJECT_RESOURCE_ID: ${{ inputs.AZURE_EXISTING_AI_PROJECT_RESOURCE_ID }}
+      AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID: ${{ inputs.AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID }}
+      AZURE_EXISTING_AIPROJECT_RESOURCE_ID: ${{ inputs.AZURE_EXISTING_AIPROJECT_RESOURCE_ID }}
     secrets: inherit
