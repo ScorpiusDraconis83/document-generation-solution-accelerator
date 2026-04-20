@@ -309,7 +309,7 @@ When `enablePrivateNetworking` is enabled:
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-## Deploy Local Changes
+## Advanced: Deploy Local Changes
 
 If you've made local modifications to the code and want to deploy them to Azure, follow these steps to swap the configuration files:
 

@@ -34,10 +34,35 @@ hooks:
       run: |
         Write-Host "Preparing deployment..." -ForegroundColor Cyan
         
-        # Check if this is first run (ACR doesn't exist yet)
-        # Set AZURE_ENV_IMAGE_TAG='none' to skip ACI deployment until image is built
-        if (-not $env:AZURE_ENV_CONTAINER_REGISTRY_NAME) {
+        # Check if image exists in the ACR (handles fresh deploy AND deployment mode switch)
+        $acrName = azd env get-value AZURE_ENV_CONTAINER_REGISTRY_NAME 2>$null
+        $global:LASTEXITCODE = 0
+        $skipAci = $false
+        
+        if (-not $acrName) {
           Write-Host "First deployment - ACI will be deployed after image build" -ForegroundColor Yellow
+          $skipAci = $true
+        } elseif ($acrName -eq 'contentgencontainerreg') {
+          # Switching from standard (shared ACR) to custom (own ACR) deployment
+          # Clear ACI name so postprovision deploys fresh with new ACR
+          Write-Host "Switching to custom deployment - ACI will be redeployed with new ACR" -ForegroundColor Yellow
+          azd env set CONTAINER_INSTANCE_NAME ""
+          $skipAci = $true
+        } else {
+          # Custom ACR exists - check if image is present
+          Write-Host "Checking for existing image in $acrName..." -ForegroundColor Cyan
+          $imageCheck = az acr repository show --name $acrName --image "content-gen-api:latest" 2>$null
+          $global:LASTEXITCODE = 0
+          
+          if (-not $imageCheck) {
+            Write-Host "Image not found in ACR - will build in postprovision" -ForegroundColor Yellow
+            $skipAci = $true
+          } else {
+            Write-Host "Image found - ACI deployment will proceed" -ForegroundColor Green
+          }
+        }
+        
+        if ($skipAci) {
           azd env set AZURE_ENV_IMAGE_TAG none
         }
       continueOnError: false
@@ -46,9 +71,31 @@ hooks:
       run: |
         echo "Preparing deployment..."
         
-        # Check if this is first run (ACR doesn't exist yet)
-        if [ -z "$AZURE_ENV_CONTAINER_REGISTRY_NAME" ]; then
+        # Check if image exists in the ACR (handles fresh deploy AND deployment mode switch)
+        ACR_NAME=$(azd env get-value AZURE_ENV_CONTAINER_REGISTRY_NAME 2>/dev/null || echo "")
+        SKIP_ACI=false
+        
+        if [ -z "$ACR_NAME" ]; then
           echo "First deployment - ACI will be deployed after image build"
+          SKIP_ACI=true
+        elif [ "$ACR_NAME" = "contentgencontainerreg" ]; then
+          # Switching from standard (shared ACR) to custom (own ACR) deployment
+          # Clear ACI name so postprovision deploys fresh with new ACR
+          echo "Switching to custom deployment - ACI will be redeployed with new ACR"
+          azd env set CONTAINER_INSTANCE_NAME ""
+          SKIP_ACI=true
+        else
+          # Custom ACR exists - check if image is present
+          echo "Checking for existing image in $ACR_NAME..."
+          if az acr repository show --name "$ACR_NAME" --image "content-gen-api:latest" >/dev/null 2>&1; then
+            echo "Image found - ACI deployment will proceed"
+          else
+            echo "Image not found in ACR - will build in postprovision"
+            SKIP_ACI=true
+          fi
+        fi
+        
+        if [ "$SKIP_ACI" = "true" ]; then
           azd env set AZURE_ENV_IMAGE_TAG none
         fi
       continueOnError: false
@@ -113,13 +160,13 @@ hooks:
           }
         } else {
           Write-Host ""
-          Write-Host "Container Instance: $aciName" -ForegroundColor Cyan
+          Write-Host "Restarting Container Instance to pick up new image..." -ForegroundColor Yellow
+          az container restart --name $aciName --resource-group $resourceGroup 2>$null
+          Write-Host "Container Instance: $aciName (restarted)" -ForegroundColor Cyan
         }
         
         Write-Host ""
         Write-Host "===== Postprovision Complete - Frontend will deploy next =====" -ForegroundColor Green
-        
-        # Ensure postprovision exits successfully so frontend deploys
         exit 0
       interactive: true
       continueOnError: false
@@ -178,7 +225,9 @@ hooks:
           fi
         else
           echo ""
-          echo "Container Instance: $ACI_NAME"
+          echo "Restarting Container Instance to pick up new image..."
+          az container restart --name "$ACI_NAME" --resource-group "$RESOURCE_GROUP" 2>/dev/null
+          echo "Container Instance: $ACI_NAME (restarted)"
         fi
         
         echo ""
