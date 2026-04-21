@@ -22,7 +22,7 @@ app.use('/api', createProxyMiddleware({
     target: BACKEND_URL,
     changeOrigin: true,
     pathRewrite: {
-        '^/api': '/api'
+        '^/': '/api/'
     },
     agent: httpAgent,
     // Increase timeout for long-running requests (10 minutes)
@@ -56,7 +56,7 @@ app.use('/api', createProxyMiddleware({
 app.use(express.static(path.join(__dirname, 'static')));
 
 // Serve index.html for all other routes (SPA support)
-app.get('*', (req, res) => {
+app.get('/{*path}', (req, res) => {
     res.sendFile(path.join(__dirname, 'static', 'index.html'));
 });
 

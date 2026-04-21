@@ -44,10 +44,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Login to Azure (OIDC)
         if: ${{ (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'dev' || github.ref_name == 'demo')) || (github.event_name == 'workflow_dispatch' && (github.ref_name == 'dependabotchanges'||github.ref_name == 'main' || github.ref_name == 'dev' || github.ref_name == 'demo')) }}
@@ -86,7 +86,7 @@ jobs:
        
          fi      
       - name: Build and Push Docker Image for Frontend Server
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./src/App
           file: ./src/App/WebApp.Dockerfile
@@ -96,7 +96,7 @@ jobs:
             ${{ secrets.ACR_LOGIN_SERVER || 'acrlogin.azurecr.io' }}/content-gen-app:${{ steps.determine_tag.outputs.tagname }}_${{ steps.date.outputs.date }}_${{ github.run_number }}
 
       - name: Build and Push Docker Image for Backend Server
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./src/backend
           file: ./src/backend/ApiApp.Dockerfile
