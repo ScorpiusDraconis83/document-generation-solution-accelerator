@@ -8,8 +8,7 @@ on:
       - demo
     paths:
       - 'src/backend/**'
-      - 'src/App/src/**'
-      - 'src/App/server/**'
+      - 'src/App/**'
       - '.github/workflows/docker-build.yml'
   pull_request:
     types:
@@ -23,8 +22,7 @@ on:
       - demo
     paths:
       - 'src/backend/**'
-      - 'src/App/src/**'
-      - 'src/App/server/**'
+      - 'src/App/**'
       - '.github/workflows/docker-build.yml'
   workflow_dispatch:
 

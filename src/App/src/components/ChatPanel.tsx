@@ -130,7 +130,7 @@ export const ChatPanel = React.memo(function ChatPanel({
                 availableProducts={availableProducts}
                 onConfirm={onGenerateContent!}
                 isAwaitingResponse={isLoading}
-                onProductSelect={onProductSelect!}
+                onProductSelect={onProductSelect}
                 disabled={isLoading}
               />
             )}
