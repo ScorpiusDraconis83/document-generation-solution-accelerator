@@ -11,6 +11,7 @@ import {
   setConversationTitle,
   setMessages,
   resetChat,
+  setIsLoading,
 } from '../store/chatSlice';
 import {
   setPendingBrief,
@@ -67,8 +68,13 @@ export function useConversationActions(
         dispatch(setPendingBrief(null));
 
         // Fetch products separately after confirmation
-        const products = await fetchProducts();
-        dispatch(setAvailableProducts(products));
+        dispatch(setIsLoading(true));
+        try {
+          const products = await fetchProducts();
+          dispatch(setAvailableProducts(products));
+        } finally {
+          dispatch(setIsLoading(false));
+        }
       }
 
       // Add assistant message
