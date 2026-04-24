@@ -17,7 +17,7 @@
     "react-dom": "^19.2.4",
     "react-markdown": "^10.1.0",
     "react-redux": "^9.1.0",
-    "uuid": "^13.0.0"
+    "uuid": "^14.0.0"
   },
   "devDependencies": {
     "@types/node": "^25.3.3",
