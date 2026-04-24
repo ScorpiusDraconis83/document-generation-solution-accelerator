@@ -68,6 +68,10 @@ class HttpClient {
     if (!response.ok) {
       throw new Error(`${config.method || 'GET'} ${url} failed: ${response.statusText}`);
     }
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.toLowerCase().includes('application/json')) {
+      throw new Error(`${config.method || 'GET'} ${url} returned non-JSON response (content-type: ${contentType || 'unknown'})`);
+    }
     return response.json();
   }
 }
