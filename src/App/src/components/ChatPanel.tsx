@@ -27,6 +27,7 @@ interface ChatPanelProps {
   onGenerateContent?: () => void;
   onRegenerateContent?: () => void;
   onProductSelect?: (product: Product) => void;
+  isProductsLoading?: boolean;
   // Feature flags
   imageGenerationEnabled?: boolean;
   // New chat
@@ -49,6 +50,7 @@ export const ChatPanel = React.memo(function ChatPanel({
   onGenerateContent,
   onRegenerateContent,
   onProductSelect,
+  isProductsLoading = false,
   imageGenerationEnabled = true,
   onNewConversation,
 }: ChatPanelProps) {
@@ -129,7 +131,7 @@ export const ChatPanel = React.memo(function ChatPanel({
                 products={selectedProducts}
                 availableProducts={availableProducts}
                 onConfirm={onGenerateContent!}
-                isAwaitingResponse={isLoading}
+                isAwaitingResponse={isProductsLoading}
                 onProductSelect={onProductSelect}
                 disabled={isLoading}
               />

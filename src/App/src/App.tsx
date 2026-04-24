@@ -31,6 +31,7 @@ function App() {
     handleStopGeneration,
     handleSelectConversation,
     handleNewConversation,
+    isProductsLoading,
   } = useConversationActions(abortControllerRef);
 
   // Fetch app config and user info on mount
@@ -68,6 +69,7 @@ function App() {
             onGenerateContent={handleGenerateContent}
             onRegenerateContent={handleGenerateContent}
             onProductSelect={handleProductSelect}
+            isProductsLoading={isProductsLoading}
             imageGenerationEnabled={imageGenerationEnabled}
             onNewConversation={handleNewConversation}
           />

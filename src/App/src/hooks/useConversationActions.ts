@@ -3,7 +3,7 @@
  * Extracts brief confirm/cancel, product selection, conversation management from App.tsx
  */
 
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
   addMessage,
@@ -11,7 +11,6 @@ import {
   setConversationTitle,
   setMessages,
   resetChat,
-  setIsLoading,
 } from '../store/chatSlice';
 import {
   setPendingBrief,
@@ -40,6 +39,7 @@ export function useConversationActions(
   abortControllerRef: React.MutableRefObject<AbortController | null>
 ) {
   const dispatch = useAppDispatch();
+  const [isProductsLoading, setIsProductsLoading] = useState(false);
   const conversationId = useAppSelector(state => state.chat.conversationId);
   const userId = useAppSelector(state => state.app.userId);
   const pendingBrief = useAppSelector(state => state.content.pendingBrief);
@@ -68,12 +68,12 @@ export function useConversationActions(
         dispatch(setPendingBrief(null));
 
         // Fetch products separately after confirmation
-        dispatch(setIsLoading(true));
+        setIsProductsLoading(true);
         try {
           const products = await fetchProducts();
           dispatch(setAvailableProducts(products));
         } finally {
-          dispatch(setIsLoading(false));
+          setIsProductsLoading(false);
         }
       }
 
@@ -180,5 +180,6 @@ export function useConversationActions(
     handleStopGeneration,
     handleSelectConversation,
     handleNewConversation,
+    isProductsLoading,
   };
 }

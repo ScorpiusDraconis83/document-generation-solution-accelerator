@@ -15,7 +15,7 @@ import { ProductCard } from './ProductCard';
 interface ProductReviewProps {
   products: Product[];
   onConfirm: () => void;
-  isAwaitingResponse?: boolean;
+  isAwaitingResponse?: boolean; // true only while products are being fetched
   availableProducts?: Product[];
   onProductSelect?: (product: Product) => void;
   disabled?: boolean;
