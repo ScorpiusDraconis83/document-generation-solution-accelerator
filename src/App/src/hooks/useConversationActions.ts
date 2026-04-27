@@ -3,7 +3,7 @@
  * Extracts brief confirm/cancel, product selection, conversation management from App.tsx
  */
 
-import { useCallback } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
   addMessage,
@@ -26,9 +26,9 @@ import { createMessage } from '../utils/messageUtils';
 import { restoreGeneratedContent } from '../utils/contentParser';
 import type { ChatMessage, CreativeBrief, Product } from '../types';
 
-async function fetchProducts(): Promise<Product[]> {
+async function fetchProducts(signal?: AbortSignal): Promise<Product[]> {
   try {
-    const data = await httpClient.get<{ products: Product[] }>('/products');
+    const data = await httpClient.get<{ products: Product[] }>('/products', signal);
     return data.products || [];
   } catch {
     return [];
@@ -39,6 +39,8 @@ export function useConversationActions(
   abortControllerRef: React.MutableRefObject<AbortController | null>
 ) {
   const dispatch = useAppDispatch();
+  const [isProductsLoading, setIsProductsLoading] = useState(false);
+  const productsAbortControllerRef = useRef<AbortController | null>(null);
   const conversationId = useAppSelector(state => state.chat.conversationId);
   const userId = useAppSelector(state => state.app.userId);
   const pendingBrief = useAppSelector(state => state.content.pendingBrief);
@@ -66,9 +68,23 @@ export function useConversationActions(
         }
         dispatch(setPendingBrief(null));
 
-        // Fetch products separately after confirmation
-        const products = await fetchProducts();
-        dispatch(setAvailableProducts(products));
+        // Fetch products separately after confirmation — abort any in-flight fetch first
+        productsAbortControllerRef.current?.abort();
+        const ac = new AbortController();
+        productsAbortControllerRef.current = ac;
+        setIsProductsLoading(true);
+        try {
+          const products = await fetchProducts(ac.signal);
+          if (!ac.signal.aborted) {
+            dispatch(setAvailableProducts(products));
+          }
+        } catch {
+          // AbortError or network error — ignore
+        } finally {
+          if (productsAbortControllerRef.current === ac) {
+            setIsProductsLoading(false);
+          }
+        }
       }
 
       // Add assistant message
@@ -139,8 +155,22 @@ export function useConversationActions(
 
       // Restore availableProducts for product/color name detection
       if (data.brief && availableProducts.length === 0) {
-        const products = await fetchProducts();
-        dispatch(setAvailableProducts(products));
+        productsAbortControllerRef.current?.abort();
+        const ac = new AbortController();
+        productsAbortControllerRef.current = ac;
+        setIsProductsLoading(true);
+        try {
+          const products = await fetchProducts(ac.signal);
+          if (!ac.signal.aborted) {
+            dispatch(setAvailableProducts(products));
+          }
+        } catch {
+          // AbortError or network error — ignore
+        } finally {
+          if (productsAbortControllerRef.current === ac) {
+            setIsProductsLoading(false);
+          }
+        }
       }
 
       if (data.generated_content) {
@@ -163,6 +193,8 @@ export function useConversationActions(
   }, [dispatch, userId, availableProducts.length]);
 
   const handleNewConversation = useCallback(() => {
+    productsAbortControllerRef.current?.abort();
+    productsAbortControllerRef.current = null;
     dispatch(resetChat());
     dispatch(resetContent());
   }, [dispatch]);
@@ -174,5 +206,6 @@ export function useConversationActions(
     handleStopGeneration,
     handleSelectConversation,
     handleNewConversation,
+    isProductsLoading,
   };
 }

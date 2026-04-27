@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   Button,
+  Spinner,
   Text,
   tokens,
 } from '@fluentui/react-components';
@@ -14,7 +15,7 @@ import { ProductCard } from './ProductCard';
 interface ProductReviewProps {
   products: Product[];
   onConfirm: () => void;
-  isAwaitingResponse?: boolean;
+  isAwaitingResponse?: boolean; // true only while products are being fetched
   availableProducts?: Product[];
   onProductSelect?: (product: Product) => void;
   disabled?: boolean;
@@ -64,6 +65,16 @@ export const ProductReview = React.memo(function ProductReview({
               disabled={disabled}
             />
           ))}
+        </div>
+      ) : isAwaitingResponse ? (
+        <div style={{
+          padding: '24px',
+          textAlign: 'center',
+          backgroundColor: tokens.colorNeutralBackground2,
+          borderRadius: '8px',
+          marginBottom: '16px',
+        }}>
+          <Spinner size="small" label="Loading products..." />
         </div>
       ) : (
         <div style={{
