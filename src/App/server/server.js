@@ -6,8 +6,11 @@ const http = require('http');
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// Backend API URL (ACI private IP in VNet)
-const BACKEND_URL = process.env.BACKEND_URL || 'http://10.0.4.5:8000';
+// Backend API URL (injected via BACKEND_URL env var at deployment time)
+if (!process.env.BACKEND_URL) {
+    console.error('ERROR: BACKEND_URL environment variable is not set. API proxy will not work.');
+}
+const BACKEND_URL = process.env.BACKEND_URL;
 
 // Create HTTP agent with extended keep-alive timeout for long-running SSE connections
 const httpAgent = new http.Agent({
