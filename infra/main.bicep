@@ -711,11 +711,6 @@ module aiSearch 'br/public:avm/res/search/search-service:0.12.0' = {
 }
 
 // ========== AI Search Connection to AI Services ========== //
-// NOTE: This connection is not referenced directly by application code (the backend
-// connects to AI Search via the Azure Search SDK using AZURE_AI_SEARCH_ENDPOINT).
-// It is retained because Azure AI Foundry consumes this connection internally for
-// agent grounding when USE_FOUNDRY=true. Do not remove without an E2E regression
-// test in Foundry mode.
 resource aiSearchFoundryConnection 'Microsoft.CognitiveServices/accounts/projects/connections@2025-12-01' = if (!useExistingAiFoundryAiProject) {
   name: '${aiFoundryAiServicesResourceName}/${aiFoundryAiProjectResourceName}/${aiSearchConnectionName}'
   properties: {
@@ -1056,14 +1051,9 @@ output AZURE_COSMOS_CONVERSATIONS_CONTAINER string = cosmosDBConversationsContai
 @description('Contains Resource Group Name')
 output RESOURCE_GROUP_NAME string = resourceGroup().name
 
-// Consumed by scripts/local_dev.ps1 and scripts/local_dev.sh to resolve the
-// Foundry resource for local development when AZURE_EXISTING_AIPROJECT_RESOURCE_ID
-// is not provided. Retain.
 @description('Contains AI Foundry Resource ID')
 output AI_FOUNDRY_RESOURCE_ID string = useExistingAiFoundryAiProject ? '' : aiFoundryAiServices!.outputs.resourceId
 
-// Consumed by scripts/local_dev.{ps1,sh} (local dev bootstrap) and referenced as
-// an env-var exception in infra/scripts/validate_bicep_params.py. Retain.
 @description('Contains existing AI project resource ID.')
 output AZURE_EXISTING_AIPROJECT_RESOURCE_ID string = azureExistingAIProjectResourceId
 
@@ -1094,18 +1084,12 @@ output AZURE_OPENAI_GPT_IMAGE_ENDPOINT string = imageModelChoice != 'none' ? 'ht
 @description('Contains Azure OpenAI API Version')
 output AZURE_ENV_OPENAI_API_VERSION string = azureOpenaiAPIVersion
 
-// Consumed by src/backend/settings.py (_OpenAISettings.ensure_endpoint) as the
-// fallback used to derive AZURE_OPENAI_ENDPOINT when an explicit endpoint is not
-// provided. Retain.
 @description('Contains OpenAI Resource')
 output AZURE_OPENAI_RESOURCE string = aiFoundryAiServicesResourceName
 
 @description('Contains Application Insights Connection String')
 output AZURE_APPLICATION_INSIGHTS_CONNECTION_STRING string = (enableMonitoring && !useExistingLogAnalytics) ? applicationInsights!.outputs.connectionString : ''
 
-// Consumed by azure.yaml / azure_custom.yaml post-provision hooks (display +
-// re-deployment parameter) and by .github/workflows/azd-template-validation.yml.
-// Retain.
 @description('Contains the location used for AI Services deployment')
 output AZURE_ENV_AI_SERVICE_LOCATION string = azureAiServiceLocation
 
