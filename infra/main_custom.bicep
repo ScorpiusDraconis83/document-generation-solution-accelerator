@@ -949,9 +949,11 @@ module webServerFarm 'br/public:avm/res/web/serverfarm:0.7.0' = {
 var webSiteResourceName = 'app-${solutionSuffix}'
 // Backend URL: Use actual ACI IP/FQDN from deployment outputs
 // This also creates an implicit dependency ensuring ACI deploys before the web app
-var aciBackendUrl = enablePrivateNetworking
-  ? 'http://${shouldDeployACI ? containerInstance!.properties.ipAddress.ip : ''}:8000'
-  : 'http://${shouldDeployACI ? containerInstance!.properties.ipAddress.fqdn : ''}:8000'
+var aciBackendUrl = shouldDeployACI
+  ? (enablePrivateNetworking
+    ? 'http://${containerInstance!.properties.ipAddress.ip}:8000'
+    : 'http://${containerInstance!.properties.ipAddress.fqdn}:8000')
+  : ''
 module webSite 'modules/web-sites.bicep' = {
   name: take('module.web-sites.${webSiteResourceName}', 64)
   params: {
