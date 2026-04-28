@@ -84,8 +84,8 @@ var loggingProperties = enableMonitoring && name == 'logs'
   : {}
 
 var expandedProperties = union(
-  properties,
   currentAppSettings,
+  properties,
   azureWebJobsValues,
   appInsightsValues,
   loggingProperties
