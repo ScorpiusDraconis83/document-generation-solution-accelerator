@@ -91,9 +91,6 @@ param imageModelChoice string = 'gpt-image-1-mini'
 @description('Optional. API version for Azure OpenAI service.')
 param azureOpenaiAPIVersion string = '2025-01-01-preview'
 
-@description('Optional. API version for Azure AI Agent service.')
-param azureAiAgentApiVersion string = '2025-05-01'
-
 @minValue(10)
 @description('Optional. AI model deployment token capacity.')
 param gptModelCapacity int = 150
@@ -747,6 +744,11 @@ module aiSearch 'br/public:avm/res/search/search-service:0.12.0' = {
 }
 
 // ========== AI Search Connection to AI Services ========== //
+// NOTE: This connection is not referenced directly by application code (the backend
+// connects to AI Search via the Azure Search SDK using AZURE_AI_SEARCH_ENDPOINT).
+// It is retained because Azure AI Foundry consumes this connection internally for
+// agent grounding when USE_FOUNDRY=true. Do not remove without an E2E regression
+// test in Foundry mode.
 resource aiSearchFoundryConnection 'Microsoft.CognitiveServices/accounts/projects/connections@2025-12-01' = if (!useExistingAiFoundryAiProject) {
   name: '${aiFoundryAiServicesResourceName}/${aiFoundryAiProjectResourceName}/${aiSearchConnectionName}'
   properties: {
@@ -766,7 +768,6 @@ resource aiSearchFoundryConnection 'Microsoft.CognitiveServices/accounts/project
 var storageAccountName = 'st${solutionSuffix}'
 var productImagesContainer = 'product-images'
 var generatedImagesContainer = 'generated-images'
-var dataContainer = 'data'
 
 module storageAccount 'br/public:avm/res/storage/storage-account:0.32.0' = {
   name: take('avm.res.storage.storage-account.${storageAccountName}', 64)
@@ -792,10 +793,6 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.32.0' = {
         }
         {
           name: generatedImagesContainer
-          publicAccess: 'None'
-        }
-        {
-          name: dataContainer
           publicAccess: 'None'
         }
       ]
@@ -1157,15 +1154,14 @@ output AZURE_COSMOS_CONVERSATIONS_CONTAINER string = cosmosDBConversationsContai
 @description('Contains Resource Group Name')
 output RESOURCE_GROUP_NAME string = resourceGroup().name
 
-@description('Contains AI Foundry Name')
-output AI_FOUNDRY_NAME string = aiFoundryAiProjectResourceName
-
-@description('Contains AI Foundry RG Name')
-output AI_FOUNDRY_RG_NAME string = aiFoundryAiServicesResourceGroupName
-
+// Consumed by scripts/local_dev.ps1 and scripts/local_dev.sh to resolve the
+// Foundry resource for local development when AZURE_EXISTING_AIPROJECT_RESOURCE_ID
+// is not provided. Retain.
 @description('Contains AI Foundry Resource ID')
 output AI_FOUNDRY_RESOURCE_ID string = useExistingAiFoundryAiProject ? '' : aiFoundryAiServices!.outputs.resourceId
 
+// Consumed by scripts/local_dev.{ps1,sh} (local dev bootstrap) and referenced as
+// an env-var exception in infra/scripts/validate_bicep_params.py. Retain.
 @description('Contains existing AI project resource ID.')
 output AZURE_EXISTING_AIPROJECT_RESOURCE_ID string = azureExistingAIProjectResourceId
 
@@ -1196,26 +1192,23 @@ output AZURE_OPENAI_GPT_IMAGE_ENDPOINT string = imageModelChoice != 'none' ? 'ht
 @description('Contains Azure OpenAI API Version')
 output AZURE_ENV_OPENAI_API_VERSION string = azureOpenaiAPIVersion
 
+// Consumed by src/backend/settings.py (_OpenAISettings.ensure_endpoint) as the
+// fallback used to derive AZURE_OPENAI_ENDPOINT when an explicit endpoint is not
+// provided. Retain.
 @description('Contains OpenAI Resource')
 output AZURE_OPENAI_RESOURCE string = aiFoundryAiServicesResourceName
-
-@description('Contains AI Agent Endpoint')
-output AZURE_AI_AGENT_ENDPOINT string = aiFoundryAiProjectEndpoint
-
-@description('Contains AI Agent API Version')
-output AZURE_AI_AGENT_API_VERSION string = azureAiAgentApiVersion
 
 @description('Contains Application Insights Connection String')
 output AZURE_APPLICATION_INSIGHTS_CONNECTION_STRING string = (enableMonitoring && !useExistingLogAnalytics) ? applicationInsights!.outputs.connectionString : ''
 
+// Consumed by azure.yaml / azure_custom.yaml post-provision hooks (display +
+// re-deployment parameter) and by .github/workflows/azd-template-validation.yml.
+// Retain.
 @description('Contains the location used for AI Services deployment')
 output AZURE_ENV_AI_SERVICE_LOCATION string = azureAiServiceLocation
 
 @description('Contains Container Instance Name')
 output CONTAINER_INSTANCE_NAME string = shouldDeployACI ? containerInstance!.name : ''
-
-@description('Contains Container Instance IP Address')
-output CONTAINER_INSTANCE_IP string = shouldDeployACI ? containerInstance!.properties.ipAddress.ip : ''
 
 @description('Contains Container Instance FQDN (only for non-private networking)')
 output CONTAINER_INSTANCE_FQDN string = (shouldDeployACI && !isPrivateNetworking) ? containerInstance!.properties.ipAddress.fqdn : ''
