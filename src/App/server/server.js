@@ -6,8 +6,11 @@ const http = require('http');
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// Backend API URL (ACI private IP in VNet)
-const BACKEND_URL = process.env.BACKEND_URL || 'http://10.0.4.5:8000';
+// Backend API URL (injected via BACKEND_URL env var at deployment time)
+if (!process.env.BACKEND_URL) {
+    console.error('ERROR: BACKEND_URL environment variable is not set. API proxy will not work.');
+}
+const BACKEND_URL = process.env.BACKEND_URL;
 
 // Create HTTP agent with extended keep-alive timeout for long-running SSE connections
 const httpAgent = new http.Agent({
@@ -18,7 +21,8 @@ const httpAgent = new http.Agent({
 });
 
 // Proxy API requests to backend
-app.use('/api', createProxyMiddleware({
+if (BACKEND_URL) {
+    app.use('/api', createProxyMiddleware({
     target: BACKEND_URL,
     changeOrigin: true,
     pathRewrite: {
@@ -51,7 +55,7 @@ app.use('/api', createProxyMiddleware({
         }
     }
 }));
-
+}
 // Serve static files from the build directory
 app.use(express.static(path.join(__dirname, 'static')));
 
@@ -63,7 +67,9 @@ app.get('/{*path}', (req, res) => {
 // Create server with extended timeouts for SSE
 const server = app.listen(PORT, () => {
     console.log(`Frontend server running on port ${PORT}`);
-    console.log(`Proxying API requests to ${BACKEND_URL}`);
+    if (BACKEND_URL) {
+        console.log(`Proxying API requests to ${BACKEND_URL}`);
+    }
 });
 
 // Extend server timeouts for long-running SSE connections

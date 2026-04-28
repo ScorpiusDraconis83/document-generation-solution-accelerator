@@ -947,13 +947,13 @@ module webServerFarm 'br/public:avm/res/web/serverfarm:0.7.0' = {
 
 // ========== Web App ========== //
 var webSiteResourceName = 'app-${solutionSuffix}'
-// Backend URL: Use ACI IP (private or public) or FQDN depending on networking mode
-var aciPrivateIpFallback = '10.0.4.4'
-var aciPublicFqdnFallback = '${containerInstanceName}.${solutionLocation}.azurecontainer.io'
-// For private networking use IP, for public use FQDN
-var aciBackendUrl = enablePrivateNetworking
-  ? 'http://${aciPrivateIpFallback}:8000'
-  : 'http://${aciPublicFqdnFallback}:8000'
+// Backend URL: Use actual ACI IP/FQDN from deployment outputs
+// This also creates an implicit dependency ensuring ACI deploys before the web app
+var aciBackendUrl = shouldDeployACI
+  ? (enablePrivateNetworking
+    ? 'http://${containerInstance!.properties.ipAddress.ip}:8000'
+    : 'http://${containerInstance!.properties.ipAddress.fqdn}:8000')
+  : ''
 module webSite 'modules/web-sites.bicep' = {
   name: take('module.web-sites.${webSiteResourceName}', 64)
   params: {
