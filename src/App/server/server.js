@@ -67,7 +67,9 @@ app.get('/{*path}', (req, res) => {
 // Create server with extended timeouts for SSE
 const server = app.listen(PORT, () => {
     console.log(`Frontend server running on port ${PORT}`);
-    console.log(`Proxying API requests to ${BACKEND_URL}`);
+    if (BACKEND_URL) {
+        console.log(`Proxying API requests to ${BACKEND_URL}`);
+    }
 });
 
 // Extend server timeouts for long-running SSE connections
