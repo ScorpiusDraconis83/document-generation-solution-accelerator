@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.42.1.51946",
-      "templateHash": "13486889164226004547"
+      "templateHash": "12202855650355699732"
     },
     "name": "Intelligent Content Generation Accelerator",
     "description": "Solution Accelerator for multimodal marketing content generation using Microsoft Agent Framework.\n"
@@ -295,7 +295,6 @@
     "replicaLocation": "[coalesce(tryGet(variables('replicaRegionPairs'), resourceGroup().location), parameters('secondaryLocation'))]",
     "azureSearchIndex": "products",
     "aiSearchName": "[format('srch-{0}', variables('solutionSuffix'))]",
-    "aiSearchConnectionName": "[format('foundry-search-connection-{0}', variables('solutionSuffix'))]",
     "useExistingLogAnalytics": "[not(empty(parameters('existingLogAnalyticsWorkspaceId')))]",
     "useExistingAiFoundryAiProject": "[not(empty(parameters('azureExistingAIProjectResourceId')))]",
     "aiFoundryAiServicesResourceGroupName": "[if(variables('useExistingAiFoundryAiProject'), split(parameters('azureExistingAIProjectResourceId'), '/')[4], format('rg-{0}', variables('solutionSuffix')))]",
@@ -417,26 +416,6 @@
       },
       "dependsOn": [
         "existingResourceGroup"
-      ]
-    },
-    "aiSearchFoundryConnection": {
-      "condition": "[not(variables('useExistingAiFoundryAiProject'))]",
-      "type": "Microsoft.CognitiveServices/accounts/projects/connections",
-      "apiVersion": "2025-12-01",
-      "name": "[format('{0}/{1}/{2}', variables('aiFoundryAiServicesResourceName'), variables('aiFoundryAiProjectResourceName'), variables('aiSearchConnectionName'))]",
-      "properties": {
-        "category": "CognitiveSearch",
-        "target": "[format('https://{0}.search.windows.net', variables('aiSearchName'))]",
-        "authType": "AAD",
-        "isSharedToAll": true,
-        "metadata": {
-          "ApiVersion": "2024-05-01-preview",
-          "ResourceId": "[reference('aiSearch').outputs.resourceId.value]"
-        }
-      },
-      "dependsOn": [
-        "aiFoundryAiServicesProject",
-        "aiSearch"
       ]
     },
     "logAnalyticsWorkspace": {
@@ -24907,8 +24886,8 @@
       },
       "dependsOn": [
         "aiFoundryAiServices",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
         "virtualNetwork"
       ]
     },

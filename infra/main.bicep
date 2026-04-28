@@ -197,7 +197,6 @@ var replicaLocation = replicaRegionPairs[?resourceGroup().location] ?? secondary
 
 var azureSearchIndex = 'products'
 var aiSearchName = 'srch-${solutionSuffix}'
-var aiSearchConnectionName = 'foundry-search-connection-${solutionSuffix}'
 
 // Extracts subscription, resource group, and workspace name from the resource ID
 var useExistingLogAnalytics = !empty(existingLogAnalyticsWorkspaceId)
@@ -711,20 +710,10 @@ module aiSearch 'br/public:avm/res/search/search-service:0.12.0' = {
 }
 
 // ========== AI Search Connection to AI Services ========== //
-resource aiSearchFoundryConnection 'Microsoft.CognitiveServices/accounts/projects/connections@2025-12-01' = if (!useExistingAiFoundryAiProject) {
-  name: '${aiFoundryAiServicesResourceName}/${aiFoundryAiProjectResourceName}/${aiSearchConnectionName}'
-  properties: {
-    category: 'CognitiveSearch'
-    target: 'https://${aiSearchName}.search.windows.net'
-    authType: 'AAD'
-    isSharedToAll: true
-    metadata: {
-      ApiVersion: '2024-05-01-preview'
-      ResourceId: aiSearch.outputs.resourceId
-    }
-  }
-  dependsOn: [aiFoundryAiServicesProject]
-}
+// EXPERIMENTAL: aiSearchFoundryConnection resource removed in branch
+// test/remove-foundry-search-connection to verify whether Foundry agents
+// still function correctly without an explicit project-level search connection.
+// If E2E tests pass, this removal will be merged in a follow-up PR.
 
 // ========== Storage Account ========== //
 var storageAccountName = 'st${solutionSuffix}'
