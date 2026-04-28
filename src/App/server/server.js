@@ -21,7 +21,8 @@ const httpAgent = new http.Agent({
 });
 
 // Proxy API requests to backend
-app.use('/api', createProxyMiddleware({
+if (BACKEND_URL) {
+    app.use('/api', createProxyMiddleware({
     target: BACKEND_URL,
     changeOrigin: true,
     pathRewrite: {
@@ -54,7 +55,7 @@ app.use('/api', createProxyMiddleware({
         }
     }
 }));
-
+}
 // Serve static files from the build directory
 app.use(express.static(path.join(__dirname, 'static')));
 
