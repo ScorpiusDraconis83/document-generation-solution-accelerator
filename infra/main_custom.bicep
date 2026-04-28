@@ -294,7 +294,7 @@ var existingTags = existingResourceGroup.tags ?? {}
 // ============== //
 
 #disable-next-line no-deployments-resources
-resource avmTelemetry 'Microsoft.Resources/deployments@2024-03-01' = if (enableTelemetry) {
+resource avmTelemetry 'Microsoft.Resources/deployments@2025-04-01' = if (enableTelemetry) {
   name: '46d3xbcp.ptn.sa-contentgeneration.${replace('-..--..-', '.', '-')}.${substring(uniqueString(deployment().name, solutionLocation), 0, 4)}'
   properties: {
     mode: 'Incremental'
@@ -540,7 +540,7 @@ var dnsZoneIndex = {
 }
 
 @batchSize(5)
-module avmPrivateDnsZones 'br/public:avm/res/network/private-dns-zone:0.8.0' = [
+module avmPrivateDnsZones 'br/public:avm/res/network/private-dns-zone:0.8.1' = [
   for (zone, i) in privateDnsZones: if (enablePrivateNetworking) {
     name: take('avm.res.network.private-dns-zone.${replace(zone, '.', '-')}', 64)
     params: {
@@ -558,7 +558,7 @@ module avmPrivateDnsZones 'br/public:avm/res/network/private-dns-zone:0.8.0' = [
 ]
 
 // ========== AI Foundry: AI Services ========== //
-module aiFoundryAiServices 'br/public:avm/res/cognitive-services/account:0.14.1'  = if (!useExistingAiFoundryAiProject) {
+module aiFoundryAiServices 'br/public:avm/res/cognitive-services/account:0.14.2'  = if (!useExistingAiFoundryAiProject) {
   name: take('avm.res.cognitive-services.account.${aiFoundryAiServicesResourceName}', 64)
   params: {
     name: aiFoundryAiServicesResourceName
@@ -622,7 +622,7 @@ module aiFoundryAiServices 'br/public:avm/res/cognitive-services/account:0.14.1'
 }
 
 // Create private endpoint for AI Services AFTER the account is fully provisioned
-module aiServicesPrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.11.1' = if (!useExistingAiFoundryAiProject && enablePrivateNetworking) {
+module aiServicesPrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.12.0' = if (!useExistingAiFoundryAiProject && enablePrivateNetworking) {
   name: take('pep-ai-services-${aiFoundryAiServicesResourceName}', 64)
   params: {
     name: 'pep-${aiFoundryAiServicesResourceName}'
@@ -747,7 +747,7 @@ module aiSearch 'br/public:avm/res/search/search-service:0.12.0' = {
 }
 
 // ========== AI Search Connection to AI Services ========== //
-resource aiSearchFoundryConnection 'Microsoft.CognitiveServices/accounts/projects/connections@2025-09-01' = if (!useExistingAiFoundryAiProject) {
+resource aiSearchFoundryConnection 'Microsoft.CognitiveServices/accounts/projects/connections@2025-12-01' = if (!useExistingAiFoundryAiProject) {
   name: '${aiFoundryAiServicesResourceName}/${aiFoundryAiProjectResourceName}/${aiSearchConnectionName}'
   properties: {
     category: 'CognitiveSearch'
@@ -768,7 +768,7 @@ var productImagesContainer = 'product-images'
 var generatedImagesContainer = 'generated-images'
 var dataContainer = 'data'
 
-module storageAccount 'br/public:avm/res/storage/storage-account:0.31.1' = {
+module storageAccount 'br/public:avm/res/storage/storage-account:0.32.0' = {
   name: take('avm.res.storage.storage-account.${storageAccountName}', 64)
   params: {
     name: storageAccountName
@@ -836,7 +836,7 @@ var cosmosDBDatabaseName = 'content_generation_db'
 var cosmosDBConversationsContainer = 'conversations'
 var cosmosDBProductsContainer = 'products'
 
-module cosmosDB 'br/public:avm/res/document-db/database-account:0.18.0' = {
+module cosmosDB 'br/public:avm/res/document-db/database-account:0.19.0' = {
   name: take('avm.res.document-db.database-account.${cosmosDBResourceName}', 64)
   params: {
     name: 'cosmos-${solutionSuffix}'
@@ -947,13 +947,13 @@ module webServerFarm 'br/public:avm/res/web/serverfarm:0.7.0' = {
 
 // ========== Web App ========== //
 var webSiteResourceName = 'app-${solutionSuffix}'
-// Backend URL: Use ACI IP (private or public) or FQDN depending on networking mode
-var aciPrivateIpFallback = '10.0.4.4'
-var aciPublicFqdnFallback = '${containerInstanceName}.${solutionLocation}.azurecontainer.io'
-// For private networking use IP, for public use FQDN
-var aciBackendUrl = enablePrivateNetworking
-  ? 'http://${aciPrivateIpFallback}:8000'
-  : 'http://${aciPublicFqdnFallback}:8000'
+// Backend URL: Use actual ACI IP/FQDN from deployment outputs
+// This also creates an implicit dependency ensuring ACI deploys before the web app
+var aciBackendUrl = shouldDeployACI
+  ? (enablePrivateNetworking
+    ? 'http://${containerInstance!.properties.ipAddress.ip}:8000'
+    : 'http://${containerInstance!.properties.ipAddress.fqdn}:8000')
+  : ''
 module webSite 'modules/web-sites.bicep' = {
   name: take('module.web-sites.${webSiteResourceName}', 64)
   params: {
@@ -1016,7 +1016,7 @@ var userAssignedIdentityResourceIdForACI = '/subscriptions/${subscription().subs
 var shouldDeployACI = !empty(imageTag) && imageTag != 'none'
 
 #disable-next-line no-deployments-resources
-resource aciTelemetry 'Microsoft.Resources/deployments@2024-03-01' = if (enableTelemetry && shouldDeployACI) {
+resource aciTelemetry 'Microsoft.Resources/deployments@2025-04-01' = if (enableTelemetry && shouldDeployACI) {
   name: '46d3xbcp.res.containerinstance.${replace('-..--..-', '.', '-')}.${substring(uniqueString(deployment().name, solutionLocation), 0, 4)}'
   properties: {
     mode: 'Incremental'

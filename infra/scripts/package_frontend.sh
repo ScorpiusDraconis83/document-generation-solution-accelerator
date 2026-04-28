@@ -3,15 +3,15 @@ set -euo pipefail
 
 # Package frontend for App Service deployment
 # This script is called by AZD during prepackage hook
-# Working directory is ./src/app/frontend-server (project directory)
+# Working directory is ./src/App/server (project directory)
 
 echo "Building React frontend..."
 
 # Build React frontend (one level up)
-cd ../frontend
+cd ..
 npm ci --loglevel=error
-npm run build -- --outDir ../frontend-server/static
-cd ../frontend-server
+npm run build -- --outDir ./server/static
+cd ./server
 
 echo "Packaging frontend server..."
 

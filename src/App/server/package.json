@@ -1,0 +1,16 @@
+{
+  "name": "contentgen-frontend",
+  "version": "1.0.0",
+  "description": "Frontend server for Content Generation Accelerator",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "http-proxy-middleware": "^3.0.5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
