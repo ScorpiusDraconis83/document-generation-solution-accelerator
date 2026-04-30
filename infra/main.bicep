@@ -709,12 +709,6 @@ module aiSearch 'br/public:avm/res/search/search-service:0.12.0' = {
   }
 }
 
-// ========== AI Search Connection to AI Services ========== //
-// EXPERIMENTAL: aiSearchFoundryConnection resource removed in branch
-// test/remove-foundry-search-connection to verify whether Foundry agents
-// still function correctly without an explicit project-level search connection.
-// If E2E tests pass, this removal will be merged in a follow-up PR.
-
 // ========== Storage Account ========== //
 var storageAccountName = 'st${solutionSuffix}'
 var productImagesContainer = 'product-images'
