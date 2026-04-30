@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.42.1.51946",
-      "templateHash": "12202855650355699732"
+      "templateHash": "9315041614692254935"
     },
     "name": "Intelligent Content Generation Accelerator",
     "description": "Solution Accelerator for multimodal marketing content generation using Microsoft Agent Framework.\n"
@@ -374,9 +374,6 @@
     "cosmosDBProductsContainer": "products",
     "webServerFarmResourceName": "[format('asp-{0}', variables('solutionSuffix'))]",
     "webSiteResourceName": "[format('app-{0}', variables('solutionSuffix'))]",
-    "aciPrivateIpFallback": "10.0.4.4",
-    "aciPublicFqdnFallback": "[format('{0}.{1}.azurecontainer.io', variables('containerInstanceName'), variables('solutionLocation'))]",
-    "aciBackendUrl": "[if(parameters('enablePrivateNetworking'), format('http://{0}:8000', variables('aciPrivateIpFallback')), format('http://{0}:8000', variables('aciPublicFqdnFallback')))]",
     "containerInstanceName": "[format('aci-{0}', variables('solutionSuffix'))]"
   },
   "resources": {
@@ -42303,7 +42300,7 @@
           },
           "virtualNetworkSubnetId": "[if(parameters('enablePrivateNetworking'), createObject('value', reference('virtualNetwork').outputs.webSubnetResourceId.value), createObject('value', null()))]",
           "configs": {
-            "value": "[concat(createArray(createObject('name', 'appsettings', 'properties', createObject('DOCKER_REGISTRY_SERVER_URL', format('https://{0}.azurecr.io', variables('acrResourceName')), 'BACKEND_URL', variables('aciBackendUrl'), 'AZURE_CLIENT_ID', reference('userAssignedIdentity').outputs.clientId.value), 'applicationInsightResourceId', if(parameters('enableMonitoring'), reference('applicationInsights').outputs.resourceId.value, null()))), if(parameters('enableMonitoring'), createArray(createObject('name', 'logs', 'properties', createObject())), createArray()))]"
+            "value": "[concat(createArray(createObject('name', 'appsettings', 'properties', createObject('DOCKER_REGISTRY_SERVER_URL', format('https://{0}.azurecr.io', variables('acrResourceName')), 'BACKEND_URL', if(parameters('enablePrivateNetworking'), format('http://{0}:8000', reference('containerInstance').outputs.ipAddress.value), format('http://{0}:8000', reference('containerInstance').outputs.fqdn.value)), 'AZURE_CLIENT_ID', reference('userAssignedIdentity').outputs.clientId.value), 'applicationInsightResourceId', if(parameters('enableMonitoring'), reference('applicationInsights').outputs.resourceId.value, null()))), if(parameters('enableMonitoring'), createArray(createObject('name', 'logs', 'properties', createObject())), createArray()))]"
           },
           "enableMonitoring": {
             "value": "[parameters('enableMonitoring')]"
@@ -42330,7 +42327,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.42.1.51946",
-              "templateHash": "18300393946144087310"
+              "templateHash": "10464081739325272474"
             }
           },
           "definitions": {
@@ -43369,7 +43366,7 @@
                     "_generator": {
                       "name": "bicep",
                       "version": "0.42.1.51946",
-                      "templateHash": "1934732677721164061"
+                      "templateHash": "904290865426801162"
                     },
                     "name": "Site App Settings",
                     "description": "This module deploys a Site App Setting."
@@ -43482,7 +43479,7 @@
                       "type": "Microsoft.Web/sites/config",
                       "apiVersion": "2025-03-01",
                       "name": "[format('{0}/{1}', parameters('appName'), parameters('name'))]",
-                      "properties": "[union(parameters('properties'), parameters('currentAppSettings'), if(and(not(empty(parameters('storageAccountResourceId'))), not(parameters('storageAccountUseIdentityAuthentication'))), createObject('AzureWebJobsStorage', format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};EndpointSuffix={2}', last(split(parameters('storageAccountResourceId'), '/')), listKeys('storageAccount', '2025-08-01').keys[0].value, environment().suffixes.storage)), if(and(not(empty(parameters('storageAccountResourceId'))), parameters('storageAccountUseIdentityAuthentication')), createObject('AzureWebJobsStorage__accountName', last(split(parameters('storageAccountResourceId'), '/')), 'AzureWebJobsStorage__blobServiceUri', reference('storageAccount').primaryEndpoints.blob, 'AzureWebJobsStorage__queueServiceUri', reference('storageAccount').primaryEndpoints.queue, 'AzureWebJobsStorage__tableServiceUri', reference('storageAccount').primaryEndpoints.table), createObject())), if(not(empty(parameters('applicationInsightResourceId'))), createObject('APPLICATIONINSIGHTS_CONNECTION_STRING', reference('applicationInsights').ConnectionString), createObject()), variables('loggingProperties'))]",
+                      "properties": "[union(parameters('currentAppSettings'), parameters('properties'), if(and(not(empty(parameters('storageAccountResourceId'))), not(parameters('storageAccountUseIdentityAuthentication'))), createObject('AzureWebJobsStorage', format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};EndpointSuffix={2}', last(split(parameters('storageAccountResourceId'), '/')), listKeys('storageAccount', '2025-08-01').keys[0].value, environment().suffixes.storage)), if(and(not(empty(parameters('storageAccountResourceId'))), parameters('storageAccountUseIdentityAuthentication')), createObject('AzureWebJobsStorage__accountName', last(split(parameters('storageAccountResourceId'), '/')), 'AzureWebJobsStorage__blobServiceUri', reference('storageAccount').primaryEndpoints.blob, 'AzureWebJobsStorage__queueServiceUri', reference('storageAccount').primaryEndpoints.queue, 'AzureWebJobsStorage__tableServiceUri', reference('storageAccount').primaryEndpoints.table), createObject())), if(not(empty(parameters('applicationInsightResourceId'))), createObject('APPLICATIONINSIGHTS_CONNECTION_STRING', reference('applicationInsights').ConnectionString), createObject()), variables('loggingProperties'))]",
                       "dependsOn": [
                         "applicationInsights",
                         "storageAccount"
@@ -44253,6 +44250,7 @@
       },
       "dependsOn": [
         "applicationInsights",
+        "containerInstance",
         "logAnalyticsWorkspace",
         "userAssignedIdentity",
         "virtualNetwork",
