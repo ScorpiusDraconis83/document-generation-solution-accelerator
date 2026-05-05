@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.42.1.51946",
-      "templateHash": "9315041614692254935"
+      "templateHash": "8605178057902281640"
     },
     "name": "Intelligent Content Generation Accelerator",
     "description": "Solution Accelerator for multimodal marketing content generation using Microsoft Agent Framework.\n"
@@ -130,13 +130,6 @@
       "defaultValue": "2025-01-01-preview",
       "metadata": {
         "description": "Optional. API version for Azure OpenAI service."
-      }
-    },
-    "azureAiAgentApiVersion": {
-      "type": "string",
-      "defaultValue": "2025-05-01",
-      "metadata": {
-        "description": "Optional. API version for Azure AI Agent service."
       }
     },
     "gptModelCapacity": {
@@ -302,7 +295,6 @@
     "replicaLocation": "[coalesce(tryGet(variables('replicaRegionPairs'), resourceGroup().location), parameters('secondaryLocation'))]",
     "azureSearchIndex": "products",
     "aiSearchName": "[format('srch-{0}', variables('solutionSuffix'))]",
-    "aiSearchConnectionName": "[format('foundry-search-connection-{0}', variables('solutionSuffix'))]",
     "useExistingLogAnalytics": "[not(empty(parameters('existingLogAnalyticsWorkspaceId')))]",
     "useExistingAiFoundryAiProject": "[not(empty(parameters('azureExistingAIProjectResourceId')))]",
     "aiFoundryAiServicesResourceGroupName": "[if(variables('useExistingAiFoundryAiProject'), split(parameters('azureExistingAIProjectResourceId'), '/')[4], format('rg-{0}', variables('solutionSuffix')))]",
@@ -376,7 +368,6 @@
     "storageAccountName": "[format('st{0}', variables('solutionSuffix'))]",
     "productImagesContainer": "product-images",
     "generatedImagesContainer": "generated-images",
-    "dataContainer": "data",
     "cosmosDBResourceName": "[format('cosmos-{0}', variables('solutionSuffix'))]",
     "cosmosDBDatabaseName": "content_generation_db",
     "cosmosDBConversationsContainer": "conversations",
@@ -422,26 +413,6 @@
       },
       "dependsOn": [
         "existingResourceGroup"
-      ]
-    },
-    "aiSearchFoundryConnection": {
-      "condition": "[not(variables('useExistingAiFoundryAiProject'))]",
-      "type": "Microsoft.CognitiveServices/accounts/projects/connections",
-      "apiVersion": "2025-12-01",
-      "name": "[format('{0}/{1}/{2}', variables('aiFoundryAiServicesResourceName'), variables('aiFoundryAiProjectResourceName'), variables('aiSearchConnectionName'))]",
-      "properties": {
-        "category": "CognitiveSearch",
-        "target": "[format('https://{0}.search.windows.net', variables('aiSearchName'))]",
-        "authType": "AAD",
-        "isSharedToAll": true,
-        "metadata": {
-          "ApiVersion": "2024-05-01-preview",
-          "ResourceId": "[reference('aiSearch').outputs.resourceId.value]"
-        }
-      },
-      "dependsOn": [
-        "aiFoundryAiServicesProject",
-        "aiSearch"
       ]
     },
     "logAnalyticsWorkspace": {
@@ -27427,10 +27398,6 @@
                 {
                   "name": "[variables('generatedImagesContainer')]",
                   "publicAccess": "None"
-                },
-                {
-                  "name": "[variables('dataContainer')]",
-                  "publicAccess": "None"
                 }
               ]
             }
@@ -44711,20 +44678,6 @@
       },
       "value": "[resourceGroup().name]"
     },
-    "AI_FOUNDRY_NAME": {
-      "type": "string",
-      "metadata": {
-        "description": "Contains AI Foundry Name"
-      },
-      "value": "[variables('aiFoundryAiProjectResourceName')]"
-    },
-    "AI_FOUNDRY_RG_NAME": {
-      "type": "string",
-      "metadata": {
-        "description": "Contains AI Foundry RG Name"
-      },
-      "value": "[variables('aiFoundryAiServicesResourceGroupName')]"
-    },
     "AI_FOUNDRY_RESOURCE_ID": {
       "type": "string",
       "metadata": {
@@ -44809,20 +44762,6 @@
       },
       "value": "[variables('aiFoundryAiServicesResourceName')]"
     },
-    "AZURE_AI_AGENT_ENDPOINT": {
-      "type": "string",
-      "metadata": {
-        "description": "Contains AI Agent Endpoint"
-      },
-      "value": "[if(variables('useExistingAiFoundryAiProject'), format('https://{0}.services.ai.azure.com/api/projects/{1}', variables('aiFoundryAiServicesResourceName'), variables('aiFoundryAiProjectResourceName')), reference('aiFoundryAiServicesProject').outputs.apiEndpoint.value)]"
-    },
-    "AZURE_AI_AGENT_API_VERSION": {
-      "type": "string",
-      "metadata": {
-        "description": "Contains AI Agent API Version"
-      },
-      "value": "[parameters('azureAiAgentApiVersion')]"
-    },
     "AZURE_APPLICATION_INSIGHTS_CONNECTION_STRING": {
       "type": "string",
       "metadata": {
@@ -44843,13 +44782,6 @@
         "description": "Contains Container Instance Name"
       },
       "value": "[reference('containerInstance').outputs.name.value]"
-    },
-    "CONTAINER_INSTANCE_IP": {
-      "type": "string",
-      "metadata": {
-        "description": "Contains Container Instance IP Address"
-      },
-      "value": "[reference('containerInstance').outputs.ipAddress.value]"
     },
     "CONTAINER_INSTANCE_FQDN": {
       "type": "string",
