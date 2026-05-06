@@ -18,11 +18,13 @@ import ContosoLogo from '../styles/images/contoso.svg';
 import LoginButton from './LoginButton';
 
 interface AppHeaderProps {
+  userName: string;
   showChatHistory: boolean;
   onToggleChatHistory: () => void;
 }
 
 export const AppHeader = React.memo(function AppHeader({
+  userName,
   showChatHistory,
   onToggleChatHistory,
 }: AppHeaderProps) {
@@ -51,7 +53,7 @@ export const AppHeader = React.memo(function AppHeader({
             aria-label={showChatHistory ? 'Hide chat history' : 'Show chat history'}
           />
         </Tooltip>
-        <LoginButton />
+        <LoginButton/>
       </div>
     </header>
   );

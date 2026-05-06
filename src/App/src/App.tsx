@@ -14,7 +14,7 @@ function App() {
   const dispatch = useAppDispatch();
 
   // Select state from Redux store
-  const { imageGenerationEnabled, showChatHistory } = useAppSelector(state => state.app);
+  const { userName, imageGenerationEnabled, showChatHistory } = useAppSelector(state => state.app);
   const { conversationId, conversationTitle, messages, isLoading, generationStatus, historyRefreshTrigger } = useAppSelector(state => state.chat);
   const { pendingBrief, confirmedBrief, selectedProducts, availableProducts, generatedContent } = useAppSelector(state => state.content);
 
@@ -44,6 +44,7 @@ function App() {
     <div className="app-container">
       {/* Header */}
       <AppHeader
+        userName={userName}
         showChatHistory={showChatHistory}
         onToggleChatHistory={() => dispatch(toggleChatHistory())}
       />
