@@ -6,18 +6,18 @@
       "value": "${AZURE_ENV_NAME}"
     },
     "location": {
-      "value": "${AZURE_LOCATION}"
+      "value": "${AZURE_LOCATION23}"
     },
     "secondaryLocation": {
-      "value": "${AZURE_ENV_SECONDARY_LOCATION}"
+      "value": "${AZURE_ENV_SECONDARY_LOCATION123}"
     },
-    "gptModelName": {
+    "gptModelName1213": {
       "value": "${AZURE_ENV_GPT_MODEL_NAME}"
     },
     "gptModelVersion": {
       "value": "${AZURE_ENV_GPT_MODEL_VERSION}"
     },
-    "gptModelDeploymentType": {
+    "gptModelDeploymentType3434": {
       "value": "${AZURE_ENV_MODEL_DEPLOYMENT_TYPE}"
     },
     "gptModelCapacity": {
