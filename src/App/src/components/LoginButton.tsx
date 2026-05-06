@@ -2,62 +2,106 @@ import React from 'react';
 import {
   Avatar,
   Menu,
-  MenuItem,
-  MenuList,
-  MenuPopover,
   MenuTrigger,
+  MenuPopover,
+  MenuList,
+  MenuItem,
+  Button,
+  Tooltip,
+  makeStyles,
+  tokens,
 } from '@fluentui/react-components';
-import { SignOut20Regular } from '@fluentui/react-icons';
+import { SignOut24Regular } from '@fluentui/react-icons';
 import { useAuth } from '../contexts/AuthContext';
 
-/**
- * AvatarTrigger — forwardRef wrapper so Fluent UI MenuTrigger can attach its ref and click handlers.
- */
-const AvatarTrigger = React.forwardRef<
-  HTMLButtonElement,
-  React.ButtonHTMLAttributes<HTMLButtonElement> & { userName: string }
->(({ userName, ...props }, ref) => (
-  <button
-    ref={ref}
-    {...props}
-    style={{
-      background: 'none',
-      border: 'none',
-      padding: 0,
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-    }}
-  >
-    <Avatar name={userName} color="colorful" size={36} />
-  </button>
-));
-AvatarTrigger.displayName = 'AvatarTrigger';
+const useStyles = makeStyles({
+  userButton: {
+    minWidth: 'auto',
+    paddingLeft: tokens.spacingHorizontalXS,
+    paddingRight: tokens.spacingHorizontalXS,
+  },
+  menuItem: {
+    paddingLeft: tokens.spacingHorizontalM,
+    paddingRight: tokens.spacingHorizontalM,
+  },
+  userInfo: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: tokens.spacingVerticalXXS,
+  },
+  userName: {
+    fontWeight: tokens.fontWeightSemibold,
+    fontSize: tokens.fontSizeBase200,
+  },
+  userEmail: {
+    fontSize: tokens.fontSizeBase100,
+    color: tokens.colorNeutralForeground2,
+  },
+});
+
+const getUserInitials = (name: string | undefined): string => {
+  if (!name) return 'U';
+  const cleanName = name.replace(/\s*\([^)]*\)/g, '').trim();
+  const parts = cleanName.split(' ');
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  return cleanName.charAt(0).toUpperCase();
+};
 
 const LoginButton: React.FC = () => {
+  const styles = useStyles();
   const { isAuthenticated, user, logout } = useAuth();
 
+  const displayName = user?.userName || user?.userEmail || 'User';
+  const userEmail = user?.userEmail || '';
+
   if (!isAuthenticated || !user) {
-    const displayName = user?.userName || user?.userEmail || 'User';
     return (
       <Avatar
         name={displayName}
+        initials={getUserInitials(displayName)}
+        size={28}
         color="colorful"
-        size={36}
+        style={{ fontWeight: 'bold' }}
       />
     );
   }
 
-  const displayName = user.userName || user.userEmail || 'User';
-
   return (
     <Menu>
       <MenuTrigger disableButtonEnhancement>
-        <AvatarTrigger userName={displayName} />
+        <Tooltip content={`Signed in as ${displayName}`} relationship="label">
+          <Button
+            appearance="subtle"
+            className={styles.userButton}
+            icon={
+              <Avatar
+                name={displayName}
+                initials={getUserInitials(displayName)}
+                size={28}
+                color="colorful"
+                style={{ fontWeight: 'bold' }}
+              />
+            }
+          />
+        </Tooltip>
       </MenuTrigger>
+
       <MenuPopover>
         <MenuList>
-          <MenuItem icon={<SignOut20Regular />} onClick={logout}>
+          <MenuItem className={styles.menuItem} disabled>
+            <div className={styles.userInfo}>
+              <div className={styles.userName}>{displayName}</div>
+              {userEmail && <div className={styles.userEmail}>{userEmail}</div>}
+            </div>
+          </MenuItem>
+          <MenuItem
+            className={styles.menuItem}
+            icon={<SignOut24Regular />}
+            onClick={logout}
+          >
             Sign out
           </MenuItem>
         </MenuList>
