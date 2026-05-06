@@ -43,7 +43,7 @@ const getUserInitials = (name: string | undefined): string => {
   if (!name) return 'U';
   const cleanName = name.replace(/\s*\([^)]*\)/g, '').trim();
   if (!cleanName) return 'U';
-  const parts = cleanName.split(' ');
+  const parts = cleanName.split(/\s+/).filter(Boolean);
   if (parts.length >= 2) {
     return (parts[0][0] + parts[1][0]).toUpperCase();
   }
@@ -66,7 +66,7 @@ const LoginButton: React.FC = () => {
     window.location.href = logoutUrl;
   }, []);
 
-  const displayName = userName || userId || 'User';
+  const displayName = isAuthenticated ? userName || userId || 'User' : 'User';
 
   if (!isAuthenticated) {
     return (
