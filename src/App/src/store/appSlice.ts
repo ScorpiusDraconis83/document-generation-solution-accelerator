@@ -32,15 +32,15 @@ export const fetchAppConfig = createAsyncThunk(
   }
 );
 
+type AuthClaim = { typ: string; val: string };
+type AuthPayload = Array<{ user_id: string; user_claims: AuthClaim[] }>;
+
 export const fetchCurrentUser = createAsyncThunk(
   'app/fetchCurrentUser',
   async () => {
     try {
-      interface AuthClaim { typ: string; val: string }
-      interface AuthPayload { user_id?: string; user_claims?: AuthClaim[] }
+      const payload = await httpClient.fetchExternal<AuthPayload>('/.auth/me');
 
-      const payload = await httpClient.fetchExternal<AuthPayload[]>('/.auth/me');
-      
       const userClaims = payload[0]?.user_claims || [];
       const objectIdClaim = userClaims.find(
         (claim) =>
