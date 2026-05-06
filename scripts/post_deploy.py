@@ -244,7 +244,7 @@ def get_api_headers(config: ResourceConfig) -> Dict[str, str]:
     return headers
 
 
-async def check_admin_api_health(config: ResourceConfig, max_retries: int = 5, retry_delay: int = 10) -> bool:
+async def check_admin_api_health(config: ResourceConfig, max_retries: int = 12, retry_delay: int = 15) -> bool:
     """Check if the admin API is available with retry logic for cold starts and container restarts."""
     print_step("Checking admin API health...")
     
