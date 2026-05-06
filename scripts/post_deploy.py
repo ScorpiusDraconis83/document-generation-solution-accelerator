@@ -245,7 +245,7 @@ def get_api_headers(config: ResourceConfig) -> Dict[str, str]:
 
 
 async def check_admin_api_health(config: ResourceConfig, max_retries: int = 5, retry_delay: int = 10) -> bool:
-    """Check if the admin API is available with retry logic for cold starts."""
+    """Check if the admin API is available with retry logic for cold starts and container restarts."""
     print_step("Checking admin API health...")
     
     async with httpx.AsyncClient(timeout=30.0) as client:
@@ -256,8 +256,32 @@ async def check_admin_api_health(config: ResourceConfig, max_retries: int = 5, r
                     headers=get_api_headers(config)
                 )
                 if response.status_code == 200:
-                    print_success("Admin API is healthy")
-                    return True
+                    # Validate the response is actually from the backend admin API,
+                    # not the frontend catch-all serving index.html
+                    try:
+                        data = response.json()
+                        if data.get("status") == "healthy":
+                            print_success("Admin API is healthy")
+                            return True
+                        else:
+                            print_warning(
+                                f"Attempt {attempt}/{max_retries}: Admin API returned unexpected JSON: {data}"
+                            )
+                    except Exception:
+                        # Response is not JSON.
+                        # This means the API proxy is not forwarding requests to the backend.
+                        content_preview = response.text[:200]
+                        is_html = "<html" in content_preview.lower() or "<!doctype" in content_preview.lower()
+                        if is_html:
+                            print_warning(
+                                f"Attempt {attempt}/{max_retries}: Got HTML instead of JSON from /api/admin/health. "
+                                "The frontend proxy may not be forwarding requests to the backend. "
+                                "Check that BACKEND_URL is set in the App Service and that the backend container is running."
+                            )
+                        else:
+                            print_warning(
+                                f"Attempt {attempt}/{max_retries}: Admin API returned non-JSON response: {content_preview}"
+                            )
                 else:
                     print_warning(f"Attempt {attempt}/{max_retries}: Admin API returned {response.status_code}")
             except Exception as e:

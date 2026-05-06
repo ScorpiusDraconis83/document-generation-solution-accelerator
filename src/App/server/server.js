@@ -22,40 +22,51 @@ const httpAgent = new http.Agent({
 
 // Proxy API requests to backend
 if (BACKEND_URL) {
-    app.use('/api', createProxyMiddleware({
-    target: BACKEND_URL,
-    changeOrigin: true,
-    pathRewrite: {
-        '^/': '/api/'
-    },
-    agent: httpAgent,
-    // Increase timeout for long-running requests (10 minutes)
-    proxyTimeout: 600000,
-    timeout: 600000,
-    // Support streaming responses (SSE)
-    onProxyRes: (proxyRes, req, res) => {
-        // Disable buffering for streaming responses
-        if (proxyRes.headers['content-type']?.includes('text/event-stream')) {
-            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-            res.setHeader('X-Accel-Buffering', 'no');
-            res.setHeader('Connection', 'keep-alive');
-            res.flushHeaders();
+    const apiProxy = createProxyMiddleware({
+        target: BACKEND_URL,
+        changeOrigin: true,
+        pathRewrite: {
+            '^/': '/api/'
+        },
+        agent: httpAgent,
+        // Increase timeout for long-running requests (10 minutes)
+        proxyTimeout: 600000,
+        timeout: 600000,
+        // Support streaming responses (SSE)
+        onProxyRes: (proxyRes, req, res) => {
+            // Disable buffering for streaming responses
+            if (proxyRes.headers['content-type']?.includes('text/event-stream')) {
+                res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+                res.setHeader('X-Accel-Buffering', 'no');
+                res.setHeader('Connection', 'keep-alive');
+                res.flushHeaders();
+            }
+            // Log response for debugging
+            console.log(`Proxy response: ${req.method} ${req.path} -> ${proxyRes.statusCode}`);
+        },
+        onProxyReq: (proxyReq, req, res) => {
+            // Log request for debugging
+            console.log(`Proxy request: ${req.method} ${req.path}`);
+        },
+        onError: (err, req, res) => {
+            console.error('Proxy error:', err.message);
+            if (!res.headersSent) {
+                res.status(502).json({ error: 'Backend service unavailable', details: err.message });
+            }
         }
-        // Log response for debugging
-        console.log(`Proxy response: ${req.method} ${req.path} -> ${proxyRes.statusCode}`);
-    },
-    onProxyReq: (proxyReq, req, res) => {
-        // Log request for debugging
-        console.log(`Proxy request: ${req.method} ${req.path}`);
-    },
-    onError: (err, req, res) => {
-        console.error('Proxy error:', err.message);
-        if (!res.headersSent) {
-            res.status(502).json({ error: 'Backend service unavailable', details: err.message });
-        }
-    }
-}));
+    });
+    app.use('/api', apiProxy);
+} else {
+    // When BACKEND_URL is not set, return a clear error for API requests
+    // instead of letting them fall through to the SPA catch-all (which returns index.html with 200)
+    app.use('/api', (req, res) => {
+        res.status(503).json({
+            error: 'Backend not configured',
+            message: 'BACKEND_URL environment variable is not set. The API proxy is not available.',
+        });
+    });
 }
+
 // Serve static files from the build directory
 app.use(express.static(path.join(__dirname, 'static')));
 
