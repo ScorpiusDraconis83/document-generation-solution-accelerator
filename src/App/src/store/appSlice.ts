@@ -6,6 +6,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { AppConfig } from '../types';
 import { getAppConfig } from '../api';
+import { httpClient } from '../utils/httpClient';
 
 interface AppState {
   userId: string;
@@ -31,23 +32,22 @@ export const fetchAppConfig = createAsyncThunk(
   }
 );
 
+type AuthClaim = { typ: string; val: string };
+type AuthPayload = Array<{ user_id: string; user_claims: AuthClaim[] }>;
+
 export const fetchCurrentUser = createAsyncThunk(
   'app/fetchCurrentUser',
   async () => {
     try {
-      const response = await fetch('/.auth/me');
-      if (!response.ok) {
-        throw new Error(`/.auth/me returned ${response.status}`);
-      }
-      const payload = await response.json();
-      
+      const payload = await httpClient.fetchExternal<AuthPayload>('/.auth/me');
+
       const userClaims = payload[0]?.user_claims || [];
       const objectIdClaim = userClaims.find(
-        (claim: { typ: string; val: string }) =>
+        (claim) =>
           claim.typ === 'http://schemas.microsoft.com/identity/claims/objectidentifier'
       );
       const nameClaim = userClaims.find(
-        (claim: { typ: string; val: string }) => claim.typ === 'name'
+        (claim) => claim.typ === 'name'
       );
       
       // Search each email claim type individually for reliability
