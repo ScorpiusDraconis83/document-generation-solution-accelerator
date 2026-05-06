@@ -34,6 +34,15 @@ This guide covers deploying the Content Generation Solution Accelerator using Az
    python3 --version
    ```
 
+5. **Bicep CLI** v0.33.0 or higher (for compiling infrastructure templates)
+   ```bash
+   # Install via Azure CLI
+   az bicep install
+
+   # Verify installation
+   az bicep version
+   ```
+
 ### Azure Requirements
 
 - An Azure subscription with the following permissions:
