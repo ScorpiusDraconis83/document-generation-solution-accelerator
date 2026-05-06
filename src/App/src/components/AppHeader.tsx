@@ -6,7 +6,6 @@
 import React from 'react';
 import {
   Text,
-  Avatar,
   Button,
   Tooltip,
   tokens,
@@ -16,15 +15,14 @@ import {
   History24Filled,
 } from '@fluentui/react-icons';
 import ContosoLogo from '../styles/images/contoso.svg';
+import LoginButton from './LoginButton';
 
 interface AppHeaderProps {
-  userName: string;
   showChatHistory: boolean;
   onToggleChatHistory: () => void;
 }
 
 export const AppHeader = React.memo(function AppHeader({
-  userName,
   showChatHistory,
   onToggleChatHistory,
 }: AppHeaderProps) {
@@ -53,11 +51,7 @@ export const AppHeader = React.memo(function AppHeader({
             aria-label={showChatHistory ? 'Hide chat history' : 'Show chat history'}
           />
         </Tooltip>
-        <Avatar
-          name={userName || undefined}
-          color="colorful"
-          size={36}
-        />
+        <LoginButton />
       </div>
     </header>
   );
