@@ -18,13 +18,11 @@ import ContosoLogo from '../styles/images/contoso.svg';
 import LoginButton from './LoginButton';
 
 interface AppHeaderProps {
-  userName: string;
   showChatHistory: boolean;
   onToggleChatHistory: () => void;
 }
 
 export const AppHeader = React.memo(function AppHeader({
-  userName,
   showChatHistory,
   onToggleChatHistory,
 }: AppHeaderProps) {
