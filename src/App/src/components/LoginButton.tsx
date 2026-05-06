@@ -55,7 +55,7 @@ const LoginButton: React.FC = () => {
   const userName = useAppSelector(state => state.app.userName);
   const userId = useAppSelector(state => state.app.userId);
   const userEmail = useAppSelector(state => state.app.userEmail);
-  const isAuthenticated = Boolean(userName);
+  const isAuthenticated = Boolean(userId && userId !== 'anonymous');
 
   const login = useCallback(() => {
     window.location.href = '/.auth/login/aad';
@@ -75,6 +75,7 @@ const LoginButton: React.FC = () => {
         className={styles.userButton}
         onClick={login}
         title="Sign in"
+        aria-label="Sign in"
         icon={
           <Avatar
             name={displayName}
@@ -95,6 +96,7 @@ const LoginButton: React.FC = () => {
           appearance="subtle"
           className={styles.userButton}
           title={`Signed in as ${displayName}`}
+          aria-label={`User menu for ${displayName}`}
           icon={
             <Avatar
               name={displayName}
