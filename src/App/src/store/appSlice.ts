@@ -6,11 +6,11 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { AppConfig } from '../types';
 import { getAppConfig } from '../api';
-import { httpClient } from '../utils/httpClient';
 
 interface AppState {
   userId: string;
   userName: string;
+  userEmail: string;
   imageGenerationEnabled: boolean;
   showChatHistory: boolean;
 }
@@ -18,6 +18,7 @@ interface AppState {
 const initialState: AppState = {
   userId: '',
   userName: '',
+  userEmail: '',
   imageGenerationEnabled: true,
   showChatHistory: true,
 };
@@ -34,23 +35,42 @@ export const fetchCurrentUser = createAsyncThunk(
   'app/fetchCurrentUser',
   async () => {
     try {
-      const payload = await httpClient.fetchExternal<Array<{
-        user_claims?: Array<{ typ: string; val: string }>;
-      }>>('/.auth/me');
+      const response = await fetch('/.auth/me');
+      if (!response.ok) {
+        throw new Error(`/.auth/me returned ${response.status}`);
+      }
+      const payload = await response.json();
+      
       const userClaims = payload[0]?.user_claims || [];
       const objectIdClaim = userClaims.find(
-        (claim) =>
+        (claim: { typ: string; val: string }) =>
           claim.typ === 'http://schemas.microsoft.com/identity/claims/objectidentifier'
       );
       const nameClaim = userClaims.find(
-        (claim) => claim.typ === 'name'
+        (claim: { typ: string; val: string }) => claim.typ === 'name'
       );
-      return {
+      
+      // Search each email claim type individually for reliability
+      let emailVal = '';
+      for (const claim of userClaims) {
+        if (claim.typ === 'preferred_username' || 
+            claim.typ === 'email' ||
+            claim.typ === 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress' ||
+            claim.typ === 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/upn') {
+          emailVal = claim.val;
+          break;
+        }
+      }
+      
+      const userData = {
         userId: objectIdClaim?.val || 'anonymous',
         userName: nameClaim?.val || '',
+        userEmail: emailVal,
       };
-    } catch {
-      return { userId: 'anonymous', userName: '' };
+      
+      return userData;
+    } catch (error) {
+      return { userId: 'anonymous', userName: '', userEmail: '' };
     }
   }
 );
@@ -75,10 +95,12 @@ const appSlice = createSlice({
       .addCase(fetchCurrentUser.fulfilled, (state, action) => {
         state.userId = action.payload.userId;
         state.userName = action.payload.userName;
+        state.userEmail = action.payload.userEmail;
       })
       .addCase(fetchCurrentUser.rejected, (state) => {
         state.userId = 'anonymous';
         state.userName = '';
+        state.userEmail = '';
       });
   },
 });

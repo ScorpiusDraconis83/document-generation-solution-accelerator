@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   Avatar,
   Menu,
@@ -7,12 +7,11 @@ import {
   MenuList,
   MenuItem,
   Button,
-  Tooltip,
   makeStyles,
   tokens,
 } from '@fluentui/react-components';
-import { SignOut24Regular } from '@fluentui/react-icons';
-import { useAuth } from '../contexts/AuthContext';
+import { Person20Regular, SignOut24Regular } from '@fluentui/react-icons';
+import { useAppSelector } from '../store/hooks';
 
 const useStyles = makeStyles({
   userButton: {
@@ -43,6 +42,7 @@ const useStyles = makeStyles({
 const getUserInitials = (name: string | undefined): string => {
   if (!name) return 'U';
   const cleanName = name.replace(/\s*\([^)]*\)/g, '').trim();
+  if (!cleanName) return 'U';
   const parts = cleanName.split(' ');
   if (parts.length >= 2) {
     return (parts[0][0] + parts[1][0]).toUpperCase();
@@ -52,19 +52,38 @@ const getUserInitials = (name: string | undefined): string => {
 
 const LoginButton: React.FC = () => {
   const styles = useStyles();
-  const { isAuthenticated, user, logout } = useAuth();
+  const userName = useAppSelector(state => state.app.userName);
+  const userId = useAppSelector(state => state.app.userId);
+  const userEmail = useAppSelector(state => state.app.userEmail);
+  const isAuthenticated = Boolean(userName);
 
-  const displayName = user?.userName || user?.userEmail || 'User';
-  const userEmail = user?.userEmail || '';
+  const login = useCallback(() => {
+    window.location.href = '/.auth/login/aad';
+  }, []);
 
-  if (!isAuthenticated || !user) {
+  const logout = useCallback(() => {
+    const logoutUrl = '/.auth/logout?post_logout_redirect_uri=' + encodeURIComponent('/');
+    window.location.href = logoutUrl;
+  }, []);
+
+  const displayName = userName || userId || 'User';
+
+  if (!isAuthenticated) {
     return (
-      <Avatar
-        name={displayName}
-        initials={getUserInitials(displayName)}
-        size={28}
-        color="colorful"
-        style={{ fontWeight: 'bold' }}
+      <Button
+        appearance="subtle"
+        className={styles.userButton}
+        onClick={login}
+        title="Sign in"
+        icon={
+          <Avatar
+            name={displayName}
+            initials={getUserInitials(displayName)}
+            size={28}
+            color="colorful"
+            style={{ fontWeight: 'bold' }}
+          />
+        }
       />
     );
   }
@@ -72,26 +91,25 @@ const LoginButton: React.FC = () => {
   return (
     <Menu>
       <MenuTrigger disableButtonEnhancement>
-        <Tooltip content={`Signed in as ${displayName}`} relationship="label">
-          <Button
-            appearance="subtle"
-            className={styles.userButton}
-            icon={
-              <Avatar
-                name={displayName}
-                initials={getUserInitials(displayName)}
-                size={28}
-                color="colorful"
-                style={{ fontWeight: 'bold' }}
-              />
-            }
-          />
-        </Tooltip>
+        <Button
+          appearance="subtle"
+          className={styles.userButton}
+          title={`Signed in as ${displayName}`}
+          icon={
+            <Avatar
+              name={displayName}
+              initials={getUserInitials(displayName)}
+              size={28}
+              color="colorful"
+              style={{ fontWeight: 'bold' }}
+            />
+          }
+        />
       </MenuTrigger>
 
       <MenuPopover>
         <MenuList>
-          <MenuItem className={styles.menuItem} disabled>
+          <MenuItem className={styles.menuItem} icon={<Person20Regular />} disabled style={{ cursor: 'default' }}>
             <div className={styles.userInfo}>
               <div className={styles.userName}>{displayName}</div>
               {userEmail && <div className={styles.userEmail}>{userEmail}</div>}
