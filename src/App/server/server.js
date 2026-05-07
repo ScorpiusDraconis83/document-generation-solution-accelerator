@@ -41,12 +41,6 @@ if (BACKEND_URL) {
                 res.setHeader('Connection', 'keep-alive');
                 res.flushHeaders();
             }
-            // Log response for debugging
-            console.log(`Proxy response: ${req.method} ${req.path} -> ${proxyRes.statusCode}`);
-        },
-        onProxyReq: (proxyReq, req, res) => {
-            // Log request for debugging
-            console.log(`Proxy request: ${req.method} ${req.path}`);
         },
         onError: (err, req, res) => {
             console.error('Proxy error:', err.message);
