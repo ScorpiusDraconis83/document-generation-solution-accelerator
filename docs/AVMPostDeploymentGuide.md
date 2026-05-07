@@ -55,6 +55,7 @@ Ensure the following tools are installed on your machine:
 |------|---------|---------------|
 | PowerShell | v7.0+ | [Install PowerShell](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell?view=powershell-7.5) |
 | Azure CLI | v2.50+ | [Install Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli) |
+| Bicep CLI | v0.33.0+ | [Install Bicep](https://learn.microsoft.com/azure/azure-resource-manager/bicep/install) |
 | Python | 3.11+ | [Download Python](https://www.python.org/downloads/) |
 | Git | Latest | [Download Git](https://git-scm.com/downloads) |
 

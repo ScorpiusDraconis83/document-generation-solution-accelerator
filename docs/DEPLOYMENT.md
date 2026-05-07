@@ -105,7 +105,8 @@ If you're not using one of the above options for opening the project, then you'l
 
 1. Make sure the following tools are installed:
     - [PowerShell](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell?view=powershell-7.5) <small>(v7.0+)</small> - available for Windows, macOS, and Linux.
-    - [Azure Developer CLI (azd)](https://aka.ms/install-azd) <small>(v1.15.0+)</small>
+    - [Azure Developer CLI (azd)](https://aka.ms/install-azd) <small>(v1.18.0+)</small>
+    - [Bicep CLI](https://learn.microsoft.com/azure/azure-resource-manager/bicep/install) <small>(v0.33.0+)</small>
     - [Python 3.11+](https://www.python.org/downloads/)
     - [Node.js 18+](https://nodejs.org/)
     - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
