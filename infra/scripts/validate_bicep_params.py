@@ -645,6 +645,23 @@ def main() -> int:
         pairs = discover_pairs(args.dir)
         if not pairs:
             print(f"No (bicep, parameters.json) pairs found under {args.dir}")
+            # Generate empty reports so downstream workflow steps (e.g. cat
+            # email_body.html) do not fail when no pairs are discovered.
+            if args.json_output:
+                args.json_output.parent.mkdir(parents=True, exist_ok=True)
+                args.json_output.write_text(
+                    json.dumps([], indent=2), encoding="utf-8"
+                )
+            if args.html_output:
+                scan_dir = str(args.dir) if args.dir else ""
+                html = generate_html_report(
+                    [],
+                    accelerator_name=args.accelerator_name,
+                    run_url=args.run_url,
+                    scan_dir=scan_dir,
+                )
+                args.html_output.parent.mkdir(parents=True, exist_ok=True)
+                args.html_output.write_text(html, encoding="utf-8")
             return 0
         for bicep_path, params_path in pairs:
             results.append(validate_pair(bicep_path, params_path))
