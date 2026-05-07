@@ -267,7 +267,7 @@ async def check_admin_api_health(config: ResourceConfig, max_retries: int = 8, r
                             print_warning(
                                 f"Attempt {attempt}/{max_retries}: Admin API returned unexpected JSON: {data}"
                             )
-                    except Exception:
+                    except (ValueError, json.JSONDecodeError):
                         # Response is not JSON.
                         # This means the API proxy is not forwarding requests to the backend.
                         content_preview = response.text[:200]
