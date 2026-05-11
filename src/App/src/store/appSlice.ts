@@ -11,6 +11,7 @@ import { httpClient } from '../utils/httpClient';
 interface AppState {
   userId: string;
   userName: string;
+  userEmail: string;
   imageGenerationEnabled: boolean;
   showChatHistory: boolean;
 }
@@ -18,6 +19,7 @@ interface AppState {
 const initialState: AppState = {
   userId: '',
   userName: '',
+  userEmail: '',
   imageGenerationEnabled: true,
   showChatHistory: true,
 };
@@ -30,13 +32,15 @@ export const fetchAppConfig = createAsyncThunk(
   }
 );
 
+type AuthClaim = { typ: string; val: string };
+type AuthPayload = Array<{ user_id: string; user_claims: AuthClaim[] }>;
+
 export const fetchCurrentUser = createAsyncThunk(
   'app/fetchCurrentUser',
   async () => {
     try {
-      const payload = await httpClient.fetchExternal<Array<{
-        user_claims?: Array<{ typ: string; val: string }>;
-      }>>('/.auth/me');
+      const payload = await httpClient.fetchExternal<AuthPayload>('/.auth/me');
+
       const userClaims = payload[0]?.user_claims || [];
       const objectIdClaim = userClaims.find(
         (claim) =>
@@ -45,12 +49,25 @@ export const fetchCurrentUser = createAsyncThunk(
       const nameClaim = userClaims.find(
         (claim) => claim.typ === 'name'
       );
+      
+      let emailVal = '';
+      for (const claim of userClaims) {
+        if (claim.typ === 'preferred_username' || 
+            claim.typ === 'email' ||
+            claim.typ === 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress' ||
+            claim.typ === 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/upn') {
+          emailVal = claim.val;
+          break;
+        }
+      }
+      
       return {
-        userId: objectIdClaim?.val || 'anonymous',
+        userId: objectIdClaim?.val || payload[0]?.user_id || 'anonymous',
         userName: nameClaim?.val || '',
+        userEmail: emailVal,
       };
     } catch {
-      return { userId: 'anonymous', userName: '' };
+      return { userId: 'anonymous', userName: '', userEmail: '' };
     }
   }
 );
@@ -75,10 +92,12 @@ const appSlice = createSlice({
       .addCase(fetchCurrentUser.fulfilled, (state, action) => {
         state.userId = action.payload.userId;
         state.userName = action.payload.userName;
+        state.userEmail = action.payload.userEmail;
       })
       .addCase(fetchCurrentUser.rejected, (state) => {
         state.userId = 'anonymous';
         state.userName = '';
+        state.userEmail = '';
       });
   },
 });
