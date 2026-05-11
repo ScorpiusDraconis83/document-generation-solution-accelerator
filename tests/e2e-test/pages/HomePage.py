@@ -24,7 +24,7 @@ class HomePage(BasePage):
 
     # Input and send locators
     ASK_QUESTION_TEXTAREA = "//input[@placeholder='Type a message']"
-    SEND_BUTTON = "//button[2]//span[1]"
+    SEND_BUTTON = "//button[@aria-label='Send']"
     
     # Response and status locators
     TYPING_INDICATOR = "//div[@class='typing-indicator']"

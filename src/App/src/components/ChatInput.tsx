@@ -122,6 +122,7 @@ export const ChatInput = React.memo(function ChatInput({
             size="small"
             onClick={handleSubmit}
             disabled={!inputValue.trim() || isLoading}
+            aria-label="Send"
             style={{
               minWidth: '32px',
               height: '32px',
