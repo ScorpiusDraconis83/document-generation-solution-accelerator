@@ -63,7 +63,49 @@ async def test_health_check_api(client):
 
 @pytest.mark.asyncio
 async def test_chat_missing_message(client):
-    """Test chat endpoint with missing message still returns response (no validation)."""
+    """Test chat endpoint rejects missing/empty message with 400."""
+    response = await client.post(
+        "/api/chat",
+        json={"conversation_id": "test-conv"}
+    )
+
+    assert response.status_code == 400
+    data = await response.get_json()
+    assert data["action_type"] == "error"
+    assert "empty" in data["message"].lower()
+
+
+@pytest.mark.asyncio
+async def test_chat_empty_body(client):
+    """Test chat endpoint rejects empty request body with 400."""
+    response = await client.post(
+        "/api/chat",
+        data="",
+        headers={"Content-Type": "application/json"}
+    )
+
+    assert response.status_code == 400
+    data = await response.get_json()
+    assert data["action_type"] == "error"
+    assert "required" in data["message"].lower()
+
+
+@pytest.mark.asyncio
+async def test_chat_whitespace_message(client):
+    """Test chat endpoint rejects whitespace-only message with 400."""
+    response = await client.post(
+        "/api/chat",
+        json={"conversation_id": "test-conv", "message": "   "}
+    )
+
+    assert response.status_code == 400
+    data = await response.get_json()
+    assert data["action_type"] == "error"
+
+
+@pytest.mark.asyncio
+async def test_chat_empty_message_with_action_allowed(client):
+    """Test chat endpoint allows empty message when action is specified."""
     with patch("app.get_routing_service") as mock_routing, \
          patch("app.get_cosmos_service") as mock_cosmos, \
          patch("app.get_orchestrator") as mock_orch:
@@ -88,10 +130,10 @@ async def test_chat_missing_message(client):
 
         response = await client.post(
             "/api/chat",
-            json={"conversation_id": "test-conv"}
+            json={"conversation_id": "test-conv", "action": "confirm_brief", "message": ""}
         )
 
-        # API doesn't validate missing message - routes to handler with empty message
+        # Action-based requests bypass message validation
         assert response.status_code in [200, 500]
 
 
