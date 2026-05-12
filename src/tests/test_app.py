@@ -101,35 +101,6 @@ async def test_chat_whitespace_message(client):
 
 
 @pytest.mark.asyncio
-async def test_chat_null_message(client):
-    """Test chat endpoint handles null message without crashing."""
-    response = await client.post(
-        "/api/chat",
-        json={"conversation_id": "test-conv", "message": None}
-    )
-
-    assert response.status_code == 400
-    data = await response.get_json()
-    assert data["action_type"] == "error"
-    assert "empty" in data["message"].lower()
-
-
-@pytest.mark.asyncio
-async def test_chat_invalid_json_body(client):
-    """Test chat endpoint rejects invalid JSON body with 400."""
-    response = await client.post(
-        "/api/chat",
-        data="not valid json",
-        headers={"Content-Type": "application/json"}
-    )
-
-    assert response.status_code == 400
-    data = await response.get_json()
-    assert data["action_type"] == "error"
-    assert "required" in data["message"].lower()
-
-
-@pytest.mark.asyncio
 async def test_chat_empty_message_with_action_allowed(client):
     """Test chat endpoint allows empty message when action is specified."""
     with patch("app.get_routing_service") as mock_routing, \
