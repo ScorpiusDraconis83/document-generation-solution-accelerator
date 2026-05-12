@@ -161,12 +161,29 @@ async def handle_chat():
     """Unified chat endpoint - routes messages to appropriate handlers based on intent."""
     data = await request.get_json()
 
+    if not data:
+        return jsonify({
+            "action_type": "error",
+            "message": "Request body is required",
+            "data": {},
+            "conversation_id": ""
+        }), 400
+
     # Extract request fields
     conversation_id = data.get("conversation_id") or str(uuid.uuid4())
     user_id = data.get("user_id", "anonymous")
     message = data.get("message", "")
     action = data.get("action")
     payload = data.get("payload", {})
+
+    # Validate that message content is not empty when no action is specified
+    if not action and not message.strip():
+        return jsonify({
+            "action_type": "error",
+            "message": "Message content must not be empty",
+            "data": {},
+            "conversation_id": conversation_id
+        }), 400
 
     selected_products = data.get("selected_products", [])
     brief_data = data.get("brief", {})
