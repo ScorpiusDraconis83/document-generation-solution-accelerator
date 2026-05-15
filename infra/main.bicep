@@ -476,10 +476,76 @@ module jumpboxVM 'br/public:avm/res/compute/virtual-machine:0.21.0' = if (deploy
       }
     }
     encryptionAtHost: false // Some Azure subscriptions do not support encryption at host
+    extensionMonitoringAgentConfig: {
+      enabled: enableMonitoring
+    }
     location: solutionLocation
     tags: tags
   }
   dependsOn: (enableMonitoring && !useExistingLogAnalytics) ? [logAnalyticsWorkspace] : []
+}
+
+// ========== Data Collection Rule for Jumpbox Security Event Logs (SFI-AzTBv17) ========== //
+var jumpboxDcrName = take('dcr-${jumpboxVmName}', 64)
+module jumpboxDcr 'br/public:avm/res/insights/data-collection-rule:0.11.0' = if (deployAdminAccessResources && enableMonitoring) {
+  name: take('avm.res.insights.data-collection-rule.${jumpboxDcrName}', 64)
+  params: {
+    name: jumpboxDcrName
+    location: solutionLocation
+    tags: tags
+    enableTelemetry: enableTelemetry
+    dataCollectionRuleProperties: {
+      kind: 'Windows'
+      description: 'Collects Windows Security audit success/failure events from jumpbox VM (SFI-AzTBv17 compliance).'
+      dataSources: {
+        windowsEventLogs: [
+          {
+            name: 'securityEventLogsDataSource'
+            streams: [
+              'Microsoft-SecurityEvent'
+            ]
+            xPathQueries: [
+              'Security!*[System[(band(Keywords,13510798882111488))]]'
+            ]
+          }
+        ]
+      }
+      destinations: {
+        logAnalytics: [
+          {
+            name: 'laDestination'
+            workspaceResourceId: logAnalyticsWorkspaceResourceId
+          }
+        ]
+      }
+      dataFlows: [
+        {
+          streams: [
+            'Microsoft-SecurityEvent'
+          ]
+          destinations: [
+            'laDestination'
+          ]
+        }
+      ]
+    }
+  }
+}
+
+resource jumpboxDcrAssociation 'Microsoft.Insights/dataCollectionRuleAssociations@2023-03-11' = if (deployAdminAccessResources && enableMonitoring) {
+  name: 'dcra-${jumpboxVmName}'
+  scope: jumpboxVmExisting
+  properties: {
+    dataCollectionRuleId: jumpboxDcr!.outputs.resourceId
+    description: 'Associates the Windows security event DCR with the jumpbox VM.'
+  }
+}
+
+resource jumpboxVmExisting 'Microsoft.Compute/virtualMachines@2024-03-01' existing = if (deployAdminAccessResources && enableMonitoring) {
+  name: take(jumpboxVmName, 15)
+  dependsOn: [
+    jumpboxVM
+  ]
 }
 
 // ========== Private DNS Zones ========== //
@@ -685,12 +751,8 @@ module aiSearch 'br/public:avm/res/search/search-service:0.12.0' = {
     partitionCount: 1
     hostingMode: 'Default'
     semanticSearch: 'free'
-    authOptions: {
-      aadOrApiKey: {
-        aadAuthFailureMode: 'http401WithBearerChallenge'
-      }
-    }
-    disableLocalAuth: false
+    managedIdentities: { systemAssigned: true }
+    disableLocalAuth: true
     roleAssignments: [
       {
         principalId: userAssignedIdentity.outputs.principalId
@@ -722,6 +784,7 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.32.0' = {
     skuName: enableRedundancy ? 'Standard_ZRS' : 'Standard_LRS'
     managedIdentities: { systemAssigned: true }
     minimumTlsVersion: 'TLS1_2'
+    requireInfrastructureEncryption: true
     enableTelemetry: enableTelemetry
     tags: tags
     accessTier: 'Hot'
@@ -938,6 +1001,7 @@ module webSite 'modules/web-sites.bicep' = {
     diagnosticSettings: enableMonitoring ? [{ workspaceResourceId: logAnalyticsWorkspaceResourceId }] : null
     vnetRouteAllEnabled: enablePrivateNetworking
     vnetImagePullEnabled: enablePrivateNetworking
+    e2eEncryptionEnabled: true
     publicNetworkAccess: 'Enabled'
   }
 }
