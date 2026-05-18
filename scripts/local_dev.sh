@@ -100,7 +100,7 @@ ensure_azure_login() {
 }
 
 ensure_azure_ai_user_role() {
-    print_info "Checking Azure AI User role..."
+    print_info "Checking Foundry User role..."
     
     local existing_project_id=""
     local foundry_resource_id=""
@@ -131,14 +131,14 @@ ensure_azure_ai_user_role() {
     existing=$(MSYS_NO_PATHCONV=1 az role assignment list --assignee "$signed_user_id" --role "$role_id" --scope "$scope" --query "[0].id" -o tsv 2>/dev/null)
     
     if [ -n "$existing" ]; then
-        print_success "Azure AI User role already assigned."
+        print_success "Foundry User role already assigned."
     else
-        print_info "Assigning Azure AI User role..."
+        print_info "Assigning Foundry User role..."
         if ! MSYS_NO_PATHCONV=1 az role assignment create --assignee "$signed_user_id" --role "$role_id" --scope "$scope" --output none 2>/dev/null; then
-            print_error "Failed to assign Azure AI User role."
+            print_error "Failed to assign Foundry User role."
             exit 1
         fi
-        print_success "Azure AI User role assigned."
+        print_success "Foundry User role assigned."
     fi
 }
 

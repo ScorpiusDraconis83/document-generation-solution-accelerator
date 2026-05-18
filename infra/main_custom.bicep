@@ -592,7 +592,7 @@ module aiFoundryAiServices 'br/public:avm/res/cognitive-services/account:0.14.2'
     }
     roleAssignments: [
       {
-        roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Azure AI User
+        roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Foundry User
         principalId: userAssignedIdentity.outputs.principalId
         principalType: 'ServicePrincipal'
       }
@@ -607,7 +607,7 @@ module aiFoundryAiServices 'br/public:avm/res/cognitive-services/account:0.14.2'
         principalType: 'ServicePrincipal'
       }
       {
-        roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Azure AI User for deployer
+        roleDefinitionIdOrName: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Foundry User for deployer
         principalId: deployer().objectId
       }
     ]

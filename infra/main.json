@@ -5,8 +5,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.42.1.51946",
-      "templateHash": "8605178057902281640"
+      "version": "0.43.8.12551",
+      "templateHash": "12804908665994846581"
     },
     "name": "Intelligent Content Generation Accelerator",
     "description": "Solution Accelerator for multimodal marketing content generation using Microsoft Agent Framework.\n"
@@ -4847,8 +4847,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "5942055518457081505"
+              "version": "0.43.8.12551",
+              "templateHash": "10553796402276006272"
             }
           },
           "parameters": {
@@ -24883,8 +24883,8 @@
       },
       "dependsOn": [
         "aiFoundryAiServices",
-        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
         "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').openAI)]",
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').cognitiveServices)]",
         "virtualNetwork"
       ]
     },
@@ -24924,8 +24924,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "16893794525082731825"
+              "version": "0.43.8.12551",
+              "templateHash": "10492947109706449236"
             }
           },
           "parameters": {
@@ -25062,8 +25062,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "12916889556462137224"
+              "version": "0.43.8.12551",
+              "templateHash": "11951897391539128934"
             }
           },
           "parameters": {
@@ -25186,8 +25186,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "13520241640147571543"
+              "version": "0.43.8.12551",
+              "templateHash": "12839007615076660968"
             }
           },
           "parameters": {
@@ -42326,8 +42326,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "10464081739325272474"
+              "version": "0.43.8.12551",
+              "templateHash": "1750084008268987068"
             }
           },
           "definitions": {
@@ -43365,8 +43365,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.42.1.51946",
-                      "templateHash": "904290865426801162"
+                      "version": "0.43.8.12551",
+                      "templateHash": "3262149826084752172"
                     },
                     "name": "Site App Settings",
                     "description": "This module deploys a Site App Setting."
@@ -44414,8 +44414,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "12074733710352169882"
+              "version": "0.43.8.12551",
+              "templateHash": "4497918681275542632"
             }
           },
           "parameters": {
