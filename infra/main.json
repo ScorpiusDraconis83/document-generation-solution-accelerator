@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "18137027992062043147"
+      "templateHash": "14282475649019624593"
     },
     "name": "Intelligent Content Generation Accelerator",
     "description": "Solution Accelerator for multimodal marketing content generation using Microsoft Agent Framework.\n"
@@ -414,31 +414,6 @@
       },
       "dependsOn": [
         "existingResourceGroup"
-      ]
-    },
-    "jumpboxDcrAssociation": {
-      "condition": "[and(variables('deployAdminAccessResources'), parameters('enableMonitoring'))]",
-      "type": "Microsoft.Insights/dataCollectionRuleAssociations",
-      "apiVersion": "2023-03-11",
-      "scope": "[resourceId('Microsoft.Compute/virtualMachines', take(variables('jumpboxVmName'), 15))]",
-      "name": "[format('dcra-{0}', variables('jumpboxVmName'))]",
-      "properties": {
-        "dataCollectionRuleId": "[reference('jumpboxDcr').outputs.resourceId.value]",
-        "description": "Associates the Windows security event DCR with the jumpbox VM."
-      },
-      "dependsOn": [
-        "jumpboxDcr",
-        "jumpboxVM"
-      ]
-    },
-    "jumpboxVmExisting": {
-      "condition": "[and(variables('deployAdminAccessResources'), parameters('enableMonitoring'))]",
-      "existing": true,
-      "type": "Microsoft.Compute/virtualMachines",
-      "apiVersion": "2024-03-01",
-      "name": "[take(variables('jumpboxVmName'), 15)]",
-      "dependsOn": [
-        "jumpboxVM"
       ]
     },
     "logAnalyticsWorkspace": {
@@ -9232,7 +9207,8 @@
           },
           "extensionMonitoringAgentConfig": {
             "value": {
-              "enabled": "[parameters('enableMonitoring')]"
+              "enabled": "[parameters('enableMonitoring')]",
+              "dataCollectionRuleAssociations": "[if(parameters('enableMonitoring'), createArray(createObject('name', format('dcra-{0}', variables('jumpboxVmName')), 'dataCollectionRuleResourceId', reference('jumpboxDcr').outputs.resourceId.value, 'description', 'Associates the Windows security event DCR with the jumpbox VM.')), createArray())]"
             }
           },
           "location": {
@@ -18285,6 +18261,7 @@
         }
       },
       "dependsOn": [
+        "jumpboxDcr",
         "logAnalyticsWorkspace",
         "userAssignedIdentity",
         "virtualNetwork"
