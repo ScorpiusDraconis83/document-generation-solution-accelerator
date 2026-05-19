@@ -23,7 +23,7 @@ param principalType string = 'ServicePrincipal'
 
 // ========== Role Definitions ========== //
 
-// Azure AI User role - for AI Foundry project access (used by AIProjectClient for image generation)
+// Foundry User role - for AI Foundry project access (used by AIProjectClient for image generation)
 resource azureAiUserRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
   name: '53ca6127-db72-4b80-b1b0-d745d6d5456d'
 }
@@ -48,7 +48,7 @@ resource existingAiProject 'Microsoft.CognitiveServices/accounts/projects@2025-1
 
 // ========== Role Assignments ========== //
 
-// Azure AI User role assignment - same as reference accelerator
+// Foundry User role assignment - same as reference accelerator
 // Required for AIProjectClient (used for image generation in Foundry mode)
 resource assignAzureAiUserRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(existingAiServices.id, principalId, azureAiUserRole.id)

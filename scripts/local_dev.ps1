@@ -102,7 +102,7 @@ function Ensure-AzureLogin {
 }
 
 function Ensure-AzureAIUserRole {
-    Write-Info "Checking Azure AI User role..."
+    Write-Info "Checking Foundry User role..."
     
     # Get env vars
     $existingProjectId = $null
@@ -135,15 +135,15 @@ function Ensure-AzureAIUserRole {
     $existing = az role assignment list --assignee $signedUserId --role $roleId --scope $scope --query "[0].id" -o tsv 2>$null
     
     if ($existing) {
-        Write-Success "Azure AI User role already assigned."
+        Write-Success "Foundry User role already assigned."
     } else {
-        Write-Info "Assigning Azure AI User role..."
+        Write-Info "Assigning Foundry User role..."
         az role assignment create --assignee $signedUserId --role $roleId --scope $scope --output none 2>$null
         if ($LASTEXITCODE -ne 0) {
-            Write-Error "Failed to assign Azure AI User role."
+            Write-Error "Failed to assign Foundry User role."
             exit 1
         }
-        Write-Success "Azure AI User role assigned."
+        Write-Success "Foundry User role assigned."
     }
 }
 
