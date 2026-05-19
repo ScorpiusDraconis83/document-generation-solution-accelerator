@@ -533,25 +533,20 @@ jobs:
       - name: Check and Create Resource Group
         id: check_create_rg
         shell: bash
-        env:
-          GITHUB_ACTOR: ${{ github.actor }}
         run: |
           set -e
+          OWNER_TAG_VALUE="${{ github.actor }}"
           echo "🔍 Checking if resource group '$RESOURCE_GROUP_NAME' exists..."
           rg_exists=$(az group exists --name $RESOURCE_GROUP_NAME)
-          OWNER_TAG="Owner=${GITHUB_ACTOR}"
           if [ "$rg_exists" = "false" ]; then
             echo "📦 Resource group does not exist. Creating new resource group '$RESOURCE_GROUP_NAME' in location '$AZURE_LOCATION'..."
-            echo "🏷️ Adding Owner tag: ${OWNER_TAG}"
-            # Preserve any existing tags from $RG_TAGS and append the Owner tag.
-            az group create --name $RESOURCE_GROUP_NAME --location $AZURE_LOCATION --tags ${{ env.RG_TAGS }} ${OWNER_TAG} || { echo "❌ Error creating resource group"; exit 1; }
+            echo "🏷️  Adding Owner tag: Owner=${OWNER_TAG_VALUE}"
+            az group create --name $RESOURCE_GROUP_NAME --location $AZURE_LOCATION --tags ${{ env.RG_TAGS }} "Owner=${OWNER_TAG_VALUE}" || { echo "❌ Error creating resource group"; exit 1; }
             echo "✅ Resource group '$RESOURCE_GROUP_NAME' created successfully."
           else
             echo "✅ Resource group '$RESOURCE_GROUP_NAME' already exists. Deploying to existing resource group."
-            echo "🏷️ Adding/Updating Owner tag on existing resource group: ${OWNER_TAG}"
-            # Merge (not overwrite) — only update the Owner tag, preserve all other existing tags.
-            az group update --name "$RESOURCE_GROUP_NAME" --set tags.Owner="${GITHUB_ACTOR}" >/dev/null \
-              || echo "⚠️ Warning: failed to update Owner tag on existing resource group (continuing)."
+            echo "🏷️  Merging Owner tag on existing resource group: Owner=${OWNER_TAG_VALUE}"
+            az group update --name "$RESOURCE_GROUP_NAME" --set tags.Owner="${OWNER_TAG_VALUE}" --output none || echo "⚠️  Warning: failed to update Owner tag on existing resource group '$RESOURCE_GROUP_NAME'."
           fi
           echo "RESOURCE_GROUP_NAME=$RESOURCE_GROUP_NAME" >> $GITHUB_OUTPUT
           echo "RESOURCE_GROUP_NAME=$RESOURCE_GROUP_NAME" >> $GITHUB_ENV
