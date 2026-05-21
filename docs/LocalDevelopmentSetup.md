@@ -441,14 +441,14 @@ az role assignment create `
   --scope "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Storage/storageAccounts/<storage>"
 ```
 
-### Azure AI User Access Denied
+### Foundry User Access Denied
 
-The local dev script assigns the Azure AI User role automatically. If you still encounter issues, add manually:
+The local dev script assigns the Foundry User role automatically. If you still encounter issues, add manually:
 
 ```bash
 # Linux/macOS
 az role assignment create \
-  --role "Azure AI User" \
+  --role "Foundry User" \
   --assignee $(az ad signed-in-user show --query id -o tsv) \
   --scope /subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.CognitiveServices/accounts/<ai-foundry-account>
 ```
@@ -456,7 +456,7 @@ az role assignment create \
 ```powershell
 # Windows PowerShell
 az role assignment create `
-  --role "Azure AI User" `
+  --role "Foundry User" `
   --assignee (az ad signed-in-user show --query id -o tsv) `
   --scope "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.CognitiveServices/accounts/<ai-foundry-account>"
 ```
