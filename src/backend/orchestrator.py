@@ -22,14 +22,12 @@ import re
 from typing import AsyncIterator, Optional, cast
 
 from agent_framework import (
-    ChatMessage,
-    HandoffBuilder,
-    HandoffAgentUserRequest,
-    RequestInfoEvent,
-    WorkflowOutputEvent,
-    WorkflowStatusEvent,
+    Agent,
+    Message,
+    WorkflowEvent,
 )
-from agent_framework.azure import AzureOpenAIChatClient
+from agent_framework.orchestrations import HandoffBuilder, HandoffAgentUserRequest
+from agent_framework.openai import OpenAIChatCompletionClient
 from azure.identity import DefaultAzureCredential
 
 # Foundry imports - only used when USE_FOUNDRY=true
@@ -537,26 +535,19 @@ class ContentGenerationOrchestrator:
                 self._project_client = project_client
 
                 # For chat completions, use the direct Azure OpenAI endpoint
-                # The Foundry project uses Azure OpenAI under the hood, and we need the direct endpoint
-                # to properly authenticate with Cognitive Services token
                 azure_endpoint = app_settings.azure_openai.endpoint
                 if not azure_endpoint:
                     raise ValueError("AZURE_OPENAI_ENDPOINT is required for Foundry mode chat completions")
-
-                def get_token() -> str:
-                    """Token provider callable - invoked for each request to ensure fresh tokens."""
-                    token = self._credential.get_token(TOKEN_ENDPOINT)
-                    return token.token
 
                 model_deployment = app_settings.ai_foundry.model_deployment or app_settings.azure_openai.gpt_model
                 api_version = app_settings.azure_openai.api_version
 
                 logger.info(f"Foundry mode using Azure OpenAI endpoint: {azure_endpoint}, deployment: {model_deployment}")
-                self._chat_client = AzureOpenAIChatClient(
-                    endpoint=azure_endpoint,
-                    deployment_name=model_deployment,
+                self._chat_client = OpenAIChatCompletionClient(
+                    azure_endpoint=azure_endpoint,
+                    model=model_deployment,
                     api_version=api_version,
-                    ad_token_provider=get_token,
+                    credential=self._credential,
                 )
             else:
                 # Azure OpenAI Direct mode
@@ -564,17 +555,12 @@ class ContentGenerationOrchestrator:
                 if not endpoint:
                     raise ValueError("AZURE_OPENAI_ENDPOINT is not configured")
 
-                def get_token() -> str:
-                    """Token provider callable - invoked for each request to ensure fresh tokens."""
-                    token = self._credential.get_token(TOKEN_ENDPOINT)
-                    return token.token
-
-                logger.info("Using Azure OpenAI Direct mode with ad_token_provider")
-                self._chat_client = AzureOpenAIChatClient(
-                    endpoint=endpoint,
-                    deployment_name=app_settings.azure_openai.gpt_model,
+                logger.info("Using Azure OpenAI Direct mode with credential")
+                self._chat_client = OpenAIChatCompletionClient(
+                    azure_endpoint=endpoint,
+                    model=app_settings.azure_openai.gpt_model,
                     api_version=app_settings.azure_openai.api_version,
-                    ad_token_provider=get_token,
+                    credential=self._credential,
                 )
         return self._chat_client
 
@@ -589,40 +575,47 @@ class ContentGenerationOrchestrator:
         # Get the chat client
         chat_client = self._get_chat_client()
 
-        # Agent names - use underscores (AzureOpenAIChatClient works with both modes now)
+        # Agent names - use underscores (OpenAIChatClient works with both modes now)
         name_sep = "_"
 
         # Create all agents
-        triage_agent = chat_client.create_agent(
+        triage_agent = Agent(
+            client=chat_client,
             name=f"triage{name_sep}agent",
             instructions=TRIAGE_INSTRUCTIONS,
         )
 
-        planning_agent = chat_client.create_agent(
+        planning_agent = Agent(
+            client=chat_client,
             name=f"planning{name_sep}agent",
             instructions=PLANNING_INSTRUCTIONS,
         )
 
-        research_agent = chat_client.create_agent(
+        research_agent = Agent(
+            client=chat_client,
             name=f"research{name_sep}agent",
             instructions=RESEARCH_INSTRUCTIONS,
         )
 
-        text_content_agent = chat_client.create_agent(
+        text_content_agent = Agent(
+            client=chat_client,
             name=f"text{name_sep}content{name_sep}agent",
             instructions=TEXT_CONTENT_INSTRUCTIONS,
         )
 
-        image_content_agent = chat_client.create_agent(
+        image_content_agent = Agent(
+            client=chat_client,
             name=f"image{name_sep}content{name_sep}agent",
             instructions=IMAGE_CONTENT_INSTRUCTIONS,
         )
 
-        compliance_agent = chat_client.create_agent(
+        compliance_agent = Agent(
+            client=chat_client,
             name=f"compliance{name_sep}agent",
             instructions=COMPLIANCE_INSTRUCTIONS,
         )
-        self._rai_agent = chat_client.create_agent(
+        self._rai_agent = Agent(
+            client=chat_client,
             name=f"rai{name_sep}agent",
             instructions=RAI_INSTRUCTIONS,
         )
@@ -736,15 +729,15 @@ class ContentGenerationOrchestrator:
                 events.append(event)
 
                 # Handle different event types from the workflow
-                if isinstance(event, WorkflowStatusEvent):
+                if event.type == "status":
                     yield {
                         "type": "status",
-                        "content": event.state.name,
+                        "content": event.state.name if hasattr(event, 'state') else str(event.data),
                         "is_final": False,
                         "metadata": {"conversation_id": conversation_id}
                     }
 
-                elif isinstance(event, RequestInfoEvent):
+                elif event.type == "request_info":
                     # Workflow is requesting user input
                     if isinstance(event.data, HandoffAgentUserRequest):
                         # Extract conversation history from agent_response.messages (updated API)
@@ -773,9 +766,9 @@ class ContentGenerationOrchestrator:
                             "metadata": {"conversation_id": conversation_id}
                         }
 
-                elif isinstance(event, WorkflowOutputEvent):
+                elif event.type == "output":
                     # Final output from the workflow
-                    conversation = cast(list[ChatMessage], event.data)
+                    conversation = cast(list[Message], event.data)
                     if isinstance(conversation, list) and conversation:
                         # Get the last assistant message as the final response
                         assistant_messages = [
@@ -841,15 +834,15 @@ class ContentGenerationOrchestrator:
         try:
             responses = {request_id: user_response}
             async for event in self._workflow.send_responses_streaming(responses):
-                if isinstance(event, WorkflowStatusEvent):
+                if event.type == "status":
                     yield {
                         "type": "status",
-                        "content": event.state.name,
+                        "content": event.state.name if hasattr(event, 'state') else str(event.data),
                         "is_final": False,
                         "metadata": {"conversation_id": conversation_id}
                     }
 
-                elif isinstance(event, RequestInfoEvent):
+                elif event.type == "request_info":
                     if isinstance(event.data, HandoffAgentUserRequest):
                         # Get messages from agent_response (updated API)
                         messages = event.data.agent_response.messages if hasattr(event.data, 'agent_response') and event.data.agent_response else []
@@ -871,8 +864,8 @@ class ContentGenerationOrchestrator:
                             "metadata": {"conversation_id": conversation_id}
                         }
 
-                elif isinstance(event, WorkflowOutputEvent):
-                    conversation = cast(list[ChatMessage], event.data)
+                elif event.type == "output":
+                    conversation = cast(list[Message], event.data)
                     if isinstance(conversation, list) and conversation:
                         assistant_messages = [
                             msg for msg in conversation
