@@ -574,14 +574,14 @@ class ContentGenerationOrchestrator:
         # Get the chat client
         chat_client = self._get_chat_client()
 
-        # Agent names - use underscores (OpenAIChatClient works with both modes now)
+        # Agent names - use underscores (OpenAIChatCompletionClient works with both modes now)
         name_sep = "_"
 
         # Create all agents
         # NOTE: Handoff workflow participants must set
         # require_per_service_call_history_persistence=True so local conversation
         # history stays consistent with the service across handoff tool-call
-        # short-circuits (required by agent_framework_orchestrations.HandoffBuilder).
+        # short-circuits (required by agent_framework.orchestrations.HandoffBuilder).
         triage_agent = Agent(
             client=chat_client,
             name=f"triage{name_sep}agent",
