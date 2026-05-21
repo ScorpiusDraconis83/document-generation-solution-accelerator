@@ -24,7 +24,6 @@ from typing import AsyncIterator, Optional, cast
 from agent_framework import (
     Agent,
     Message,
-    WorkflowEvent,
 )
 from agent_framework.orchestrations import HandoffBuilder, HandoffAgentUserRequest
 from agent_framework.openai import OpenAIChatCompletionClient
