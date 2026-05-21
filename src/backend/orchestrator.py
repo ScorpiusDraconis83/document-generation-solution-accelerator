@@ -579,40 +579,50 @@ class ContentGenerationOrchestrator:
         name_sep = "_"
 
         # Create all agents
+        # NOTE: Handoff workflow participants must set
+        # require_per_service_call_history_persistence=True so local conversation
+        # history stays consistent with the service across handoff tool-call
+        # short-circuits (required by agent_framework_orchestrations.HandoffBuilder).
         triage_agent = Agent(
             client=chat_client,
             name=f"triage{name_sep}agent",
             instructions=TRIAGE_INSTRUCTIONS,
+            require_per_service_call_history_persistence=True,
         )
 
         planning_agent = Agent(
             client=chat_client,
             name=f"planning{name_sep}agent",
             instructions=PLANNING_INSTRUCTIONS,
+            require_per_service_call_history_persistence=True,
         )
 
         research_agent = Agent(
             client=chat_client,
             name=f"research{name_sep}agent",
             instructions=RESEARCH_INSTRUCTIONS,
+            require_per_service_call_history_persistence=True,
         )
 
         text_content_agent = Agent(
             client=chat_client,
             name=f"text{name_sep}content{name_sep}agent",
             instructions=TEXT_CONTENT_INSTRUCTIONS,
+            require_per_service_call_history_persistence=True,
         )
 
         image_content_agent = Agent(
             client=chat_client,
             name=f"image{name_sep}content{name_sep}agent",
             instructions=IMAGE_CONTENT_INSTRUCTIONS,
+            require_per_service_call_history_persistence=True,
         )
 
         compliance_agent = Agent(
             client=chat_client,
             name=f"compliance{name_sep}agent",
             instructions=COMPLIANCE_INSTRUCTIONS,
+            require_per_service_call_history_persistence=True,
         )
         self._rai_agent = Agent(
             client=chat_client,
