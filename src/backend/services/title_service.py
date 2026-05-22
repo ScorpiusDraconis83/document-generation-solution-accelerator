@@ -17,9 +17,6 @@ from settings import app_settings
 
 logger = logging.getLogger(__name__)
 
-# Token endpoint for Azure OpenAI authentication
-TOKEN_ENDPOINT = "https://cognitiveservices.azure.com/.default"
-
 # Title generation instructions (from MS reference accelerator)
 TITLE_INSTRUCTIONS = """Summarize the conversation so far into a 4-word or less title.
 Do not use any quotation marks or punctuation.

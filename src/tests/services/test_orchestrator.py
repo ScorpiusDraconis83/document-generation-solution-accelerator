@@ -260,8 +260,11 @@ async def test_orchestrator_initialize_creates_workflow():
 
         mock_workflow = MagicMock()
         mock_builder_instance = MagicMock()
+        mock_builder_instance.participants.return_value = mock_builder_instance
+        mock_builder_instance.with_start_agent.return_value = mock_builder_instance
         mock_builder_instance.add_agent.return_value = mock_builder_instance
         mock_builder_instance.add_handoff.return_value = mock_builder_instance
+        mock_builder_instance.with_termination_condition.return_value = mock_builder_instance
         mock_builder_instance.build.return_value = mock_workflow
         mock_builder.return_value = mock_builder_instance
 
@@ -303,8 +306,11 @@ async def test_orchestrator_initialize_foundry_mode():
 
         mock_workflow = MagicMock()
         mock_builder_instance = MagicMock()
+        mock_builder_instance.participants.return_value = mock_builder_instance
+        mock_builder_instance.with_start_agent.return_value = mock_builder_instance
         mock_builder_instance.add_agent.return_value = mock_builder_instance
         mock_builder_instance.add_handoff.return_value = mock_builder_instance
+        mock_builder_instance.with_termination_condition.return_value = mock_builder_instance
         mock_builder_instance.build.return_value = mock_workflow
         mock_builder.return_value = mock_builder_instance
 

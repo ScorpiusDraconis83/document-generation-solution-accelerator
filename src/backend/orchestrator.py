@@ -482,7 +482,7 @@ class ContentGenerationOrchestrator:
     Microsoft Agent Framework's HandoffBuilder.
 
     Supports two modes:
-    1. Azure OpenAI Direct (default): Uses AzureOpenAIChatClient with ad_token_provider
+    1. Azure OpenAI Direct (default): Uses OpenAIChatCompletionClient with DefaultAzureCredential
     2. Azure AI Foundry: Uses AIProjectClient with project endpoint (set USE_FOUNDRY=true)
 
     Agents:
@@ -495,7 +495,7 @@ class ContentGenerationOrchestrator:
     """
 
     def __init__(self):
-        self._chat_client = None  # Always AzureOpenAIChatClient
+        self._chat_client = None  # OpenAIChatCompletionClient instance
         self._project_client = None  # AIProjectClient for Foundry mode (used for image generation)
         self._agents: dict = {}
         self._rai_agent = None
@@ -638,7 +638,7 @@ class ContentGenerationOrchestrator:
             "compliance": compliance_agent,
         }
 
-        # Workflow name - Foundry requires hyphens
+        # Workflow name
         workflow_name = f"content{name_sep}generation{name_sep}workflow"
 
         # Build the handoff workflow
