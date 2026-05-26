@@ -404,7 +404,7 @@ def test_validate_start_over(login_logout, request):
     Steps:
     1. Validate home page elements are visible
     2. Send prompt from quick link
-    4. Click Start over and validate start over text is displayed
+    3. Click Start over and validate start over text is displayed
     """
     page = login_logout
     page.goto(URL)
