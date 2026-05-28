@@ -24,9 +24,7 @@ from typing import AsyncIterator, Optional, cast
 from agent_framework import (
     Agent,
     Message,
-    WorkflowEvent,
     WorkflowEventType,
-    WorkflowRunState,
 )
 from agent_framework.orchestrations import HandoffBuilder, HandoffAgentUserRequest
 from agent_framework.openai import OpenAIChatCompletionClient
@@ -541,7 +539,8 @@ class ContentGenerationOrchestrator:
                 # Store the project client for image generation
                 self._project_client = project_client
 
-                # For chat completions, use the direct Azure OpenAI endpoint
+                # The Foundry project uses Azure OpenAI under the hood, and we need the direct endpoint
+                # to properly authenticate with Cognitive Services token
                 azure_endpoint = app_settings.azure_openai.endpoint
                 if not azure_endpoint:
                     raise ValueError("AZURE_OPENAI_ENDPOINT is required for Foundry mode chat completions")
