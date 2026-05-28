@@ -24,6 +24,9 @@ from typing import AsyncIterator, Optional, cast
 from agent_framework import (
     Agent,
     Message,
+    WorkflowEvent,
+    WorkflowEventType,
+    WorkflowRunState,
 )
 from agent_framework.orchestrations import HandoffBuilder, HandoffAgentUserRequest
 from agent_framework.openai import OpenAIChatCompletionClient
@@ -44,6 +47,11 @@ logger = logging.getLogger(__name__)
 
 # Token endpoint for Azure Cognitive Services (used for Azure OpenAI)
 TOKEN_ENDPOINT = "https://cognitiveservices.azure.com/.default"
+
+# Event type constants for type-safe dispatch (avoids string typos)
+EVENT_STATUS: WorkflowEventType = "status"
+EVENT_REQUEST_INFO: WorkflowEventType = "request_info"
+EVENT_OUTPUT: WorkflowEventType = "output"
 
 
 # Harmful content patterns to detect in USER INPUT before processing
@@ -538,6 +546,11 @@ class ContentGenerationOrchestrator:
                 if not azure_endpoint:
                     raise ValueError("AZURE_OPENAI_ENDPOINT is required for Foundry mode chat completions")
 
+                def get_token() -> str:
+                    """Token provider callable - invoked for each request to ensure fresh tokens."""
+                    token = self._credential.get_token(TOKEN_ENDPOINT)
+                    return token.token
+
                 model_deployment = app_settings.ai_foundry.model_deployment or app_settings.azure_openai.gpt_model
                 api_version = app_settings.azure_openai.api_version
 
@@ -546,7 +559,7 @@ class ContentGenerationOrchestrator:
                     azure_endpoint=azure_endpoint,
                     model=model_deployment,
                     api_version=api_version,
-                    credential=self._credential,
+                    credential=get_token,
                 )
             else:
                 # Azure OpenAI Direct mode
@@ -554,12 +567,17 @@ class ContentGenerationOrchestrator:
                 if not endpoint:
                     raise ValueError("AZURE_OPENAI_ENDPOINT is not configured")
 
-                logger.info("Using Azure OpenAI Direct mode with credential")
+                def get_token() -> str:
+                    """Token provider callable - invoked for each request to ensure fresh tokens."""
+                    token = self._credential.get_token(TOKEN_ENDPOINT)
+                    return token.token
+
+                logger.info("Using Azure OpenAI Direct mode with ad_token_provider")
                 self._chat_client = OpenAIChatCompletionClient(
                     azure_endpoint=endpoint,
                     model=app_settings.azure_openai.gpt_model,
                     api_version=app_settings.azure_openai.api_version,
-                    credential=self._credential,
+                    credential=get_token,
                 )
         return self._chat_client
 
@@ -738,21 +756,21 @@ class ContentGenerationOrchestrator:
                 events.append(event)
 
                 # Handle different event types from the workflow
-                if event.type == "status":
+                if event.type == EVENT_STATUS:
+                    status_name = event.state.name if event.state else str(event.data)
                     yield {
                         "type": "status",
-                        "content": event.state.name if hasattr(event, 'state') else str(event.data),
+                        "content": status_name,
                         "is_final": False,
                         "metadata": {"conversation_id": conversation_id}
                     }
 
-                elif event.type == "request_info":
+                elif event.type == EVENT_REQUEST_INFO:
                     # Workflow is requesting user input
                     if isinstance(event.data, HandoffAgentUserRequest):
-                        # Extract conversation history from agent_response.messages (updated API)
-                        messages = event.data.agent_response.messages if hasattr(event.data, 'agent_response') and event.data.agent_response else []
-                        if not isinstance(messages, list):
-                            messages = [messages] if messages else []
+                        # Extract conversation history from agent_response.messages
+                        agent_resp = event.data.agent_response
+                        messages = list(agent_resp.messages) if agent_resp and agent_resp.messages else []
 
                         conversation_text = "\n".join([
                             f"{msg.author_name or msg.role.value}: {msg.text}"
@@ -760,13 +778,13 @@ class ContentGenerationOrchestrator:
                         ])
 
                         # Get the last message content and filter any system prompt leakage
-                        last_msg_content = messages[-1].text if messages else (event.data.agent_response.text if hasattr(event.data, 'agent_response') and event.data.agent_response else "")
+                        last_msg_content = messages[-1].text if messages else (agent_resp.text if agent_resp else "")
                         last_msg_content = _filter_system_prompt_from_response(last_msg_content)
-                        last_msg_agent = messages[-1].author_name if messages and hasattr(messages[-1], 'author_name') else "unknown"
+                        last_msg_agent = messages[-1].author_name if messages else "unknown"
 
                         yield {
                             "type": "agent_response",
-                            "agent": last_msg_agent,
+                            "agent": last_msg_agent or "unknown",
                             "content": last_msg_content,
                             "conversation_history": conversation_text,
                             "is_final": False,
@@ -775,8 +793,7 @@ class ContentGenerationOrchestrator:
                             "metadata": {"conversation_id": conversation_id}
                         }
 
-                elif event.type == "output":
-                    # Final output from the workflow
+                elif event.type == EVENT_OUTPUT:
                     conversation = cast(list[Message], event.data)
                     if isinstance(conversation, list) and conversation:
                         # Get the last assistant message as the final response
@@ -843,29 +860,29 @@ class ContentGenerationOrchestrator:
         try:
             responses = {request_id: user_response}
             async for event in self._workflow.send_responses_streaming(responses):
-                if event.type == "status":
+                if event.type == EVENT_STATUS:
+                    status_name = event.state.name if event.state else str(event.data)
                     yield {
                         "type": "status",
-                        "content": event.state.name if hasattr(event, 'state') else str(event.data),
+                        "content": status_name,
                         "is_final": False,
                         "metadata": {"conversation_id": conversation_id}
                     }
 
-                elif event.type == "request_info":
+                elif event.type == EVENT_REQUEST_INFO:
                     if isinstance(event.data, HandoffAgentUserRequest):
-                        # Get messages from agent_response (updated API)
-                        messages = event.data.agent_response.messages if hasattr(event.data, 'agent_response') and event.data.agent_response else []
-                        if not isinstance(messages, list):
-                            messages = [messages] if messages else []
+                        # Get messages from agent_response
+                        agent_resp = event.data.agent_response
+                        messages = list(agent_resp.messages) if agent_resp and agent_resp.messages else []
 
                         # Get the last message content and filter any system prompt leakage
-                        last_msg_content = messages[-1].text if messages else (event.data.agent_response.text if hasattr(event.data, 'agent_response') and event.data.agent_response else "")
+                        last_msg_content = messages[-1].text if messages else (agent_resp.text if agent_resp else "")
                         last_msg_content = _filter_system_prompt_from_response(last_msg_content)
-                        last_msg_agent = messages[-1].author_name if messages and hasattr(messages[-1], 'author_name') else "unknown"
+                        last_msg_agent = messages[-1].author_name if messages else "unknown"
 
                         yield {
                             "type": "agent_response",
-                            "agent": last_msg_agent,
+                            "agent": last_msg_agent or "unknown",
                             "content": last_msg_content,
                             "is_final": False,
                             "requires_user_input": True,
@@ -873,7 +890,7 @@ class ContentGenerationOrchestrator:
                             "metadata": {"conversation_id": conversation_id}
                         }
 
-                elif event.type == "output":
+                elif event.type == EVENT_OUTPUT:
                     conversation = cast(list[Message], event.data)
                     if isinstance(conversation, list) and conversation:
                         assistant_messages = [

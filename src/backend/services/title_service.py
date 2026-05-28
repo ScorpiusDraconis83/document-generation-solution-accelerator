@@ -17,6 +17,9 @@ from settings import app_settings
 
 logger = logging.getLogger(__name__)
 
+# Token endpoint for Azure OpenAI authentication
+TOKEN_ENDPOINT = "https://cognitiveservices.azure.com/.default"
+
 # Title generation instructions (from MS reference accelerator)
 TITLE_INSTRUCTIONS = """Summarize the conversation so far into a 4-word or less title.
 Do not use any quotation marks or punctuation.
@@ -55,11 +58,17 @@ class TitleService:
 
             api_version = app_settings.azure_openai.api_version
 
+            # Create token provider function
+            def get_token() -> str:
+                """Token provider callable - invoked for each request to ensure fresh tokens."""
+                token = self._credential.get_token(TOKEN_ENDPOINT)
+                return token.token
+
             chat_client = OpenAIChatCompletionClient(
                 azure_endpoint=endpoint,
                 model=deployment,
                 api_version=api_version,
-                credential=self._credential,
+                credential=get_token,
             )
 
             self._agent = Agent(
