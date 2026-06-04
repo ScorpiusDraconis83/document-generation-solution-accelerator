@@ -571,7 +571,7 @@ class ContentGenerationOrchestrator:
                     token = self._credential.get_token(TOKEN_ENDPOINT)
                     return token.token
 
-                logger.info("Using Azure OpenAI Direct mode with ad_token_provider")
+                logger.info("Using Azure OpenAI Direct mode with DefaultAzureCredential token provider")
                 self._chat_client = OpenAIChatCompletionClient(
                     azure_endpoint=endpoint,
                     model=app_settings.azure_openai.gpt_model,
