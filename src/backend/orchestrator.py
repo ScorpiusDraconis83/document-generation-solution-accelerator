@@ -591,8 +591,10 @@ class ContentGenerationOrchestrator:
         # Get the chat client
         chat_client = self._get_chat_client()
 
-        # Agent names - use underscores (OpenAIChatCompletionClient works with both modes now)
-        name_sep = "_"
+        # Agent names - Foundry workflow names require hyphens, while direct mode
+        # continues to use underscores.
+        name_sep = "-" if self._use_foundry else "_"
+        
 
         # Create all agents
         # NOTE: Handoff workflow participants must set
