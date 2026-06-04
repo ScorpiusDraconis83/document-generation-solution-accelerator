@@ -404,9 +404,7 @@ def test_validate_start_over(login_logout, request):
     Steps:
     1. Validate home page elements are visible
     2. Send prompt from quick link
-    3. Confirm brief
-    4. Stop generation while content is being generated
-    5. Click Start over and validate start over text is displayed
+    3. Click Start over and validate start over text is displayed
     """
     page = login_logout
     page.goto(URL)
@@ -426,17 +424,16 @@ def test_validate_start_over(login_logout, request):
         home.send_prompt(home.USER_MESSAGE)
         step2_end = time.time()
 
-
         # Step 3: Start Over
-        step4_start = time.time()
+        step3_start = time.time()
         home.start_over()
-        step4_end = time.time()
+        step3_end = time.time()
 
         # Log test summary
         step_times = [
             ("Step 1 (Home Page Validation)", step1_end - step1_start),
             ("Step 2 (Send Prompt)", step2_end - step2_start),
-            ("Step 3 (Start Over)", step4_end - step4_start)
+            ("Step 3 (Start Over)", step3_end - step3_start)
         ]
         total_duration = log_test_summary(start_time, step_times, "Start Over Test")
 

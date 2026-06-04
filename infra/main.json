@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "14282475649019624593"
+      "templateHash": "11476101976733556609"
     },
     "name": "Intelligent Content Generation Accelerator",
     "description": "Solution Accelerator for multimodal marketing content generation using Microsoft Agent Framework.\n"
@@ -354,6 +354,7 @@
     "jumpboxUniqueToken": "[take(uniqueString(resourceGroup().id, variables('solutionSuffix')), 10)]",
     "jumpboxVmName": "[take(format('vm-{0}', variables('jumpboxUniqueToken')), 15)]",
     "jumpboxDcrName": "[take(format('dcr-{0}', variables('jumpboxVmName')), 64)]",
+    "dcrLogAnalyticsDestinationName": "[format('la-{0}-destination', variables('logAnalyticsWorkspaceResourceName'))]",
     "privateDnsZones": [
       "privatelink.cognitiveservices.azure.com",
       "privatelink.openai.azure.com",
@@ -18302,7 +18303,7 @@
                       "Microsoft-SecurityEvent"
                     ],
                     "xPathQueries": [
-                      "Security!*[System[(band(Keywords,13510798882111488))]]"
+                      "Security!*[System[(band(Keywords,13510798882111488)) and (EventID != 4624)]]"
                     ]
                   }
                 ]
@@ -18310,7 +18311,7 @@
               "destinations": {
                 "logAnalytics": [
                   {
-                    "name": "laDestination",
+                    "name": "[variables('dcrLogAnalyticsDestinationName')]",
                     "workspaceResourceId": "[if(variables('useExistingLogAnalytics'), parameters('existingLogAnalyticsWorkspaceId'), if(parameters('enableMonitoring'), reference('logAnalyticsWorkspace').outputs.resourceId.value, ''))]"
                   }
                 ]
@@ -18321,7 +18322,7 @@
                     "Microsoft-SecurityEvent"
                   ],
                   "destinations": [
-                    "laDestination"
+                    "[variables('dcrLogAnalyticsDestinationName')]"
                   ]
                 }
               ]

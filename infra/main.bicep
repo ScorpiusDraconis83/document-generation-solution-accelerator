@@ -494,6 +494,7 @@ module jumpboxVM 'br/public:avm/res/compute/virtual-machine:0.21.0' = if (deploy
 
 // ========== Data Collection Rule for Jumpbox Security Event Logs (SFI-AzTBv17) ========== //
 var jumpboxDcrName = take('dcr-${jumpboxVmName}', 64)
+var dcrLogAnalyticsDestinationName = 'la-${logAnalyticsWorkspaceResourceName}-destination'
 module jumpboxDcr 'br/public:avm/res/insights/data-collection-rule:0.11.0' = if (deployAdminAccessResources && enableMonitoring) {
   name: take('avm.res.insights.data-collection-rule.${jumpboxDcrName}', 64)
   params: {
@@ -512,7 +513,7 @@ module jumpboxDcr 'br/public:avm/res/insights/data-collection-rule:0.11.0' = if 
               'Microsoft-SecurityEvent'
             ]
             xPathQueries: [
-              'Security!*[System[(band(Keywords,13510798882111488))]]'
+              'Security!*[System[(band(Keywords,13510798882111488)) and (EventID != 4624)]]'
             ]
           }
         ]
@@ -520,7 +521,7 @@ module jumpboxDcr 'br/public:avm/res/insights/data-collection-rule:0.11.0' = if 
       destinations: {
         logAnalytics: [
           {
-            name: 'laDestination'
+            name: dcrLogAnalyticsDestinationName
             workspaceResourceId: logAnalyticsWorkspaceResourceId
           }
         ]
@@ -531,7 +532,7 @@ module jumpboxDcr 'br/public:avm/res/insights/data-collection-rule:0.11.0' = if 
             'Microsoft-SecurityEvent'
           ]
           destinations: [
-            'laDestination'
+            dcrLogAnalyticsDestinationName
           ]
         }
       ]

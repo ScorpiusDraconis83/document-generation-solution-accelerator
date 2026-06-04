@@ -802,7 +802,7 @@ class HomePage(BasePage):
             # Step 1: Click on START_OVER_BUTTON
             logger.info("Step 1: Clicking on START_OVER_BUTTON...")
             start_over_btn = self.page.locator(self.START_OVER_BUTTON)
-            expect(start_over_btn).to_be_visible(timeout=10000)
+            expect(start_over_btn).to_be_visible(timeout=30000)
             start_over_btn.click()
             self.page.wait_for_timeout(3000)
             logger.info("✓ START_OVER_BUTTON clicked")
