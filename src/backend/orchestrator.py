@@ -22,14 +22,12 @@ import re
 from typing import AsyncIterator, Optional, cast
 
 from agent_framework import (
-    ChatMessage,
-    HandoffBuilder,
-    HandoffAgentUserRequest,
-    RequestInfoEvent,
-    WorkflowOutputEvent,
-    WorkflowStatusEvent,
+    Agent,
+    Message,
+    WorkflowEventType,
 )
-from agent_framework.azure import AzureOpenAIChatClient
+from agent_framework.orchestrations import HandoffBuilder, HandoffAgentUserRequest
+from agent_framework.openai import OpenAIChatCompletionClient
 from azure.identity import DefaultAzureCredential
 
 # Foundry imports - only used when USE_FOUNDRY=true
@@ -47,6 +45,11 @@ logger = logging.getLogger(__name__)
 
 # Token endpoint for Azure Cognitive Services (used for Azure OpenAI)
 TOKEN_ENDPOINT = "https://cognitiveservices.azure.com/.default"
+
+# Event type constants for type-safe dispatch (avoids string typos)
+EVENT_STATUS: WorkflowEventType = "status"
+EVENT_REQUEST_INFO: WorkflowEventType = "request_info"
+EVENT_OUTPUT: WorkflowEventType = "output"
 
 
 # Harmful content patterns to detect in USER INPUT before processing
@@ -120,9 +123,9 @@ SYSTEM_PROMPT_PATTERNS = [
     r"You are a Text Content Agent",
     r"You are an Image Content Agent",
     r"You are a Compliance Agent",
-    # Handoff instructions
-    r"hand off to \w+_agent",
-    r"hand back to \w+_agent",
+    # Handoff instructions (match both underscore and hyphen agent names)
+    r"hand off to \w+[_\-]agent",
+    r"hand back to \w+[_\-]agent",
     r"may hand off to",
     r"After (?:generating|completing|validation|parsing)",
     # Internal workflow markers
@@ -139,8 +142,8 @@ SYSTEM_PROMPT_PATTERNS = [
     # RAI internal instructions
     r"NEVER generate images that contain:",
     r"Responsible AI - Image Generation Rules",
-    # Agent framework references
-    r"compliance_agent|triage_agent|planning_agent|research_agent|text_content_agent|image_content_agent",
+    # Agent framework references (match both underscore and hyphen separators)
+    r"compliance[_\-]agent|triage[_\-]agent|planning[_\-]agent|research[_\-]agent|text[_\-]content[_\-]agent|image[_\-]content[_\-]agent",
 ]
 
 _SYSTEM_PROMPT_PATTERNS_COMPILED = [re.compile(pattern, re.IGNORECASE | re.DOTALL) for pattern in SYSTEM_PROMPT_PATTERNS]
@@ -485,7 +488,7 @@ class ContentGenerationOrchestrator:
     Microsoft Agent Framework's HandoffBuilder.
 
     Supports two modes:
-    1. Azure OpenAI Direct (default): Uses AzureOpenAIChatClient with ad_token_provider
+    1. Azure OpenAI Direct (default): Uses OpenAIChatCompletionClient with DefaultAzureCredential
     2. Azure AI Foundry: Uses AIProjectClient with project endpoint (set USE_FOUNDRY=true)
 
     Agents:
@@ -498,7 +501,7 @@ class ContentGenerationOrchestrator:
     """
 
     def __init__(self):
-        self._chat_client = None  # Always AzureOpenAIChatClient
+        self._chat_client = None  # OpenAIChatCompletionClient instance
         self._project_client = None  # AIProjectClient for Foundry mode (used for image generation)
         self._agents: dict = {}
         self._rai_agent = None
@@ -536,7 +539,6 @@ class ContentGenerationOrchestrator:
                 # Store the project client for image generation
                 self._project_client = project_client
 
-                # For chat completions, use the direct Azure OpenAI endpoint
                 # The Foundry project uses Azure OpenAI under the hood, and we need the direct endpoint
                 # to properly authenticate with Cognitive Services token
                 azure_endpoint = app_settings.azure_openai.endpoint
@@ -552,11 +554,11 @@ class ContentGenerationOrchestrator:
                 api_version = app_settings.azure_openai.api_version
 
                 logger.info(f"Foundry mode using Azure OpenAI endpoint: {azure_endpoint}, deployment: {model_deployment}")
-                self._chat_client = AzureOpenAIChatClient(
-                    endpoint=azure_endpoint,
-                    deployment_name=model_deployment,
+                self._chat_client = OpenAIChatCompletionClient(
+                    azure_endpoint=azure_endpoint,
+                    model=model_deployment,
                     api_version=api_version,
-                    ad_token_provider=get_token,
+                    credential=get_token,
                 )
             else:
                 # Azure OpenAI Direct mode
@@ -569,12 +571,12 @@ class ContentGenerationOrchestrator:
                     token = self._credential.get_token(TOKEN_ENDPOINT)
                     return token.token
 
-                logger.info("Using Azure OpenAI Direct mode with ad_token_provider")
-                self._chat_client = AzureOpenAIChatClient(
-                    endpoint=endpoint,
-                    deployment_name=app_settings.azure_openai.gpt_model,
+                logger.info("Using Azure OpenAI Direct mode with DefaultAzureCredential token provider")
+                self._chat_client = OpenAIChatCompletionClient(
+                    azure_endpoint=endpoint,
+                    model=app_settings.azure_openai.gpt_model,
                     api_version=app_settings.azure_openai.api_version,
-                    ad_token_provider=get_token,
+                    credential=get_token,
                 )
         return self._chat_client
 
@@ -589,40 +591,60 @@ class ContentGenerationOrchestrator:
         # Get the chat client
         chat_client = self._get_chat_client()
 
-        # Agent names - use underscores (AzureOpenAIChatClient works with both modes now)
+        # Agent names - always use underscores so that instruction strings
+        # (TRIAGE_INSTRUCTIONS, *_CONTENT_INSTRUCTIONS, etc.) and the
+        # SYSTEM_PROMPT_PATTERNS leakage-detection regexes stay in sync.
+        # Foundry workflows accept underscore names; no hyphen conversion needed.
         name_sep = "_"
 
         # Create all agents
-        triage_agent = chat_client.create_agent(
+        # NOTE: Handoff workflow participants must set
+        # require_per_service_call_history_persistence=True so local conversation
+        # history stays consistent with the service across handoff tool-call
+        # short-circuits (required by agent_framework.orchestrations.HandoffBuilder).
+        triage_agent = Agent(
+            client=chat_client,
             name=f"triage{name_sep}agent",
             instructions=TRIAGE_INSTRUCTIONS,
+            require_per_service_call_history_persistence=True,
         )
 
-        planning_agent = chat_client.create_agent(
+        planning_agent = Agent(
+            client=chat_client,
             name=f"planning{name_sep}agent",
             instructions=PLANNING_INSTRUCTIONS,
+            require_per_service_call_history_persistence=True,
         )
 
-        research_agent = chat_client.create_agent(
+        research_agent = Agent(
+            client=chat_client,
             name=f"research{name_sep}agent",
             instructions=RESEARCH_INSTRUCTIONS,
+            require_per_service_call_history_persistence=True,
         )
 
-        text_content_agent = chat_client.create_agent(
+        text_content_agent = Agent(
+            client=chat_client,
             name=f"text{name_sep}content{name_sep}agent",
             instructions=TEXT_CONTENT_INSTRUCTIONS,
+            require_per_service_call_history_persistence=True,
         )
 
-        image_content_agent = chat_client.create_agent(
+        image_content_agent = Agent(
+            client=chat_client,
             name=f"image{name_sep}content{name_sep}agent",
             instructions=IMAGE_CONTENT_INSTRUCTIONS,
+            require_per_service_call_history_persistence=True,
         )
 
-        compliance_agent = chat_client.create_agent(
+        compliance_agent = Agent(
+            client=chat_client,
             name=f"compliance{name_sep}agent",
             instructions=COMPLIANCE_INSTRUCTIONS,
+            require_per_service_call_history_persistence=True,
         )
-        self._rai_agent = chat_client.create_agent(
+        self._rai_agent = Agent(
+            client=chat_client,
             name=f"rai{name_sep}agent",
             instructions=RAI_INSTRUCTIONS,
         )
@@ -636,7 +658,7 @@ class ContentGenerationOrchestrator:
             "compliance": compliance_agent,
         }
 
-        # Workflow name - Foundry requires hyphens
+        # Workflow name
         workflow_name = f"content{name_sep}generation{name_sep}workflow"
 
         # Build the handoff workflow
@@ -736,21 +758,21 @@ class ContentGenerationOrchestrator:
                 events.append(event)
 
                 # Handle different event types from the workflow
-                if isinstance(event, WorkflowStatusEvent):
+                if event.type == EVENT_STATUS:
+                    status_name = event.state.name if event.state else str(event.data)
                     yield {
                         "type": "status",
-                        "content": event.state.name,
+                        "content": status_name,
                         "is_final": False,
                         "metadata": {"conversation_id": conversation_id}
                     }
 
-                elif isinstance(event, RequestInfoEvent):
+                elif event.type == EVENT_REQUEST_INFO:
                     # Workflow is requesting user input
                     if isinstance(event.data, HandoffAgentUserRequest):
-                        # Extract conversation history from agent_response.messages (updated API)
-                        messages = event.data.agent_response.messages if hasattr(event.data, 'agent_response') and event.data.agent_response else []
-                        if not isinstance(messages, list):
-                            messages = [messages] if messages else []
+                        # Extract conversation history from agent_response.messages
+                        agent_resp = event.data.agent_response
+                        messages = list(agent_resp.messages) if agent_resp and agent_resp.messages else []
 
                         conversation_text = "\n".join([
                             f"{msg.author_name or msg.role.value}: {msg.text}"
@@ -758,13 +780,13 @@ class ContentGenerationOrchestrator:
                         ])
 
                         # Get the last message content and filter any system prompt leakage
-                        last_msg_content = messages[-1].text if messages else (event.data.agent_response.text if hasattr(event.data, 'agent_response') and event.data.agent_response else "")
+                        last_msg_content = messages[-1].text if messages else (agent_resp.text if agent_resp else "")
                         last_msg_content = _filter_system_prompt_from_response(last_msg_content)
-                        last_msg_agent = messages[-1].author_name if messages and hasattr(messages[-1], 'author_name') else "unknown"
+                        last_msg_agent = messages[-1].author_name if messages else "unknown"
 
                         yield {
                             "type": "agent_response",
-                            "agent": last_msg_agent,
+                            "agent": last_msg_agent or "unknown",
                             "content": last_msg_content,
                             "conversation_history": conversation_text,
                             "is_final": False,
@@ -773,9 +795,8 @@ class ContentGenerationOrchestrator:
                             "metadata": {"conversation_id": conversation_id}
                         }
 
-                elif isinstance(event, WorkflowOutputEvent):
-                    # Final output from the workflow
-                    conversation = cast(list[ChatMessage], event.data)
+                elif event.type == EVENT_OUTPUT:
+                    conversation = cast(list[Message], event.data)
                     if isinstance(conversation, list) and conversation:
                         # Get the last assistant message as the final response
                         assistant_messages = [
@@ -841,29 +862,29 @@ class ContentGenerationOrchestrator:
         try:
             responses = {request_id: user_response}
             async for event in self._workflow.send_responses_streaming(responses):
-                if isinstance(event, WorkflowStatusEvent):
+                if event.type == EVENT_STATUS:
+                    status_name = event.state.name if event.state else str(event.data)
                     yield {
                         "type": "status",
-                        "content": event.state.name,
+                        "content": status_name,
                         "is_final": False,
                         "metadata": {"conversation_id": conversation_id}
                     }
 
-                elif isinstance(event, RequestInfoEvent):
+                elif event.type == EVENT_REQUEST_INFO:
                     if isinstance(event.data, HandoffAgentUserRequest):
-                        # Get messages from agent_response (updated API)
-                        messages = event.data.agent_response.messages if hasattr(event.data, 'agent_response') and event.data.agent_response else []
-                        if not isinstance(messages, list):
-                            messages = [messages] if messages else []
+                        # Get messages from agent_response
+                        agent_resp = event.data.agent_response
+                        messages = list(agent_resp.messages) if agent_resp and agent_resp.messages else []
 
                         # Get the last message content and filter any system prompt leakage
-                        last_msg_content = messages[-1].text if messages else (event.data.agent_response.text if hasattr(event.data, 'agent_response') and event.data.agent_response else "")
+                        last_msg_content = messages[-1].text if messages else (agent_resp.text if agent_resp else "")
                         last_msg_content = _filter_system_prompt_from_response(last_msg_content)
-                        last_msg_agent = messages[-1].author_name if messages and hasattr(messages[-1], 'author_name') else "unknown"
+                        last_msg_agent = messages[-1].author_name if messages else "unknown"
 
                         yield {
                             "type": "agent_response",
-                            "agent": last_msg_agent,
+                            "agent": last_msg_agent or "unknown",
                             "content": last_msg_content,
                             "is_final": False,
                             "requires_user_input": True,
@@ -871,8 +892,8 @@ class ContentGenerationOrchestrator:
                             "metadata": {"conversation_id": conversation_id}
                         }
 
-                elif isinstance(event, WorkflowOutputEvent):
-                    conversation = cast(list[ChatMessage], event.data)
+                elif event.type == EVENT_OUTPUT:
+                    conversation = cast(list[Message], event.data)
                     if isinstance(conversation, list) and conversation:
                         assistant_messages = [
                             msg for msg in conversation
