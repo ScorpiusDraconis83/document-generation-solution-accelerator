@@ -594,7 +594,6 @@ class ContentGenerationOrchestrator:
         # Agent names - Foundry workflow names require hyphens, while direct mode
         # continues to use underscores.
         name_sep = "-" if self._use_foundry else "_"
-        
 
         # Create all agents
         # NOTE: Handoff workflow participants must set
