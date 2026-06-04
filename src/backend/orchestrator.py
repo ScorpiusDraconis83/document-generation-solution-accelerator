@@ -123,9 +123,9 @@ SYSTEM_PROMPT_PATTERNS = [
     r"You are a Text Content Agent",
     r"You are an Image Content Agent",
     r"You are a Compliance Agent",
-    # Handoff instructions
-    r"hand off to \w+_agent",
-    r"hand back to \w+_agent",
+    # Handoff instructions (match both underscore and hyphen agent names)
+    r"hand off to \w+[_\-]agent",
+    r"hand back to \w+[_\-]agent",
     r"may hand off to",
     r"After (?:generating|completing|validation|parsing)",
     # Internal workflow markers
@@ -142,8 +142,8 @@ SYSTEM_PROMPT_PATTERNS = [
     # RAI internal instructions
     r"NEVER generate images that contain:",
     r"Responsible AI - Image Generation Rules",
-    # Agent framework references
-    r"compliance_agent|triage_agent|planning_agent|research_agent|text_content_agent|image_content_agent",
+    # Agent framework references (match both underscore and hyphen separators)
+    r"compliance[_\-]agent|triage[_\-]agent|planning[_\-]agent|research[_\-]agent|text[_\-]content[_\-]agent|image[_\-]content[_\-]agent",
 ]
 
 _SYSTEM_PROMPT_PATTERNS_COMPILED = [re.compile(pattern, re.IGNORECASE | re.DOTALL) for pattern in SYSTEM_PROMPT_PATTERNS]
@@ -591,9 +591,11 @@ class ContentGenerationOrchestrator:
         # Get the chat client
         chat_client = self._get_chat_client()
 
-        # Agent names - Foundry workflow names require hyphens, while direct mode
-        # continues to use underscores.
-        name_sep = "-" if self._use_foundry else "_"
+        # Agent names - always use underscores so that instruction strings
+        # (TRIAGE_INSTRUCTIONS, *_CONTENT_INSTRUCTIONS, etc.) and the
+        # SYSTEM_PROMPT_PATTERNS leakage-detection regexes stay in sync.
+        # Foundry workflows accept underscore names; no hyphen conversion needed.
+        name_sep = "_"
 
         # Create all agents
         # NOTE: Handoff workflow participants must set
