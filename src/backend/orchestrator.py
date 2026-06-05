@@ -124,8 +124,8 @@ SYSTEM_PROMPT_PATTERNS = [
     r"You are an Image Content Agent",
     r"You are a Compliance Agent",
     # Handoff instructions (match both underscore and hyphen agent names)
-    r"hand off to \w+[_\-]agent",
-    r"hand back to \w+[_\-]agent",
+    r"hand off to [\w\-]+[_\-]agent",
+    r"hand back to [\w\-]+[_\-]agent",
     r"may hand off to",
     r"After (?:generating|completing|validation|parsing)",
     # Internal workflow markers
@@ -545,11 +545,6 @@ class ContentGenerationOrchestrator:
                 if not azure_endpoint:
                     raise ValueError("AZURE_OPENAI_ENDPOINT is required for Foundry mode chat completions")
 
-                def get_token() -> str:
-                    """Token provider callable - invoked for each request to ensure fresh tokens."""
-                    token = self._credential.get_token(TOKEN_ENDPOINT)
-                    return token.token
-
                 model_deployment = app_settings.ai_foundry.model_deployment or app_settings.azure_openai.gpt_model
                 api_version = app_settings.azure_openai.api_version
 
@@ -558,7 +553,7 @@ class ContentGenerationOrchestrator:
                     azure_endpoint=azure_endpoint,
                     model=model_deployment,
                     api_version=api_version,
-                    credential=get_token,
+                    credential=self._credential,
                 )
             else:
                 # Azure OpenAI Direct mode
@@ -566,17 +561,12 @@ class ContentGenerationOrchestrator:
                 if not endpoint:
                     raise ValueError("AZURE_OPENAI_ENDPOINT is not configured")
 
-                def get_token() -> str:
-                    """Token provider callable - invoked for each request to ensure fresh tokens."""
-                    token = self._credential.get_token(TOKEN_ENDPOINT)
-                    return token.token
-
-                logger.info("Using Azure OpenAI Direct mode with DefaultAzureCredential token provider")
+                logger.info("Using Azure OpenAI Direct mode with DefaultAzureCredential")
                 self._chat_client = OpenAIChatCompletionClient(
                     azure_endpoint=endpoint,
                     model=app_settings.azure_openai.gpt_model,
                     api_version=app_settings.azure_openai.api_version,
-                    credential=get_token,
+                    credential=self._credential,
                 )
         return self._chat_client
 
