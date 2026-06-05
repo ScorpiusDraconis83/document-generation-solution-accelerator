@@ -135,6 +135,24 @@ def test_filter_system_prompt_handoff():
     assert "text_content_agent" not in filtered
 
 
+def test_filter_system_prompt_handoff_hyphenated():
+    """Test filtering of handoff instructions with hyphenated agent names."""
+
+    response = "I'll hand off to text-content-agent now"
+    filtered = _filter_system_prompt_from_response(response)
+
+    assert "text-content-agent" not in filtered
+
+
+def test_filter_system_prompt_handback_hyphenated():
+    """Test filtering of hand back instructions with hyphenated agent names."""
+
+    response = "Let me hand back to triage-agent with results"
+    filtered = _filter_system_prompt_from_response(response)
+
+    assert "triage-agent" not in filtered
+
+
 def test_filter_system_prompt_critical():
     """Test filtering of critical instruction markers."""
 
