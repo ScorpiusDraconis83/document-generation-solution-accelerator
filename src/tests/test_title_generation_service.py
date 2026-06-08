@@ -178,3 +178,67 @@ class TestGetTitleServiceSingleton:
         mock_existing.__bool__ = lambda self: True
         result = get_title_service()
         assert result is mock_existing
+
+
+# ---------------------------------------------------------------------------
+# TitleService.initialize wiring
+# ---------------------------------------------------------------------------
+
+
+class TestTitleServiceInitialize:
+    """Tests that initialize wires the chat client with correct config."""
+
+    @patch("services.title_service.app_settings")
+    @patch("services.title_service.DefaultAzureCredential")
+    @patch("services.title_service.OpenAIChatCompletionClient")
+    @patch("services.title_service.Agent")
+    def test_initialize_wires_credential_direct_mode(
+        self, mock_agent, mock_client, mock_cred_cls, mock_settings
+    ):
+        """Test that initialize passes credential directly to chat client."""
+        mock_credential = MagicMock()
+        mock_cred_cls.return_value = mock_credential
+
+        mock_settings.ai_foundry.use_foundry = False
+        mock_settings.azure_openai.endpoint = "https://test.openai.azure.com"
+        mock_settings.azure_openai.gpt_model = "gpt-4o"
+        mock_settings.azure_openai.api_version = "2024-02-15"
+
+        svc = TitleService()
+        svc.initialize()
+
+        mock_client.assert_called_once_with(
+            azure_endpoint="https://test.openai.azure.com",
+            model="gpt-4o",
+            api_version="2024-02-15",
+            credential=mock_credential,
+        )
+        assert svc._initialized is True
+
+    @patch("services.title_service.app_settings")
+    @patch("services.title_service.DefaultAzureCredential")
+    @patch("services.title_service.OpenAIChatCompletionClient")
+    @patch("services.title_service.Agent")
+    def test_initialize_wires_credential_foundry_mode(
+        self, mock_agent, mock_client, mock_cred_cls, mock_settings
+    ):
+        """Test that initialize uses Foundry endpoint and model."""
+        mock_credential = MagicMock()
+        mock_cred_cls.return_value = mock_credential
+
+        mock_settings.ai_foundry.use_foundry = True
+        mock_settings.azure_openai.endpoint = "https://foundry.openai.azure.com"
+        mock_settings.ai_foundry.model_deployment = "gpt-4o-foundry"
+        mock_settings.azure_openai.gpt_model = "gpt-4o"
+        mock_settings.azure_openai.api_version = "2024-02-15"
+
+        svc = TitleService()
+        svc.initialize()
+
+        mock_client.assert_called_once_with(
+            azure_endpoint="https://foundry.openai.azure.com",
+            model="gpt-4o-foundry",
+            api_version="2024-02-15",
+            credential=mock_credential,
+        )
+        assert svc._initialized is True
