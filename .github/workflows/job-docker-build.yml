@@ -8,6 +8,10 @@ on:
         value: ${{ jobs.docker-build.outputs.AZURE_ENV_IMAGE_TAG }}
   workflow_dispatch:
 
+permissions:
+  contents: read
+  id-token: write  
+
 env:
   BRANCH_NAME: ${{ github.event.workflow_run.head_branch || github.head_ref || github.ref_name }}
 
@@ -47,7 +51,10 @@ jobs:
 
       - name: Log in to Azure Container Registry
         shell: bash
-        run: az acr login --name ${{ vars.ACR_TEST_LOGIN_SERVER }}
+        run: |
+          # Extract registry name from login server (e.g., myacr.azurecr.io -> myacr)
+          ACR_NAME=$(echo "${{ vars.ACR_TEST_LOGIN_SERVER }}" | cut -d'.' -f1)
+          az acr login --name "$ACR_NAME"
 
       - name: Build and Push Docker Image for Frontend Server
         id: build_push_frontend
