@@ -5,8 +5,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.43.8.12551",
-      "templateHash": "11476101976733556609"
+      "version": "0.44.1.10279",
+      "templateHash": "11010885094881131352"
     },
     "name": "Intelligent Content Generation Accelerator",
     "description": "Solution Accelerator for multimodal marketing content generation using Microsoft Agent Framework.\n"
@@ -4849,8 +4849,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "10553796402276006272"
+              "version": "0.44.1.10279",
+              "templateHash": "6557649947950257832"
             }
           },
           "parameters": {
@@ -26199,8 +26199,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "10492947109706449236"
+              "version": "0.44.1.10279",
+              "templateHash": "10687287011543111358"
             }
           },
           "parameters": {
@@ -26337,8 +26337,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "11951897391539128934"
+              "version": "0.44.1.10279",
+              "templateHash": "11714054478009335704"
             }
           },
           "parameters": {
@@ -26461,8 +26461,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "12839007615076660968"
+              "version": "0.44.1.10279",
+              "templateHash": "15628220945119743042"
             }
           },
           "parameters": {
@@ -26568,12 +26568,12 @@
             "value": [
               {
                 "principalId": "[reference('userAssignedIdentity').outputs.principalId.value]",
-                "roleDefinitionIdOrName": "Search Index Data Contributor",
+                "roleDefinitionIdOrName": "8ebe5a00-799e-43f5-93ac-243d3dce84a7",
                 "principalType": "ServicePrincipal"
               },
               {
                 "principalId": "[reference('userAssignedIdentity').outputs.principalId.value]",
-                "roleDefinitionIdOrName": "Search Service Contributor",
+                "roleDefinitionIdOrName": "7ca78c08-252a-4471-8644-bb5ff32d4ba0",
                 "principalType": "ServicePrincipal"
               }
             ]
@@ -28682,7 +28682,7 @@
             "value": [
               {
                 "principalId": "[reference('userAssignedIdentity').outputs.principalId.value]",
-                "roleDefinitionIdOrName": "Storage Blob Data Contributor",
+                "roleDefinitionIdOrName": "ba92f5b4-2d11-453d-a403-e96b0029c9fe",
                 "principalType": "ServicePrincipal"
               }
             ]
@@ -43605,8 +43605,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "1750084008268987068"
+              "version": "0.44.1.10279",
+              "templateHash": "5713718252926392689"
             }
           },
           "definitions": {
@@ -44644,8 +44644,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.43.8.12551",
-                      "templateHash": "3262149826084752172"
+                      "version": "0.44.1.10279",
+                      "templateHash": "2616621918371988230"
                     },
                     "name": "Site App Settings",
                     "description": "This module deploys a Site App Setting."
@@ -45693,8 +45693,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "4497918681275542632"
+              "version": "0.44.1.10279",
+              "templateHash": "3218681246740688998"
             }
           },
           "parameters": {
