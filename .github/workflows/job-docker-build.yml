@@ -1,4 +1,4 @@
-name: Docker Build Job
+name: Build & Push Test Images (Feature Branch)
 
 on:
   workflow_call:
