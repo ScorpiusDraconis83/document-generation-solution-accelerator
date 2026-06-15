@@ -47,7 +47,7 @@ jobs:
 
       - name: Log in to Azure Container Registry
         shell: bash
-        run: az acr login --name ${{ secrets.ACR_TEST_LOGIN_SERVER }}
+        run: az acr login --name ${{ vars.ACR_TEST_LOGIN_SERVER }}
 
       - name: Build and Push Docker Image for Frontend Server
         id: build_push_frontend
@@ -59,8 +59,8 @@ jobs:
           file: ./src/App/WebApp.Dockerfile
           push: true
           tags: |
-            ${{ secrets.ACR_TEST_LOGIN_SERVER }}/content-gen-app:${{ steps.generate_docker_tag.outputs.AZURE_ENV_IMAGE_TAG }}
-            ${{ secrets.ACR_TEST_LOGIN_SERVER }}/content-gen-app:${{ steps.generate_docker_tag.outputs.AZURE_ENV_IMAGE_TAG }}_${{ github.run_number }}
+            ${{ vars.ACR_TEST_LOGIN_SERVER }}/content-gen-app:${{ steps.generate_docker_tag.outputs.AZURE_ENV_IMAGE_TAG }}
+            ${{ vars.ACR_TEST_LOGIN_SERVER }}/content-gen-app:${{ steps.generate_docker_tag.outputs.AZURE_ENV_IMAGE_TAG }}_${{ github.run_number }}
 
       - name: Build and Push Docker Image for Backend Server
         id: build_push_backend
@@ -72,8 +72,8 @@ jobs:
           file: ./src/backend/ApiApp.Dockerfile
           push: true
           tags: |
-            ${{ secrets.ACR_TEST_LOGIN_SERVER }}/content-gen-api:${{ steps.generate_docker_tag.outputs.AZURE_ENV_IMAGE_TAG }}
-            ${{ secrets.ACR_TEST_LOGIN_SERVER }}/content-gen-api:${{ steps.generate_docker_tag.outputs.AZURE_ENV_IMAGE_TAG }}_${{ github.run_number }}
+            ${{ vars.ACR_TEST_LOGIN_SERVER }}/content-gen-api:${{ steps.generate_docker_tag.outputs.AZURE_ENV_IMAGE_TAG }}
+            ${{ vars.ACR_TEST_LOGIN_SERVER }}/content-gen-api:${{ steps.generate_docker_tag.outputs.AZURE_ENV_IMAGE_TAG }}_${{ github.run_number }}
 
       - name: Verify Docker Image Build
         shell: bash
@@ -85,7 +85,7 @@ jobs:
         if: always()
         shell: bash
         run: |
-          AZURE_ENV_CONTAINER_REGISTRY_SERVER=$(echo "${{ secrets.ACR_TEST_LOGIN_SERVER }}")
+          AZURE_ENV_CONTAINER_REGISTRY_SERVER=$(echo "${{ vars.ACR_TEST_LOGIN_SERVER }}")
           echo "## 🐳 Docker Build Job Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
