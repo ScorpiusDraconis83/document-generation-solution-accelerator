@@ -715,6 +715,11 @@ module aiServicesPrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.1
       ]
     }
   }
+  dependsOn: [
+    aiFoundryAiServices
+    virtualNetwork
+    avmPrivateDnsZones
+  ]
 }
 
 module aiFoundryAiServicesProject 'modules/ai-project.bicep' = if (!useExistingAiFoundryAiProject) {
