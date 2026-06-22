@@ -57,7 +57,7 @@ param secondaryLocation string = 'uksouth'
   azd: {
     type: 'location'
     usageName: [
-      'OpenAI.GlobalStandard.gpt-5.1,150'
+      'OpenAI.GlobalStandard.gpt-5.1,50'
       'OpenAI.GlobalStandard.gpt-image-1-mini,1'
     ]
   }
@@ -93,7 +93,7 @@ param azureOpenaiAPIVersion string = '2025-01-01-preview'
 
 @minValue(10)
 @description('Optional. AI model deployment token capacity.')
-param gptModelCapacity int = 150
+param gptModelCapacity int = 50
 
 @minValue(1)
 @description('Optional. Image model deployment capacity (RPM).')
@@ -715,6 +715,11 @@ module aiServicesPrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.1
       ]
     }
   }
+  dependsOn: [
+    aiFoundryAiServices
+    virtualNetwork
+    avmPrivateDnsZones
+  ]
 }
 
 module aiFoundryAiServicesProject 'modules/ai-project.bicep' = if (!useExistingAiFoundryAiProject) {
@@ -790,12 +795,12 @@ module aiSearch 'br/public:avm/res/search/search-service:0.12.0' = {
     roleAssignments: [
       {
         principalId: userAssignedIdentity.outputs.principalId
-        roleDefinitionIdOrName: 'Search Index Data Contributor'
+        roleDefinitionIdOrName: '8ebe5a00-799e-43f5-93ac-243d3dce84a7' // Search Index Data Contributor
         principalType: 'ServicePrincipal'
       }
       {
         principalId: userAssignedIdentity.outputs.principalId
-        roleDefinitionIdOrName: 'Search Service Contributor'
+        roleDefinitionIdOrName: '7ca78c08-252a-4471-8644-bb5ff32d4ba0' // Search Service Contributor
         principalType: 'ServicePrincipal'
       }
     ]
@@ -842,7 +847,7 @@ module storageAccount 'br/public:avm/res/storage/storage-account:0.32.0' = {
     roleAssignments: [
       {
         principalId: userAssignedIdentity.outputs.principalId
-        roleDefinitionIdOrName: 'Storage Blob Data Contributor'
+        roleDefinitionIdOrName: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe' // Storage Blob Data Contributor
         principalType: 'ServicePrincipal'
       }
     ]

@@ -264,7 +264,7 @@ jobs:
           # Set ACR name only when building Docker image
           if [[ "$BUILD_DOCKER_IMAGE" == "true" ]]; then
             # Extract ACR name from login server and set as environment variable
-            AZURE_ENV_CONTAINER_REGISTRY_NAME=$(echo "${{ secrets.ACR_TEST_LOGIN_SERVER }}" | cut -d'.' -f1)
+            AZURE_ENV_CONTAINER_REGISTRY_NAME=$(echo "${{ vars.ACR_TEST_LOGIN_SERVER }}" | cut -d'.' -f1)
             azd env set AZURE_ENV_CONTAINER_REGISTRY_NAME="$AZURE_ENV_CONTAINER_REGISTRY_NAME"
             echo "Set ACR name to: $AZURE_ENV_CONTAINER_REGISTRY_NAME"
           else
