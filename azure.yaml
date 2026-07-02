@@ -60,7 +60,7 @@ hooks:
         Write-Host "  1. Build and push the application images to ACR, then update the web app and container instance:" -ForegroundColor Yellow
         Write-Host "     ./infra/scripts/build_and_deploy_images.ps1" -ForegroundColor Cyan
         Write-Host "  2. Load the sample data into the application (run only after the previous script run has completed):" -ForegroundColor Yellow
-        Write-Host "     python ./scripts/post_deploy.py --skip-tests" -ForegroundColor Cyan
+        Write-Host "     ./infra/scripts/process_sample_data.ps1" -ForegroundColor Cyan
 
         Write-Host ""
         Write-Host "Web app URL: " -NoNewline
@@ -74,8 +74,9 @@ hooks:
         echo "Run the following two scripts, in order:"
         echo "  1. Build and push the application images to ACR, then update the web app and container instance:"
         echo "     bash ./infra/scripts/build_and_deploy_images.sh"
+        echo " "
         echo "  2. Load the sample data into the application (run only after the previous script run has completed):"
-        echo "     python ./scripts/post_deploy.py --skip-tests"
+        echo "     bash ./infra/scripts/process_sample_data.sh"
 
         echo ""
         echo "Web app URL: $WEB_APP_URL"
