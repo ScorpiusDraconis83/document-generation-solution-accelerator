@@ -104,6 +104,14 @@ param existingLogAnalyticsWorkspaceId string = ''
 @description('Optional. Resource ID of an existing Foundry project.')
 param azureExistingAIProjectResourceId string = ''
 
+@description('Optional. Principal type of the deployer, used for the ACR AcrPush role assignment. Set to ServicePrincipal for CI/OIDC deployments; defaults to User for interactive deployments.')
+@allowed([
+  'User'
+  'Group'
+  'ServicePrincipal'
+])
+param deployerType string = 'User'
+
 @description('Optional. Deploy Azure Bastion and Jumpbox resources for private network administration.')
 param deployBastionAndJumpbox bool = false
 
@@ -391,7 +399,7 @@ module containerRegistry 'modules/container-registry.bicep' = {
     pushPrincipalIds: [
       deployer().objectId
     ]
-    pushPrincipalType: 'User'
+    deployerType: deployerType
   }
 }
 

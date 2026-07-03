@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.44.1.10279",
-      "templateHash": "12340397001946101697"
+      "templateHash": "2883025917739612961"
     },
     "name": "Intelligent Content Generation Accelerator",
     "description": "Solution Accelerator for multimodal marketing content generation using Microsoft Agent Framework.\n"
@@ -160,6 +160,18 @@
       "defaultValue": "",
       "metadata": {
         "description": "Optional. Resource ID of an existing Foundry project."
+      }
+    },
+    "deployerType": {
+      "type": "string",
+      "defaultValue": "User",
+      "allowedValues": [
+        "User",
+        "Group",
+        "ServicePrincipal"
+      ],
+      "metadata": {
+        "description": "Optional. Principal type of the deployer, used for the ACR AcrPush role assignment. Set to ServicePrincipal for CI/OIDC deployments; defaults to User for interactive deployments."
       }
     },
     "deployBastionAndJumpbox": {
@@ -4844,8 +4856,8 @@
               "[deployer().objectId]"
             ]
           },
-          "pushPrincipalType": {
-            "value": "User"
+          "deployerType": {
+            "value": "[parameters('deployerType')]"
           }
         },
         "template": {
@@ -4856,7 +4868,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.44.1.10279",
-              "templateHash": "553009202159475069"
+              "templateHash": "6229495116704884486"
             }
           },
           "definitions": {
@@ -4943,7 +4955,7 @@
                 "description": "Optional. Principal IDs (e.g. the deployer) that require AcrPush access to build and push images."
               }
             },
-            "pushPrincipalType": {
+            "deployerType": {
               "type": "string",
               "defaultValue": "User",
               "allowedValues": [
@@ -5008,7 +5020,7 @@
                 "input": {
                   "principalId": "[parameters('pushPrincipalIds')[copyIndex('pushRoleAssignments')]]",
                   "roleDefinitionIdOrName": "[variables('acrPushRoleDefinitionId')]",
-                  "principalType": "[parameters('pushPrincipalType')]"
+                  "principalType": "[parameters('deployerType')]"
                 }
               }
             ],

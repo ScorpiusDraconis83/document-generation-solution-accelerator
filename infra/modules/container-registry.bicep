@@ -36,7 +36,7 @@ param pushPrincipalIds array = []
   'Group'
   'ServicePrincipal'
 ])
-param pushPrincipalType string = 'User'
+param deployerType string = 'User'
 
 @description('Optional. Enable private networking. Forces the Premium SKU, disables public network access and creates a private endpoint for the registry.')
 param enablePrivateNetworking bool = false
@@ -74,7 +74,7 @@ var pushRoleAssignments = [
   for principalId in pushPrincipalIds: {
     principalId: principalId
     roleDefinitionIdOrName: acrPushRoleDefinitionId
-    principalType: pushPrincipalType
+    principalType: deployerType
   }
 ]
 
