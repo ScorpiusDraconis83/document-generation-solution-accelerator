@@ -94,10 +94,8 @@ module containerRegistry 'br/public:avm/res/container-registry/registry:0.9.0' =
     softDeletePolicyStatus: 'disabled'
     softDeletePolicyDays: 7
     publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
-    // networkRuleBypassOptions and networkRuleSet are Premium-only; suppress them
-    // unless the registry is Premium (private networking or scalability enabled).
-    networkRuleBypassOptions: (enablePrivateNetworking || enableScalability) ? 'AzureServices' : null
-    networkRuleSetDefaultAction: (enablePrivateNetworking || enableScalability) ? 'Deny' : 'Allow'
+    networkRuleBypassOptions: enablePrivateNetworking ? 'AzureServices' : null
+    networkRuleSetDefaultAction: enablePrivateNetworking ? 'Deny' : 'Allow'
     roleAssignments: concat(pullRoleAssignments, pushRoleAssignments)
     managedIdentities: managedIdentities
     privateEndpoints: enablePrivateNetworking

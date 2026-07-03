@@ -15,9 +15,15 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
-# Load azd environment outputs into the shell.
+# Load azd environment outputs into the shell. Parse without `eval` so that any
+# command substitution embedded in a value cannot execute in this shell.
 if command -v azd >/dev/null 2>&1; then
-  eval "$(azd env get-values 2>/dev/null | sed 's/^/export /')"
+  while IFS='=' read -r _key _val; do
+    [ -z "${_key}" ] && continue
+    _val="${_val%\"}"
+    _val="${_val#\"}"
+    export "${_key}=${_val}"
+  done < <(azd env get-values 2>/dev/null)
 fi
 
 # Resolve the Python executable (python3 preferred, fall back to python).

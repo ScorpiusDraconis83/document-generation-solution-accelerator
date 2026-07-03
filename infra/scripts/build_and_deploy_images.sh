@@ -12,9 +12,15 @@ set -euo pipefail
 # Run AFTER `azd up`. Configuration is read from the azd environment.
 # ============================================================================
 
-# Load azd environment outputs into the shell.
+# Load azd environment outputs into the shell. Parse without `eval` so that any
+# command substitution embedded in a value cannot execute in this shell.
 if command -v azd >/dev/null 2>&1; then
-  eval "$(azd env get-values 2>/dev/null | sed 's/^/export /')"
+  while IFS='=' read -r _key _val; do
+    [ -z "${_key}" ] && continue
+    _val="${_val%\"}"
+    _val="${_val#\"}"
+    export "${_key}=${_val}"
+  done < <(azd env get-values 2>/dev/null)
 fi
 
 ACR_NAME="${AZURE_ENV_CONTAINER_REGISTRY_NAME:-}"
@@ -57,9 +63,9 @@ az webapp config container set -g "${RESOURCE_GROUP}" -n "${APP_SERVICE}" \
   --container-registry-url "https://${ACR_LOGIN_SERVER}" -o none --only-show-errors
 
 WEBAPP_ID="$(az webapp show -g "${RESOURCE_GROUP}" -n "${APP_SERVICE}" --query id -o tsv)"
-# az resource update --ids "${WEBAPP_ID}/config/web" \
-#   --set properties.acrUseManagedIdentityCreds=true \
-#   --set properties.acrUserManagedIdentityID="${CLIENT_ID}" -o none
+az resource update --ids "${WEBAPP_ID}/config/web" \
+  --set properties.acrUseManagedIdentityCreds=true \
+  --set properties.acrUserManagedIdentityID="${CLIENT_ID}" -o none
 
 echo "Restarting Frontend App Service..."
 az webapp restart -g "${RESOURCE_GROUP}" -n "${APP_SERVICE}" -o none

@@ -64,9 +64,9 @@ Invoke-Az webapp config container set -g $ResourceGroup -n $AppService `
     --container-registry-url "https://$AcrLoginServer" --output none --only-show-errors
 
 $WebappId = az webapp show -g $ResourceGroup -n $AppService --query id -o tsv
-# Invoke-Az resource update --ids "$WebappId/config/web" `
-#     --set properties.acrUseManagedIdentityCreds=true `
-#     --set properties.acrUserManagedIdentityID=$ClientId --output none
+Invoke-Az resource update --ids "$WebappId/config/web" `
+    --set properties.acrUseManagedIdentityCreds=true `
+    --set properties.acrUserManagedIdentityID=$ClientId --output none
 
 Write-Host "Restarting Frontend App Service..." -ForegroundColor Yellow
 Invoke-Az webapp restart -g $ResourceGroup -n $AppService --output none

@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.44.1.10279",
-      "templateHash": "2883025917739612961"
+      "templateHash": "13991311501344883078"
     },
     "name": "Intelligent Content Generation Accelerator",
     "description": "Solution Accelerator for multimodal marketing content generation using Microsoft Agent Framework.\n"
@@ -4868,7 +4868,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.44.1.10279",
-              "templateHash": "6229495116704884486"
+              "templateHash": "15150176666831120984"
             }
           },
           "definitions": {
@@ -5073,8 +5073,8 @@
                     "value": 7
                   },
                   "publicNetworkAccess": "[if(parameters('enablePrivateNetworking'), createObject('value', 'Disabled'), createObject('value', 'Enabled'))]",
-                  "networkRuleBypassOptions": "[if(or(parameters('enablePrivateNetworking'), parameters('enableScalability')), createObject('value', 'AzureServices'), createObject('value', null()))]",
-                  "networkRuleSetDefaultAction": "[if(or(parameters('enablePrivateNetworking'), parameters('enableScalability')), createObject('value', 'Deny'), createObject('value', 'Allow'))]",
+                  "networkRuleBypassOptions": "[if(parameters('enablePrivateNetworking'), createObject('value', 'AzureServices'), createObject('value', null()))]",
+                  "networkRuleSetDefaultAction": "[if(parameters('enablePrivateNetworking'), createObject('value', 'Deny'), createObject('value', 'Allow'))]",
                   "roleAssignments": {
                     "value": "[concat(variables('pullRoleAssignments'), variables('pushRoleAssignments'))]"
                   },
