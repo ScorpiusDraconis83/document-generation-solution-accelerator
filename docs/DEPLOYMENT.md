@@ -166,6 +166,8 @@ Depending on your subscription quota and capacity, you can adjust quota settings
 
 Once you've opened the project in [Codespaces](#github-codespaces), [Dev Containers](#vs-code-dev-containers), or [locally](#local-environment), you can deploy it to Azure by following the steps in the [AZD Deployment Guide](AZD_DEPLOYMENT.md).
 
+> **Important:** `azd up` only **provisions** the Azure resources (the Container Registry is created with placeholder images). Once provisioning completes, you must run the **two follow-up scripts**, in order - first `build_and_deploy_images` (builds and pushes the application images to ACR and updates the App Service and Container Instance), then `process_sample_data` (loads the sample data). See [Post-Provision Scripts (steps 5–8)](AZD_DEPLOYMENT.md#5-log-in-to-azure-cli) for details.
+
 ## Post Deployment Steps
 
 1. **Add App Authentication**

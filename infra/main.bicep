@@ -104,6 +104,14 @@ param existingLogAnalyticsWorkspaceId string = ''
 @description('Optional. Resource ID of an existing Foundry project.')
 param azureExistingAIProjectResourceId string = ''
 
+@description('Optional. Principal type of the deployer, used for the ACR AcrPush role assignment. Set to ServicePrincipal for CI/OIDC deployments; defaults to User for interactive deployments.')
+@allowed([
+  'User'
+  'Group'
+  'ServicePrincipal'
+])
+param deployerType string = 'User'
+
 @description('Optional. Deploy Azure Bastion and Jumpbox resources for private network administration.')
 param deployBastionAndJumpbox bool = false
 
@@ -135,12 +143,6 @@ param enableRedundancy bool = false
 @description('Optional. Enable private networking for applicable resources (WAF-aligned).')
 param enablePrivateNetworking bool = false
 
-@description('Optional. The existing Container Registry name (without .azurecr.io). Must contain pre-built images: content-gen-app and content-gen-api.')
-param acrName string = 'contentgencontainerreg'
-
-@description('Optional. Image Tag.')
-param imageTag string = 'latest'
-
 @description('Optional. Enable/Disable usage telemetry for module.')
 param enableTelemetry bool = true
 
@@ -153,8 +155,6 @@ param createdBy string = contains(deployer(), 'userPrincipalName')? split(deploy
 
 var solutionLocation = empty(location) ? resourceGroup().location : location
 
-// acrName is required - points to existing ACR with pre-built images
-var acrResourceName = acrName
 var solutionSuffix = toLower(trim(replace(
   replace(
     replace(replace(replace(replace('${solutionName}${solutionUniqueText}', '-', ''), '_', ''), '.', ''), '/', ''),
@@ -372,6 +372,37 @@ module userAssignedIdentity 'br/public:avm/res/managed-identity/user-assigned-id
   }
 }
 
+// ========== Azure Container Registry ========== //
+// Provisions the ACR and grants AcrPull to the shared managed identity (used by
+// both the frontend App Service and the backend Container Instance). Application
+// images are built and pushed to this ACR by a post-deployment step.
+module containerRegistry 'modules/container-registry.bicep' = {
+  name: take('module.container-registry.${solutionSuffix}', 64)
+  params: {
+    name: 'cr${solutionSuffix}'
+    location: solutionLocation
+    tags: tags
+    enableTelemetry: enableTelemetry
+    acrSku: 'Standard'
+    enablePrivateNetworking: enablePrivateNetworking
+    enableScalability: enableScalability
+    privateEndpointSubnetResourceId: enablePrivateNetworking ? virtualNetwork!.outputs.pepsSubnetResourceId : ''
+    privateDnsZoneResourceId: enablePrivateNetworking ? avmPrivateDnsZones[dnsZoneIndex.containerRegistry]!.outputs.resourceId : ''
+    managedIdentities: {
+      userAssignedResourceIds: [
+        userAssignedIdentity.outputs.resourceId
+      ]
+    }
+    pullPrincipalIds: [
+      userAssignedIdentity.outputs.principalId
+    ]
+    pushPrincipalIds: [
+      deployer().objectId
+    ]
+    deployerType: deployerType
+  }
+}
+
 // ========== Virtual Network and Networking Components ========== //
 var deployAdminAccessResources = enablePrivateNetworking && deployBastionAndJumpbox && !empty(vmAdminPassword)
 module virtualNetwork 'modules/virtualNetwork.bicep' = if (enablePrivateNetworking) {
@@ -548,11 +579,13 @@ module jumpboxDcr 'br/public:avm/res/insights/data-collection-rule:0.11.0' = if 
 // - OpenAI (for Azure OpenAI endpoints)
 // - Blob Storage
 // - Cosmos DB (Documents)
+// - Container Registry (for private image pulls)
 var privateDnsZones = [
   'privatelink.cognitiveservices.azure.com'
   'privatelink.openai.azure.com'
   'privatelink.blob.${environment().suffixes.storage}'
   'privatelink.documents.azure.com'
+  'privatelink.azurecr.io'
 ]
 
 var dnsZoneIndex = {
@@ -560,6 +593,7 @@ var dnsZoneIndex = {
   openAI: 1
   storageBlob: 2
   cosmosDB: 3
+  containerRegistry: 4
 }
 
 @batchSize(5)
@@ -966,11 +1000,13 @@ module webSite 'modules/web-sites.bicep' = {
     serverFarmResourceId: webServerFarm.outputs.resourceId
     managedIdentities: { userAssignedResourceIds: [userAssignedIdentity!.outputs.resourceId] }
     siteConfig: {
-      // Frontend container - same for both modes
-      linuxFxVersion: 'DOCKER|${acrResourceName}.azurecr.io/content-gen-app:${imageTag}'
+      // Frontend container - hello-world placeholder (updated post-deployment)
+      linuxFxVersion: 'DOCKER|mcr.microsoft.com/azuredocs/aci-helloworld:latest'
       minTlsVersion: '1.2'
       alwaysOn: true
       ftpsState: 'FtpsOnly'
+      acrUseManagedIdentityCreds: true
+      acrUserManagedIdentityID: userAssignedIdentity!.outputs.clientId
     }
     virtualNetworkSubnetId: enablePrivateNetworking ? virtualNetwork!.outputs.webSubnetResourceId : null
     configs: concat(
@@ -979,7 +1015,7 @@ module webSite 'modules/web-sites.bicep' = {
           // Frontend container proxies to ACI backend (both modes)
           name: 'appsettings'
           properties: {
-            DOCKER_REGISTRY_SERVER_URL: 'https://${acrResourceName}.azurecr.io'
+            DOCKER_REGISTRY_SERVER_URL: 'https://${containerRegistry.outputs.loginServer}'
             BACKEND_URL: aciBackendUrl
             AZURE_CLIENT_ID: userAssignedIdentity.outputs.clientId
           }
@@ -1013,13 +1049,14 @@ module containerInstance 'modules/container-instance.bicep' = {
     name: containerInstanceName
     location: solutionLocation
     tags: tags
-    containerImage: '${acrResourceName}.azurecr.io/content-gen-api:${imageTag}'
+    containerImage: 'mcr.microsoft.com/azuredocs/aci-helloworld:latest'
     cpu: 2
     memoryInGB: 4
     port: 8000
     // Only pass subnetResourceId when private networking is enabled
     subnetResourceId: enablePrivateNetworking ? virtualNetwork!.outputs.aciSubnetResourceId : ''
     userAssignedIdentityResourceId: userAssignedIdentity.outputs.resourceId
+    acrLoginServer: containerRegistry.outputs.loginServer
     enableTelemetry: enableTelemetry
     environmentVariables: [
       // Azure OpenAI Settings
@@ -1144,7 +1181,7 @@ output CONTAINER_INSTANCE_NAME string = containerInstance.outputs.name
 output CONTAINER_INSTANCE_FQDN string = enablePrivateNetworking ? '' : containerInstance.outputs.fqdn
 
 @description('Contains ACR Name')
-output AZURE_ENV_CONTAINER_REGISTRY_NAME string = acrResourceName
+output AZURE_ENV_CONTAINER_REGISTRY_NAME string = containerRegistry.outputs.name
 
 @description('Contains flag for Azure AI Foundry usage')
 output USE_FOUNDRY bool = useFoundryMode ? true : false
