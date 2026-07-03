@@ -61,8 +61,7 @@ $ClientId = az identity show --ids $UamiRid --query clientId -o tsv
 
 Invoke-Az webapp config container set -g $ResourceGroup -n $AppService `
     --container-image-name "$AcrLoginServer/$FrontendImage`:$Tag" `
-    --container-registry-url "https://$AcrLoginServer" --output none
-    --only-show-errors | Out-Null
+    --container-registry-url "https://$AcrLoginServer" --output none --only-show-errors
 
 $WebappId = az webapp show -g $ResourceGroup -n $AppService --query id -o tsv
 # Invoke-Az resource update --ids "$WebappId/config/web" `

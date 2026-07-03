@@ -54,7 +54,7 @@ CLIENT_ID="$(az identity show --ids "${UAMI_RID}" --query clientId -o tsv)"
 
 az webapp config container set -g "${RESOURCE_GROUP}" -n "${APP_SERVICE}" \
   --container-image-name "${ACR_LOGIN_SERVER}/${FRONTEND_IMAGE}:${TAG}" \
-  --container-registry-url "https://${ACR_LOGIN_SERVER}" -o none
+  --container-registry-url "https://${ACR_LOGIN_SERVER}" -o none --only-show-errors
 
 WEBAPP_ID="$(az webapp show -g "${RESOURCE_GROUP}" -n "${APP_SERVICE}" --query id -o tsv)"
 # az resource update --ids "${WEBAPP_ID}/config/web" \
