@@ -119,14 +119,67 @@ azd config set provision.preflight off
 azd up
 ```
 
-This single command will:
-1. **Provision** all Azure resources (AI Services, Cosmos DB, Storage, AI Search, App Service, Container Registry)
-2. **Build** the Docker container image and push to ACR
-3. **Deploy** the container to Azure Container Instances
-4. **Build** the frontend (React/TypeScript)
-5. **Deploy** the frontend to App Service
-6. **Configure** RBAC and Cosmos DB roles
-7. **Upload** sample data and create the search index
+This command will **provision** all Azure resources (AI Services, Cosmos DB, Storage, AI Search, App Service, Container Instance, Container Registry) and configure RBAC and Cosmos DB roles. The Container Registry (ACR) is initially deployed with placeholder images; the application images are built and pushed by the follow-up scripts below.
+
+When provisioning completes, the terminal prints the two follow-up scripts you must run, **in order**, to finish the deployment.
+
+### 5. Log in to Azure CLI
+
+These scripts use the Azure CLI, so log in first:
+
+```bash
+az login
+```
+
+Alternatively, log in using a device code (**recommended when using VS Code Web**):
+
+```bash
+az login --use-device-code
+```
+
+> **Note:** If you are running this deployment in **GitHub Codespaces**, a **VS Code Dev Container**, or **VS Code Web**, skip this step and continue with [step 7](#7-run-the-script-to-build-and-push-the-application-images).
+
+### 6. Create and activate a Python virtual environment
+
+```powershell
+# PowerShell (Windows)
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+```
+
+```bash
+# Bash (macOS/Linux, or Git Bash on Windows)
+python -m venv .venv
+source .venv/bin/activate        # on Git Bash (Windows): source .venv/Scripts/activate
+```
+
+### 7. Run the script to build and push the application images
+
+Build and push the frontend and backend images to ACR, then update the App Service and Container Instance:
+
+```powershell
+# PowerShell
+./infra/scripts/build_and_deploy_images.ps1
+```
+
+```bash
+# Bash
+bash ./infra/scripts/build_and_deploy_images.sh
+```
+
+### 8. Run the script to load the sample data (script 2)
+
+Run this **only after step 7 has completed** — it loads the sample data into the application:
+
+```powershell
+# PowerShell
+./infra/scripts/process_sample_data.ps1
+```
+
+```bash
+# Bash
+bash ./infra/scripts/process_sample_data.sh
+```
 
 ## Using Existing Resources
 
@@ -146,14 +199,20 @@ azd env set AZURE_ENV_EXISTING_LOG_ANALYTICS_WORKSPACE_RID "/subscriptions/<sub-
 
 ## Post-Deployment
 
-After `azd up` completes, you'll see output like:
+After `azd up` completes, the terminal prints the provisioning summary and the two follow-up scripts to run:
 
 ```
-===== Deployment Complete =====
+===== Provisioning Complete =====
+Run the following two scripts, in order:
+  1. Build and push the application images to ACR, then update the web app and container instance:
+     ./infra/scripts/build_and_deploy_images.ps1
+  2. Load the sample data into the application (run only after the previous script run has completed):
+     ./infra/scripts/process_sample_data.ps1
 
-Access the web application:
-   https://app-<env-name>.azurewebsites.net
+Web app URL: https://app-<env-name>.azurewebsites.net
 ```
+
+Run those two scripts as described in [steps 5–8](#5-log-in-to-azure-cli) above, then verify the deployment.
 
 ### Verify Deployment
 
