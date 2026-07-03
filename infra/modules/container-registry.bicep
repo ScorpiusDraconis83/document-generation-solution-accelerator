@@ -38,6 +38,18 @@ param pushPrincipalIds array = []
 ])
 param pushPrincipalType string = 'User'
 
+@description('Optional. Enable private networking. Forces the Premium SKU, disables public network access and creates a private endpoint for the registry.')
+param enablePrivateNetworking bool = false
+
+@description('Optional. Enable scalability. Bumps the registry to the Premium SKU (WAF-aligned) to allow geo-replication and higher throughput.')
+param enableScalability bool = false
+
+@description('Optional. Resource ID of the subnet to host the registry private endpoint. Required when enablePrivateNetworking is true.')
+param privateEndpointSubnetResourceId string = ''
+
+@description('Optional. Resource ID of the privatelink.azurecr.io private DNS zone. Required when enablePrivateNetworking is true.')
+param privateDnsZoneResourceId string = ''
+
 import { managedIdentityAllType } from 'br/public:avm/utl/types/avm-common-types:0.7.0'
 @description('Optional. The managed identity definition for this resource.')
 param managedIdentities managedIdentityAllType?
@@ -46,6 +58,9 @@ param managedIdentities managedIdentityAllType?
 var acrPullRoleDefinitionId = '7f951dda-4ed3-4680-a7ca-43fe172d538d'
 // AcrPush role: allows the deployer to build and push images to the registry.
 var acrPushRoleDefinitionId = '8311e382-0749-4cb8-b61a-304f252e45ec'
+
+// Premium is required for private endpoints, and recommended (WAF) for scalability.
+var effectiveAcrSku = (enablePrivateNetworking || enableScalability) ? 'Premium' : acrSku
 
 var pullRoleAssignments = [
   for principalId in pullPrincipalIds: {
@@ -71,13 +86,35 @@ module containerRegistry 'br/public:avm/res/container-registry/registry:0.9.0' =
     location: location
     tags: tags
     enableTelemetry: enableTelemetry
-    acrSku: acrSku
+    acrSku: effectiveAcrSku
     acrAdminUserEnabled: false
     anonymousPullEnabled: false
-    publicNetworkAccess: 'Enabled'
-    networkRuleBypassOptions: 'AzureServices'
+    azureADAuthenticationAsArmPolicyStatus: 'enabled'
+    exportPolicyStatus: 'enabled'
+    softDeletePolicyStatus: 'disabled'
+    softDeletePolicyDays: 7
+    publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
+    // networkRuleBypassOptions and networkRuleSet are Premium-only; suppress them
+    // unless the registry is Premium (private networking or scalability enabled).
+    networkRuleBypassOptions: (enablePrivateNetworking || enableScalability) ? 'AzureServices' : null
+    networkRuleSetDefaultAction: (enablePrivateNetworking || enableScalability) ? 'Deny' : 'Allow'
     roleAssignments: concat(pullRoleAssignments, pushRoleAssignments)
     managedIdentities: managedIdentities
+    privateEndpoints: enablePrivateNetworking
+      ? [
+          {
+            name: 'pep-${name}'
+            customNetworkInterfaceName: 'nic-${name}'
+            service: 'registry'
+            subnetResourceId: privateEndpointSubnetResourceId
+            privateDnsZoneGroup: {
+              privateDnsZoneGroupConfigs: [
+                { privateDnsZoneResourceId: privateDnsZoneResourceId }
+              ]
+            }
+          }
+        ]
+      : []
   }
 }
 

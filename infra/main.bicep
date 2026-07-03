@@ -376,6 +376,10 @@ module containerRegistry 'modules/container-registry.bicep' = {
     tags: tags
     enableTelemetry: enableTelemetry
     acrSku: 'Standard'
+    enablePrivateNetworking: enablePrivateNetworking
+    enableScalability: enableScalability
+    privateEndpointSubnetResourceId: enablePrivateNetworking ? virtualNetwork!.outputs.pepsSubnetResourceId : ''
+    privateDnsZoneResourceId: enablePrivateNetworking ? avmPrivateDnsZones[dnsZoneIndex.containerRegistry]!.outputs.resourceId : ''
     managedIdentities: {
       userAssignedResourceIds: [
         userAssignedIdentity.outputs.resourceId
@@ -567,11 +571,13 @@ module jumpboxDcr 'br/public:avm/res/insights/data-collection-rule:0.11.0' = if 
 // - OpenAI (for Azure OpenAI endpoints)
 // - Blob Storage
 // - Cosmos DB (Documents)
+// - Container Registry (for private image pulls)
 var privateDnsZones = [
   'privatelink.cognitiveservices.azure.com'
   'privatelink.openai.azure.com'
   'privatelink.blob.${environment().suffixes.storage}'
   'privatelink.documents.azure.com'
+  'privatelink.azurecr.io'
 ]
 
 var dnsZoneIndex = {
@@ -579,6 +585,7 @@ var dnsZoneIndex = {
   openAI: 1
   storageBlob: 2
   cosmosDB: 3
+  containerRegistry: 4
 }
 
 @batchSize(5)

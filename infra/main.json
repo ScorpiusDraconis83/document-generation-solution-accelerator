@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.44.1.10279",
-      "templateHash": "18281771994413307619"
+      "templateHash": "12340397001946101697"
     },
     "name": "Intelligent Content Generation Accelerator",
     "description": "Solution Accelerator for multimodal marketing content generation using Microsoft Agent Framework.\n"
@@ -344,13 +344,15 @@
       "privatelink.cognitiveservices.azure.com",
       "privatelink.openai.azure.com",
       "[format('privatelink.blob.{0}', environment().suffixes.storage)]",
-      "privatelink.documents.azure.com"
+      "privatelink.documents.azure.com",
+      "privatelink.azurecr.io"
     ],
     "dnsZoneIndex": {
       "cognitiveServices": 0,
       "openAI": 1,
       "storageBlob": 2,
-      "cosmosDB": 3
+      "cosmosDB": 3,
+      "containerRegistry": 4
     },
     "storageAccountName": "[format('st{0}', variables('solutionSuffix'))]",
     "productImagesContainer": "product-images",
@@ -4817,6 +4819,14 @@
           "acrSku": {
             "value": "Standard"
           },
+          "enablePrivateNetworking": {
+            "value": "[parameters('enablePrivateNetworking')]"
+          },
+          "enableScalability": {
+            "value": "[parameters('enableScalability')]"
+          },
+          "privateEndpointSubnetResourceId": "[if(parameters('enablePrivateNetworking'), createObject('value', reference('virtualNetwork').outputs.pepsSubnetResourceId.value), createObject('value', ''))]",
+          "privateDnsZoneResourceId": "[if(parameters('enablePrivateNetworking'), createObject('value', reference(format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').containerRegistry)).outputs.resourceId.value), createObject('value', ''))]",
           "managedIdentities": {
             "value": {
               "userAssignedResourceIds": [
@@ -4846,7 +4856,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.44.1.10279",
-              "templateHash": "8532463912224257721"
+              "templateHash": "553009202159475069"
             }
           },
           "definitions": {
@@ -4945,6 +4955,34 @@
                 "description": "Optional. Principal type for the AcrPush role assignments."
               }
             },
+            "enablePrivateNetworking": {
+              "type": "bool",
+              "defaultValue": false,
+              "metadata": {
+                "description": "Optional. Enable private networking. Forces the Premium SKU, disables public network access and creates a private endpoint for the registry."
+              }
+            },
+            "enableScalability": {
+              "type": "bool",
+              "defaultValue": false,
+              "metadata": {
+                "description": "Optional. Enable scalability. Bumps the registry to the Premium SKU (WAF-aligned) to allow geo-replication and higher throughput."
+              }
+            },
+            "privateEndpointSubnetResourceId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Optional. Resource ID of the subnet to host the registry private endpoint. Required when enablePrivateNetworking is true."
+              }
+            },
+            "privateDnsZoneResourceId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Optional. Resource ID of the privatelink.azurecr.io private DNS zone. Required when enablePrivateNetworking is true."
+              }
+            },
             "managedIdentities": {
               "$ref": "#/definitions/managedIdentityAllType",
               "nullable": true,
@@ -4975,7 +5013,8 @@
               }
             ],
             "acrPullRoleDefinitionId": "7f951dda-4ed3-4680-a7ca-43fe172d538d",
-            "acrPushRoleDefinitionId": "8311e382-0749-4cb8-b61a-304f252e45ec"
+            "acrPushRoleDefinitionId": "8311e382-0749-4cb8-b61a-304f252e45ec",
+            "effectiveAcrSku": "[if(or(parameters('enablePrivateNetworking'), parameters('enableScalability')), 'Premium', parameters('acrSku'))]"
           },
           "resources": {
             "containerRegistry": {
@@ -5001,7 +5040,7 @@
                     "value": "[parameters('enableTelemetry')]"
                   },
                   "acrSku": {
-                    "value": "[parameters('acrSku')]"
+                    "value": "[variables('effectiveAcrSku')]"
                   },
                   "acrAdminUserEnabled": {
                     "value": false
@@ -5009,18 +5048,28 @@
                   "anonymousPullEnabled": {
                     "value": false
                   },
-                  "publicNetworkAccess": {
-                    "value": "Enabled"
+                  "azureADAuthenticationAsArmPolicyStatus": {
+                    "value": "enabled"
                   },
-                  "networkRuleBypassOptions": {
-                    "value": "AzureServices"
+                  "exportPolicyStatus": {
+                    "value": "enabled"
                   },
+                  "softDeletePolicyStatus": {
+                    "value": "disabled"
+                  },
+                  "softDeletePolicyDays": {
+                    "value": 7
+                  },
+                  "publicNetworkAccess": "[if(parameters('enablePrivateNetworking'), createObject('value', 'Disabled'), createObject('value', 'Enabled'))]",
+                  "networkRuleBypassOptions": "[if(or(parameters('enablePrivateNetworking'), parameters('enableScalability')), createObject('value', 'AzureServices'), createObject('value', null()))]",
+                  "networkRuleSetDefaultAction": "[if(or(parameters('enablePrivateNetworking'), parameters('enableScalability')), createObject('value', 'Deny'), createObject('value', 'Allow'))]",
                   "roleAssignments": {
                     "value": "[concat(variables('pullRoleAssignments'), variables('pushRoleAssignments'))]"
                   },
                   "managedIdentities": {
                     "value": "[parameters('managedIdentities')]"
-                  }
+                  },
+                  "privateEndpoints": "[if(parameters('enablePrivateNetworking'), createObject('value', createArray(createObject('name', format('pep-{0}', parameters('name')), 'customNetworkInterfaceName', format('nic-{0}', parameters('name')), 'service', 'registry', 'subnetResourceId', parameters('privateEndpointSubnetResourceId'), 'privateDnsZoneGroup', createObject('privateDnsZoneGroupConfigs', createArray(createObject('privateDnsZoneResourceId', parameters('privateDnsZoneResourceId'))))))), createObject('value', createArray()))]"
                 },
                 "template": {
                   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
@@ -8064,7 +8113,9 @@
         }
       },
       "dependsOn": [
-        "userAssignedIdentity"
+        "[format('avmPrivateDnsZones[{0}]', variables('dnsZoneIndex').containerRegistry)]",
+        "userAssignedIdentity",
+        "virtualNetwork"
       ]
     },
     "virtualNetwork": {
