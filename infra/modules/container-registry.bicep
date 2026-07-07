@@ -27,17 +27,6 @@ param acrSku string = 'Standard'
 @description('Optional. Principal IDs (frontend/backend managed identities) that require AcrPull access.')
 param pullPrincipalIds array = []
 
-@description('Optional. Principal IDs (e.g. the deployer) that require AcrPush access to build and push images.')
-param pushPrincipalIds array = []
-
-@description('Optional. Principal type for the AcrPush role assignments.')
-@allowed([
-  'User'
-  'Group'
-  'ServicePrincipal'
-])
-param deployerType string = 'User'
-
 @description('Optional. Enable private networking. Forces the Premium SKU, disables public network access and creates a private endpoint for the registry.')
 param enablePrivateNetworking bool = false
 
@@ -56,8 +45,6 @@ param managedIdentities managedIdentityAllType?
 
 // AcrPull role: allows the App Service / Container Instance identities to pull images.
 var acrPullRoleDefinitionId = '7f951dda-4ed3-4680-a7ca-43fe172d538d'
-// AcrPush role: allows the deployer to build and push images to the registry.
-var acrPushRoleDefinitionId = '8311e382-0749-4cb8-b61a-304f252e45ec'
 
 // Premium is required for private endpoints, and recommended (WAF) for scalability.
 var effectiveAcrSku = (enablePrivateNetworking || enableScalability) ? 'Premium' : acrSku
@@ -67,14 +54,6 @@ var pullRoleAssignments = [
     principalId: principalId
     roleDefinitionIdOrName: acrPullRoleDefinitionId
     principalType: 'ServicePrincipal'
-  }
-]
-
-var pushRoleAssignments = [
-  for principalId in pushPrincipalIds: {
-    principalId: principalId
-    roleDefinitionIdOrName: acrPushRoleDefinitionId
-    principalType: deployerType
   }
 ]
 
@@ -96,7 +75,7 @@ module containerRegistry 'br/public:avm/res/container-registry/registry:0.9.0' =
     publicNetworkAccess: enablePrivateNetworking ? 'Disabled' : 'Enabled'
     networkRuleBypassOptions: enablePrivateNetworking ? 'AzureServices' : null
     networkRuleSetDefaultAction: enablePrivateNetworking ? 'Deny' : 'Allow'
-    roleAssignments: concat(pullRoleAssignments, pushRoleAssignments)
+    roleAssignments: pullRoleAssignments
     managedIdentities: managedIdentities
     privateEndpoints: enablePrivateNetworking
       ? [
