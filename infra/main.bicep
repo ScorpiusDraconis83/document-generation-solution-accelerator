@@ -104,14 +104,6 @@ param existingLogAnalyticsWorkspaceId string = ''
 @description('Optional. Resource ID of an existing Foundry project.')
 param azureExistingAIProjectResourceId string = ''
 
-@description('Optional. Principal type of the deployer, used for the ACR AcrPush role assignment. Set to ServicePrincipal for CI/OIDC deployments; defaults to User for interactive deployments.')
-@allowed([
-  'User'
-  'Group'
-  'ServicePrincipal'
-])
-param deployerType string = 'User'
-
 @description('Optional. Deploy Azure Bastion and Jumpbox resources for private network administration.')
 param deployBastionAndJumpbox bool = false
 
@@ -396,15 +388,11 @@ module containerRegistry 'modules/container-registry.bicep' = {
     pullPrincipalIds: [
       userAssignedIdentity.outputs.principalId
     ]
-    pushPrincipalIds: [
-      deployer().objectId
-    ]
-    deployerType: deployerType
   }
 }
 
 // ========== Virtual Network and Networking Components ========== //
-var deployAdminAccessResources = enablePrivateNetworking && deployBastionAndJumpbox && !empty(vmAdminPassword)
+var deployAdminAccessResources = enablePrivateNetworking && deployBastionAndJumpbox
 module virtualNetwork 'modules/virtualNetwork.bicep' = if (enablePrivateNetworking) {
   name: take('module.virtualNetwork.${solutionSuffix}', 64)
   params: {
@@ -474,8 +462,9 @@ module jumpboxVM 'br/public:avm/res/compute/virtual-machine:0.21.0' = if (deploy
     osType: 'Windows'
     vmSize: empty(vmSize) ? 'Standard_D2s_v5' : vmSize
     adminUsername: empty(vmAdminUsername) ? 'JumpboxAdminUser' : vmAdminUsername
-    adminPassword: vmAdminPassword
+    adminPassword: empty(vmAdminPassword) ? 'Vm!${uniqueString(subscription().subscriptionId, solutionName)}${guid(subscription().subscriptionId, solutionName, 'vm-admin-password')}' : vmAdminPassword
     managedIdentities: {
+      systemAssigned: true // Required by the AADLoginForWindows extension for Entra ID auth
       userAssignedResourceIds: [
         userAssignedIdentity.outputs.resourceId
       ]
@@ -519,6 +508,17 @@ module jumpboxVM 'br/public:avm/res/compute/virtual-machine:0.21.0' = if (deploy
     }
     location: solutionLocation
     tags: tags
+    roleAssignments: [
+      {
+        roleDefinitionIdOrName: '1c0163c0-47e6-4577-8991-ea5c82e286e4' // Virtual Machine Administrator Login
+        principalId: deployer().objectId
+      }
+    ]
+    extensionAadJoinConfig: {
+      enabled: true // AAD-joins the VM (AADLoginForWindows) so Entra ID login works
+      typeHandlerVersion: '2.0'
+      settings: { mdmId: '' }
+    }
   }
   dependsOn: (enableMonitoring && !useExistingLogAnalytics) ? [logAnalyticsWorkspace, jumpboxDcr] : (enableMonitoring ? [jumpboxDcr] : [])
 }
@@ -539,9 +539,9 @@ module jumpboxDcr 'br/public:avm/res/insights/data-collection-rule:0.11.0' = if 
       dataSources: {
         windowsEventLogs: [
           {
-            name: 'securityEventLogsDataSource'
+            name: 'SecurityAuditEvents'
             streams: [
-              'Microsoft-SecurityEvent'
+              'Microsoft-Event'
             ]
             xPathQueries: [
               'Security!*[System[(band(Keywords,13510798882111488)) and (EventID != 4624)]]'
@@ -560,11 +560,13 @@ module jumpboxDcr 'br/public:avm/res/insights/data-collection-rule:0.11.0' = if 
       dataFlows: [
         {
           streams: [
-            'Microsoft-SecurityEvent'
+            'Microsoft-Event'
           ]
           destinations: [
             dcrLogAnalyticsDestinationName
           ]
+          transformKql: 'source'
+          outputStream: 'Microsoft-Event'
         }
       ]
     }

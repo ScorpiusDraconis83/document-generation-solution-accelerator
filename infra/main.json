@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.44.1.10279",
-      "templateHash": "13991311501344883078"
+      "templateHash": "16705306315679210410"
     },
     "name": "Intelligent Content Generation Accelerator",
     "description": "Solution Accelerator for multimodal marketing content generation using Microsoft Agent Framework.\n"
@@ -160,18 +160,6 @@
       "defaultValue": "",
       "metadata": {
         "description": "Optional. Resource ID of an existing Foundry project."
-      }
-    },
-    "deployerType": {
-      "type": "string",
-      "defaultValue": "User",
-      "allowedValues": [
-        "User",
-        "Group",
-        "ServicePrincipal"
-      ],
-      "metadata": {
-        "description": "Optional. Principal type of the deployer, used for the ACR AcrPush role assignment. Set to ServicePrincipal for CI/OIDC deployments; defaults to User for interactive deployments."
       }
     },
     "deployBastionAndJumpbox": {
@@ -334,7 +322,7 @@
     "logAnalyticsWorkspaceResourceName": "[format('log-{0}', variables('solutionSuffix'))]",
     "applicationInsightsResourceName": "[format('appi-{0}', variables('solutionSuffix'))]",
     "userAssignedIdentityResourceName": "[format('id-{0}', variables('solutionSuffix'))]",
-    "deployAdminAccessResources": "[and(and(parameters('enablePrivateNetworking'), parameters('deployBastionAndJumpbox')), not(empty(parameters('vmAdminPassword'))))]",
+    "deployAdminAccessResources": "[and(parameters('enablePrivateNetworking'), parameters('deployBastionAndJumpbox'))]",
     "bastionHostName": "[format('bas-{0}', variables('solutionSuffix'))]",
     "zoneSupportedJumpboxLocations": [
       "australiaeast",
@@ -4850,14 +4838,6 @@
             "value": [
               "[reference('userAssignedIdentity').outputs.principalId.value]"
             ]
-          },
-          "pushPrincipalIds": {
-            "value": [
-              "[deployer().objectId]"
-            ]
-          },
-          "deployerType": {
-            "value": "[parameters('deployerType')]"
           }
         },
         "template": {
@@ -4868,7 +4848,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.44.1.10279",
-              "templateHash": "15150176666831120984"
+              "templateHash": "9041711177904037864"
             }
           },
           "definitions": {
@@ -4948,25 +4928,6 @@
                 "description": "Optional. Principal IDs (frontend/backend managed identities) that require AcrPull access."
               }
             },
-            "pushPrincipalIds": {
-              "type": "array",
-              "defaultValue": [],
-              "metadata": {
-                "description": "Optional. Principal IDs (e.g. the deployer) that require AcrPush access to build and push images."
-              }
-            },
-            "deployerType": {
-              "type": "string",
-              "defaultValue": "User",
-              "allowedValues": [
-                "User",
-                "Group",
-                "ServicePrincipal"
-              ],
-              "metadata": {
-                "description": "Optional. Principal type for the AcrPush role assignments."
-              }
-            },
             "enablePrivateNetworking": {
               "type": "bool",
               "defaultValue": false,
@@ -5013,19 +4974,9 @@
                   "roleDefinitionIdOrName": "[variables('acrPullRoleDefinitionId')]",
                   "principalType": "ServicePrincipal"
                 }
-              },
-              {
-                "name": "pushRoleAssignments",
-                "count": "[length(parameters('pushPrincipalIds'))]",
-                "input": {
-                  "principalId": "[parameters('pushPrincipalIds')[copyIndex('pushRoleAssignments')]]",
-                  "roleDefinitionIdOrName": "[variables('acrPushRoleDefinitionId')]",
-                  "principalType": "[parameters('deployerType')]"
-                }
               }
             ],
             "acrPullRoleDefinitionId": "7f951dda-4ed3-4680-a7ca-43fe172d538d",
-            "acrPushRoleDefinitionId": "8311e382-0749-4cb8-b61a-304f252e45ec",
             "effectiveAcrSku": "[if(or(parameters('enablePrivateNetworking'), parameters('enableScalability')), 'Premium', parameters('acrSku'))]"
           },
           "resources": {
@@ -5076,7 +5027,7 @@
                   "networkRuleBypassOptions": "[if(parameters('enablePrivateNetworking'), createObject('value', 'AzureServices'), createObject('value', null()))]",
                   "networkRuleSetDefaultAction": "[if(parameters('enablePrivateNetworking'), createObject('value', 'Deny'), createObject('value', 'Allow'))]",
                   "roleAssignments": {
-                    "value": "[concat(variables('pullRoleAssignments'), variables('pushRoleAssignments'))]"
+                    "value": "[variables('pullRoleAssignments')]"
                   },
                   "managedIdentities": {
                     "value": "[parameters('managedIdentities')]"
@@ -12484,11 +12435,10 @@
           },
           "vmSize": "[if(empty(parameters('vmSize')), createObject('value', 'Standard_D2s_v5'), createObject('value', parameters('vmSize')))]",
           "adminUsername": "[if(empty(parameters('vmAdminUsername')), createObject('value', 'JumpboxAdminUser'), createObject('value', parameters('vmAdminUsername')))]",
-          "adminPassword": {
-            "value": "[parameters('vmAdminPassword')]"
-          },
+          "adminPassword": "[if(empty(parameters('vmAdminPassword')), createObject('value', format('Vm!{0}{1}', uniqueString(subscription().subscriptionId, parameters('solutionName')), guid(subscription().subscriptionId, parameters('solutionName'), 'vm-admin-password'))), createObject('value', parameters('vmAdminPassword')))]",
           "managedIdentities": {
             "value": {
+              "systemAssigned": true,
               "userAssignedResourceIds": [
                 "[reference('userAssignedIdentity').outputs.resourceId.value]"
               ]
@@ -12540,6 +12490,23 @@
           },
           "tags": {
             "value": "[parameters('tags')]"
+          },
+          "roleAssignments": {
+            "value": [
+              {
+                "roleDefinitionIdOrName": "1c0163c0-47e6-4577-8991-ea5c82e286e4",
+                "principalId": "[deployer().objectId]"
+              }
+            ]
+          },
+          "extensionAadJoinConfig": {
+            "value": {
+              "enabled": true,
+              "typeHandlerVersion": "2.0",
+              "settings": {
+                "mdmId": ""
+              }
+            }
           }
         },
         "template": {
@@ -21621,9 +21588,9 @@
               "dataSources": {
                 "windowsEventLogs": [
                   {
-                    "name": "securityEventLogsDataSource",
+                    "name": "SecurityAuditEvents",
                     "streams": [
-                      "Microsoft-SecurityEvent"
+                      "Microsoft-Event"
                     ],
                     "xPathQueries": [
                       "Security!*[System[(band(Keywords,13510798882111488)) and (EventID != 4624)]]"
@@ -21642,11 +21609,13 @@
               "dataFlows": [
                 {
                   "streams": [
-                    "Microsoft-SecurityEvent"
+                    "Microsoft-Event"
                   ],
                   "destinations": [
                     "[variables('dcrLogAnalyticsDestinationName')]"
-                  ]
+                  ],
+                  "transformKql": "source",
+                  "outputStream": "Microsoft-Event"
                 }
               ]
             }
