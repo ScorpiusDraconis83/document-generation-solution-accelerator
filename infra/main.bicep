@@ -135,12 +135,6 @@ param enableRedundancy bool = false
 @description('Optional. Enable private networking for applicable resources (WAF-aligned).')
 param enablePrivateNetworking bool = false
 
-@description('Optional. The existing Container Registry name (without .azurecr.io). Must contain pre-built images: content-gen-app and content-gen-api.')
-param acrName string = 'contentgencontainerreg'
-
-@description('Optional. Image Tag.')
-param imageTag string = 'latest'
-
 @description('Optional. Enable/Disable usage telemetry for module.')
 param enableTelemetry bool = true
 
@@ -153,8 +147,6 @@ param createdBy string = contains(deployer(), 'userPrincipalName')? split(deploy
 
 var solutionLocation = empty(location) ? resourceGroup().location : location
 
-// acrName is required - points to existing ACR with pre-built images
-var acrResourceName = acrName
 var solutionSuffix = toLower(trim(replace(
   replace(
     replace(replace(replace(replace('${solutionName}${solutionUniqueText}', '-', ''), '_', ''), '.', ''), '/', ''),
@@ -343,6 +335,16 @@ var logAnalyticsWorkspaceResourceId = useExistingLogAnalytics
   ? existingLogAnalyticsWorkspaceId 
   : (enableMonitoring ? logAnalyticsWorkspace!.outputs.resourceId : '')
 
+
+var existingLogAnalyticsSubscriptionId = useExistingLogAnalytics ? split(existingLogAnalyticsWorkspaceId, '/')[2] : subscription().subscriptionId
+var existingLogAnalyticsResourceGroupName = useExistingLogAnalytics ? split(existingLogAnalyticsWorkspaceId, '/')[4] : resourceGroup().name
+var existingLogAnalyticsWorkspaceName = useExistingLogAnalytics ? split(existingLogAnalyticsWorkspaceId, '/')[8] : ''
+resource existingLogAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2022-10-01' existing = if (useExistingLogAnalytics) {
+  name: existingLogAnalyticsWorkspaceName
+  scope: resourceGroup(existingLogAnalyticsSubscriptionId, existingLogAnalyticsResourceGroupName)
+}
+var logAnalyticsWorkspaceLocation = useExistingLogAnalytics ? existingLogAnalyticsWorkspace!.location : solutionLocation
+
 // ========== Application Insights ========== //
 var applicationInsightsResourceName = 'appi-${solutionSuffix}'
 module applicationInsights 'br/public:avm/res/insights/component:0.7.1' = if (enableMonitoring) {
@@ -372,8 +374,35 @@ module userAssignedIdentity 'br/public:avm/res/managed-identity/user-assigned-id
   }
 }
 
+// ========== Azure Container Registry ========== //
+// Provisions the ACR and grants AcrPull to the shared managed identity (used by
+// both the frontend App Service and the backend Container Instance). Application
+// images are built and pushed to this ACR by a post-deployment step.
+module containerRegistry 'modules/container-registry.bicep' = {
+  name: take('module.container-registry.${solutionSuffix}', 64)
+  params: {
+    name: 'cr${solutionSuffix}'
+    location: solutionLocation
+    tags: tags
+    enableTelemetry: enableTelemetry
+    acrSku: 'Standard'
+    enablePrivateNetworking: enablePrivateNetworking
+    enableScalability: enableScalability
+    privateEndpointSubnetResourceId: enablePrivateNetworking ? virtualNetwork!.outputs.pepsSubnetResourceId : ''
+    privateDnsZoneResourceId: enablePrivateNetworking ? avmPrivateDnsZones[dnsZoneIndex.containerRegistry]!.outputs.resourceId : ''
+    managedIdentities: {
+      userAssignedResourceIds: [
+        userAssignedIdentity.outputs.resourceId
+      ]
+    }
+    pullPrincipalIds: [
+      userAssignedIdentity.outputs.principalId
+    ]
+  }
+}
+
 // ========== Virtual Network and Networking Components ========== //
-var deployAdminAccessResources = enablePrivateNetworking && deployBastionAndJumpbox && !empty(vmAdminPassword)
+var deployAdminAccessResources = enablePrivateNetworking && deployBastionAndJumpbox
 module virtualNetwork 'modules/virtualNetwork.bicep' = if (enablePrivateNetworking) {
   name: take('module.virtualNetwork.${solutionSuffix}', 64)
   params: {
@@ -443,8 +472,9 @@ module jumpboxVM 'br/public:avm/res/compute/virtual-machine:0.21.0' = if (deploy
     osType: 'Windows'
     vmSize: empty(vmSize) ? 'Standard_D2s_v5' : vmSize
     adminUsername: empty(vmAdminUsername) ? 'JumpboxAdminUser' : vmAdminUsername
-    adminPassword: vmAdminPassword
+    adminPassword: empty(vmAdminPassword) ? 'Vm!${uniqueString(subscription().subscriptionId, solutionName)}${guid(subscription().subscriptionId, solutionName, 'vm-admin-password')}' : vmAdminPassword
     managedIdentities: {
+      systemAssigned: true // Required by the AADLoginForWindows extension for Entra ID auth
       userAssignedResourceIds: [
         userAssignedIdentity.outputs.resourceId
       ]
@@ -488,6 +518,17 @@ module jumpboxVM 'br/public:avm/res/compute/virtual-machine:0.21.0' = if (deploy
     }
     location: solutionLocation
     tags: tags
+    roleAssignments: [
+      {
+        roleDefinitionIdOrName: '1c0163c0-47e6-4577-8991-ea5c82e286e4' // Virtual Machine Administrator Login
+        principalId: deployer().objectId
+      }
+    ]
+    extensionAadJoinConfig: {
+      enabled: true // AAD-joins the VM (AADLoginForWindows) so Entra ID login works
+      typeHandlerVersion: '2.0'
+      settings: { mdmId: '' }
+    }
   }
   dependsOn: (enableMonitoring && !useExistingLogAnalytics) ? [logAnalyticsWorkspace, jumpboxDcr] : (enableMonitoring ? [jumpboxDcr] : [])
 }
@@ -499,7 +540,7 @@ module jumpboxDcr 'br/public:avm/res/insights/data-collection-rule:0.11.0' = if 
   name: take('avm.res.insights.data-collection-rule.${jumpboxDcrName}', 64)
   params: {
     name: jumpboxDcrName
-    location: solutionLocation
+    location: logAnalyticsWorkspaceLocation // Must be same as Log Analytics workspace for DCR
     tags: tags
     enableTelemetry: enableTelemetry
     dataCollectionRuleProperties: {
@@ -508,9 +549,9 @@ module jumpboxDcr 'br/public:avm/res/insights/data-collection-rule:0.11.0' = if 
       dataSources: {
         windowsEventLogs: [
           {
-            name: 'securityEventLogsDataSource'
+            name: 'SecurityAuditEvents'
             streams: [
-              'Microsoft-SecurityEvent'
+              'Microsoft-Event'
             ]
             xPathQueries: [
               'Security!*[System[(band(Keywords,13510798882111488)) and (EventID != 4624)]]'
@@ -529,11 +570,13 @@ module jumpboxDcr 'br/public:avm/res/insights/data-collection-rule:0.11.0' = if 
       dataFlows: [
         {
           streams: [
-            'Microsoft-SecurityEvent'
+            'Microsoft-Event'
           ]
           destinations: [
             dcrLogAnalyticsDestinationName
           ]
+          transformKql: 'source'
+          outputStream: 'Microsoft-Event'
         }
       ]
     }
@@ -548,11 +591,13 @@ module jumpboxDcr 'br/public:avm/res/insights/data-collection-rule:0.11.0' = if 
 // - OpenAI (for Azure OpenAI endpoints)
 // - Blob Storage
 // - Cosmos DB (Documents)
+// - Container Registry (for private image pulls)
 var privateDnsZones = [
   'privatelink.cognitiveservices.azure.com'
   'privatelink.openai.azure.com'
   'privatelink.blob.${environment().suffixes.storage}'
   'privatelink.documents.azure.com'
+  'privatelink.azurecr.io'
 ]
 
 var dnsZoneIndex = {
@@ -560,6 +605,7 @@ var dnsZoneIndex = {
   openAI: 1
   storageBlob: 2
   cosmosDB: 3
+  containerRegistry: 4
 }
 
 @batchSize(5)
@@ -966,11 +1012,13 @@ module webSite 'modules/web-sites.bicep' = {
     serverFarmResourceId: webServerFarm.outputs.resourceId
     managedIdentities: { userAssignedResourceIds: [userAssignedIdentity!.outputs.resourceId] }
     siteConfig: {
-      // Frontend container - same for both modes
-      linuxFxVersion: 'DOCKER|${acrResourceName}.azurecr.io/content-gen-app:${imageTag}'
+      // Frontend container - hello-world placeholder (updated post-deployment)
+      linuxFxVersion: 'DOCKER|mcr.microsoft.com/azuredocs/aci-helloworld:latest'
       minTlsVersion: '1.2'
       alwaysOn: true
       ftpsState: 'FtpsOnly'
+      acrUseManagedIdentityCreds: true
+      acrUserManagedIdentityID: userAssignedIdentity!.outputs.clientId
     }
     virtualNetworkSubnetId: enablePrivateNetworking ? virtualNetwork!.outputs.webSubnetResourceId : null
     configs: concat(
@@ -979,7 +1027,7 @@ module webSite 'modules/web-sites.bicep' = {
           // Frontend container proxies to ACI backend (both modes)
           name: 'appsettings'
           properties: {
-            DOCKER_REGISTRY_SERVER_URL: 'https://${acrResourceName}.azurecr.io'
+            DOCKER_REGISTRY_SERVER_URL: 'https://${containerRegistry.outputs.loginServer}'
             BACKEND_URL: aciBackendUrl
             AZURE_CLIENT_ID: userAssignedIdentity.outputs.clientId
           }
@@ -1013,13 +1061,14 @@ module containerInstance 'modules/container-instance.bicep' = {
     name: containerInstanceName
     location: solutionLocation
     tags: tags
-    containerImage: '${acrResourceName}.azurecr.io/content-gen-api:${imageTag}'
+    containerImage: 'mcr.microsoft.com/azuredocs/aci-helloworld:latest'
     cpu: 2
     memoryInGB: 4
     port: 8000
     // Only pass subnetResourceId when private networking is enabled
     subnetResourceId: enablePrivateNetworking ? virtualNetwork!.outputs.aciSubnetResourceId : ''
     userAssignedIdentityResourceId: userAssignedIdentity.outputs.resourceId
+    acrLoginServer: containerRegistry.outputs.loginServer
     enableTelemetry: enableTelemetry
     environmentVariables: [
       // Azure OpenAI Settings
@@ -1144,7 +1193,7 @@ output CONTAINER_INSTANCE_NAME string = containerInstance.outputs.name
 output CONTAINER_INSTANCE_FQDN string = enablePrivateNetworking ? '' : containerInstance.outputs.fqdn
 
 @description('Contains ACR Name')
-output AZURE_ENV_CONTAINER_REGISTRY_NAME string = acrResourceName
+output AZURE_ENV_CONTAINER_REGISTRY_NAME string = containerRegistry.outputs.name
 
 @description('Contains flag for Azure AI Foundry usage')
 output USE_FOUNDRY bool = useFoundryMode ? true : false

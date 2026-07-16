@@ -352,6 +352,15 @@ var logAnalyticsWorkspaceResourceId = useExistingLogAnalytics
   ? existingLogAnalyticsWorkspaceId 
   : (enableMonitoring ? logAnalyticsWorkspace!.outputs.resourceId : '')
 
+var existingLogAnalyticsSubscriptionId = useExistingLogAnalytics ? split(existingLogAnalyticsWorkspaceId, '/')[2] : subscription().subscriptionId
+var existingLogAnalyticsResourceGroupName = useExistingLogAnalytics ? split(existingLogAnalyticsWorkspaceId, '/')[4] : resourceGroup().name
+var existingLogAnalyticsWorkspaceName = useExistingLogAnalytics ? split(existingLogAnalyticsWorkspaceId, '/')[8] : ''
+resource existingLogAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2022-10-01' existing = if (useExistingLogAnalytics) {
+  name: existingLogAnalyticsWorkspaceName
+  scope: resourceGroup(existingLogAnalyticsSubscriptionId, existingLogAnalyticsResourceGroupName)
+}
+var logAnalyticsWorkspaceLocation = useExistingLogAnalytics ? existingLogAnalyticsWorkspace!.location : solutionLocation
+
 // ========== Application Insights ========== //
 var applicationInsightsResourceName = 'appi-${solutionSuffix}'
 module applicationInsights 'br/public:avm/res/insights/component:0.7.1' = if (enableMonitoring) {
@@ -525,7 +534,7 @@ module jumpboxDcr 'br/public:avm/res/insights/data-collection-rule:0.11.0' = if 
   name: take('avm.res.insights.data-collection-rule.${jumpboxDcrName}', 64)
   params: {
     name: jumpboxDcrName
-    location: solutionLocation
+    location: logAnalyticsWorkspaceLocation
     tags: tags
     enableTelemetry: enableTelemetry
     dataCollectionRuleProperties: {
