@@ -5,8 +5,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.44.1.10279",
-      "templateHash": "16705306315679210410"
+      "version": "0.45.6.27763",
+      "templateHash": "7829787750927986140"
     },
     "name": "Intelligent Content Generation Accelerator",
     "description": "Solution Accelerator for multimodal marketing content generation using Microsoft Agent Framework.\n"
@@ -320,6 +320,9 @@
     "aiFoundryAiServicesModelDeployment": "[concat(variables('baseModelDeployments'), variables('imageModelDeployment'))]",
     "aiFoundryAiProjectDescription": "Content Generation AI Foundry Project",
     "logAnalyticsWorkspaceResourceName": "[format('log-{0}', variables('solutionSuffix'))]",
+    "existingLogAnalyticsSubscriptionId": "[if(variables('useExistingLogAnalytics'), split(parameters('existingLogAnalyticsWorkspaceId'), '/')[2], subscription().subscriptionId)]",
+    "existingLogAnalyticsResourceGroupName": "[if(variables('useExistingLogAnalytics'), split(parameters('existingLogAnalyticsWorkspaceId'), '/')[4], resourceGroup().name)]",
+    "existingLogAnalyticsWorkspaceName": "[if(variables('useExistingLogAnalytics'), split(parameters('existingLogAnalyticsWorkspaceId'), '/')[8], '')]",
     "applicationInsightsResourceName": "[format('appi-{0}', variables('solutionSuffix'))]",
     "userAssignedIdentityResourceName": "[format('id-{0}', variables('solutionSuffix'))]",
     "deployAdminAccessResources": "[and(parameters('enablePrivateNetworking'), parameters('deployBastionAndJumpbox'))]",
@@ -403,6 +406,15 @@
       "dependsOn": [
         "existingResourceGroup"
       ]
+    },
+    "existingLogAnalyticsWorkspace": {
+      "condition": "[variables('useExistingLogAnalytics')]",
+      "existing": true,
+      "type": "Microsoft.OperationalInsights/workspaces",
+      "apiVersion": "2022-10-01",
+      "subscriptionId": "[variables('existingLogAnalyticsSubscriptionId')]",
+      "resourceGroup": "[variables('existingLogAnalyticsResourceGroupName')]",
+      "name": "[variables('existingLogAnalyticsWorkspaceName')]"
     },
     "logAnalyticsWorkspace": {
       "condition": "[and(parameters('enableMonitoring'), not(variables('useExistingLogAnalytics')))]",
@@ -4847,8 +4859,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.44.1.10279",
-              "templateHash": "9041711177904037864"
+              "version": "0.45.6.27763",
+              "templateHash": "12763336354304899421"
             }
           },
           "definitions": {
@@ -8123,8 +8135,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.44.1.10279",
-              "templateHash": "6557649947950257832"
+              "version": "0.45.6.27763",
+              "templateHash": "12147106769856360363"
             }
           },
           "parameters": {
@@ -21572,9 +21584,7 @@
           "name": {
             "value": "[variables('jumpboxDcrName')]"
           },
-          "location": {
-            "value": "[variables('solutionLocation')]"
-          },
+          "location": "[if(variables('useExistingLogAnalytics'), createObject('value', reference('existingLogAnalyticsWorkspace', '2022-10-01', 'full').location), createObject('value', variables('solutionLocation')))]",
           "tags": {
             "value": "[parameters('tags')]"
           },
@@ -22823,6 +22833,7 @@
         }
       },
       "dependsOn": [
+        "existingLogAnalyticsWorkspace",
         "logAnalyticsWorkspace"
       ]
     },
@@ -29490,8 +29501,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.44.1.10279",
-              "templateHash": "10687287011543111358"
+              "version": "0.45.6.27763",
+              "templateHash": "13545973557632951810"
             }
           },
           "parameters": {
@@ -29628,8 +29639,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.44.1.10279",
-              "templateHash": "11714054478009335704"
+              "version": "0.45.6.27763",
+              "templateHash": "16945699569768051557"
             }
           },
           "parameters": {
@@ -29752,8 +29763,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.44.1.10279",
-              "templateHash": "15628220945119743042"
+              "version": "0.45.6.27763",
+              "templateHash": "6358798222636429727"
             }
           },
           "parameters": {
@@ -46898,8 +46909,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.44.1.10279",
-              "templateHash": "5713718252926392689"
+              "version": "0.45.6.27763",
+              "templateHash": "12017817135849598403"
             }
           },
           "definitions": {
@@ -47937,8 +47948,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.44.1.10279",
-                      "templateHash": "2616621918371988230"
+                      "version": "0.45.6.27763",
+                      "templateHash": "11895150199726048164"
                     },
                     "name": "Site App Settings",
                     "description": "This module deploys a Site App Setting."
@@ -48990,8 +49001,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.44.1.10279",
-              "templateHash": "9581263247326965160"
+              "version": "0.45.6.27763",
+              "templateHash": "6984233280324010497"
             }
           },
           "parameters": {
